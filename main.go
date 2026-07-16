@@ -132,6 +132,12 @@ func main() {
 	mux.HandleFunc("/broadcast/pause", authMiddleware(handleCampaignPause))
 	mux.HandleFunc("/broadcast/retry", authMiddleware(handleCampaignRetry))
 	mux.HandleFunc("/broadcast/delete", authMiddleware(crudDel(func(id int64) { db.DeleteCampaign(id) }, "/broadcast")))
+	mux.HandleFunc("/drips", authMiddleware(handleDrips))
+	mux.HandleFunc("/drips/add", authMiddleware(handleDripAdd))
+	mux.HandleFunc("/drips/step/add", authMiddleware(handleDripStepAdd))
+	mux.HandleFunc("/drips/step/delete", authMiddleware(crudDel(func(id int64) { db.DeleteDripStep(id) }, "/drips")))
+	mux.HandleFunc("/drips/delete", authMiddleware(crudDel(func(id int64) { db.DeleteDrip(id) }, "/drips")))
+	mux.HandleFunc("/drips/toggle", authMiddleware(handleDripToggle))
 		mux.HandleFunc("/scheduled", authMiddleware(handleScheduled))
 	mux.HandleFunc("/scheduled/delete", authMiddleware(crudDel(func(id int64) { db.DeleteScheduled(id) }, "/scheduled")))
 	mux.HandleFunc("/templates", p("templates"))
@@ -260,6 +266,7 @@ type pageData struct {
 	APIKeys    []store.APIKey
 	Webhooks   []store.Webhook
 	Campaigns  []store.Campaign
+	Drips      []store.Drip
 	Scheduleds []store.Scheduled
 	Logs       []store.LogEntry
 	// admin/ai/devices
@@ -484,6 +491,8 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Groups, _ = db.ListGroups()
 		d.MetaAccounts, _ = db.ListMetaAccounts()
 		d.MetaTemplates, _ = db.ListMetaTemplates()
+	case "drips":
+		d.Drips, _ = db.ListDrips()
 	case "scheduled":
 		d.Scheduleds, _ = db.ListScheduled()
 	case "sent":
@@ -654,6 +663,8 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_contacts_unsub"), T("nav_contacts"), T("nav_contacts_unsub"), "la-unlink"
 	case "broadcast":
 		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_broadcast"), T("nav_whatsapp"), T("nav_broadcast"), "la-bullhorn"
+	case "drips":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Drip Campaign", T("nav_whatsapp"), "Drip Campaign", "la-tint"
 	case "scheduled":
 		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_scheduled"), T("nav_whatsapp"), T("nav_scheduled"), "la-clock"
 	case "templates":
@@ -724,6 +735,7 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 			return s[start:end]
 		},
 		"js": func(s string) template.JS { return template.JS(s) },
+		"add": func(a, b int) int { return a + b },
 		"permBadges": func(perms string) template.HTML {
 			if perms == "" { return "-" }
 			parts := strings.Split(perms, ",")
@@ -1301,6 +1313,53 @@ func handleCampaignRetry(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/broadcast", http.StatusSeeOther)
 }
 
+// ---- Drip Campaigns ----
+
+func handleDrips(w http.ResponseWriter, r *http.Request) {
+	render(w, r, "drips")
+}
+func handleDripAdd(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Redirect(w, r, "/drips", http.StatusSeeOther)
+		return
+	}
+	name := r.FormValue("name")
+	if name == "" { name = "Drip Campaign" }
+	db.AddDrip(name)
+	http.Redirect(w, r, "/drips", http.StatusSeeOther)
+}
+func handleDripStepAdd(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Redirect(w, r, "/drips", http.StatusSeeOther)
+		return
+	}
+	dripID, _ := strconv.ParseInt(r.FormValue("drip_id"), 10, 64)
+	delay, _ := strconv.Atoi(r.FormValue("delay"))
+	message := r.FormValue("message")
+	sortOrder, _ := strconv.Atoi(r.FormValue("sort_order"))
+	if dripID > 0 && message != "" {
+		db.AddDripStep(dripID, delay, message, sortOrder)
+	}
+	http.Redirect(w, r, "/drips", http.StatusSeeOther)
+}
+func handleDripToggle(w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+	if id > 0 {
+		drips, _ := db.ListDrips()
+		for _, d := range drips {
+			if d.ID == id {
+				if d.Status == "active" {
+					db.UpdateDripStatus(id, "inactive")
+				} else {
+					db.UpdateDripStatus(id, "active")
+				}
+				break
+			}
+		}
+	}
+	http.Redirect(w, r, "/drips", http.StatusSeeOther)
+}
+
 // ---- Contact CSV Import ----
 func handleContactImport(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -1489,6 +1548,19 @@ func handleMetaWebhook(w http.ResponseWriter, r *http.Request) {
 				db.MarkRead(m.From)
 				engine.Notify(m.From)
 				db.Log("meta", "received", fmt.Sprintf("%s -> %s: %s", m.From, acc.Name, text))
+
+				// Drip: auto-enroll + STOP
+				trimmed := strings.ToLower(strings.TrimSpace(text))
+				if trimmed == "stop" || trimmed == "berhenti" || trimmed == "unsub" {
+					db.UnenrollFromDrip(m.From)
+				} else {
+					drips, _ := db.ListDrips()
+					for _, d := range drips {
+						if d.Status == "active" {
+							db.EnrollInDrip(d.ID, m.From, "")
+						}
+					}
+				}
 
 				// Auto-reply for Meta
 				mc := meta.New(acc.PhoneNumberID, acc.AccessToken, acc.VerifyToken)

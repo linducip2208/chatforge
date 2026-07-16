@@ -17,6 +17,7 @@ func (e *Engine) StartLoops() {
 	go e.campaignLoop()
 	go e.scheduledLoop()
 	go e.heartbeatLoop()
+	go e.dripLoop()
 }
 
 // campaignLoop drains running campaigns, sending to each contact in the target groups.
@@ -252,6 +253,50 @@ func (e *Engine) heartbeatLoop() {
 					_ = s.client.Connect()
 				}
 			}
+		}
+	}
+}
+
+// dripLoop sends drip campaign messages on schedule.
+func (e *Engine) dripLoop() {
+	for {
+		time.Sleep(60 * time.Second)
+		enrollments, err := e.db.DueDripEnrollments()
+		if err != nil {
+			continue
+		}
+		for _, en := range enrollments {
+			drip, err := e.db.GetDrip(en.DripID)
+			if err != nil || len(drip.Steps) == 0 {
+				continue
+			}
+			if en.CurrentStep >= len(drip.Steps) {
+				e.db.AdvanceDripStep(en.ID, 0) // mark completed
+				continue
+			}
+			step := drip.Steps[en.CurrentStep]
+			// send via first connected WA session
+			e.mu.RLock()
+			var s *session
+			for _, ss := range e.sessions {
+				if ss.status == "connected" { s = ss; break }
+			}
+			e.mu.RUnlock()
+			if s == nil { continue }
+			msg := msgtemplate.Render(step.Message, msgtemplate.Vars{Name: en.Name, Phone: en.Phone, Message: ""})
+			digits := onlyDigits(en.Phone)
+			if digits != "" {
+				jid := waTypes.NewJID(digits, waTypes.DefaultUserServer)
+				if err := e.sendVia(s, jid, msg); err == nil {
+					e.db.Log("drip", "sent", "Drip #"+itoa(en.DripID)+" step "+itoa(int64(en.CurrentStep+1))+" -> "+en.Phone)
+				}
+			}
+			nextDelay := 0
+			if en.CurrentStep+1 < len(drip.Steps) {
+				nextDelay = drip.Steps[en.CurrentStep+1].DelayMinutes
+			}
+			e.db.AdvanceDripStep(en.ID, nextDelay)
+			time.Sleep(2 * time.Second)
 		}
 	}
 }

@@ -431,6 +431,20 @@ func (e *Engine) onMessage(s *session, evt *events.Message) {
 		e.dispatchWebhooks("received", senderPhone, name, text, "private")
 	}
 
+	// Drip: auto-enroll + STOP handler
+	trimmed := strings.TrimSpace(strings.ToLower(text))
+	if trimmed == "stop" || trimmed == "berhenti" || trimmed == "unsub" {
+		e.db.UnenrollFromDrip(senderPhone)
+		e.db.Log("drip", "stop", fmt.Sprintf("%s stopped all drips", senderPhone))
+	} else {
+		drips, _ := e.db.ListDrips()
+		for _, d := range drips {
+			if d.Status == "active" {
+				e.db.EnrollInDrip(d.ID, senderPhone, name)
+			}
+		}
+	}
+
 	to := evt.Info.Chat
 	if !evt.Info.IsGroup && to.Server == waTypes.HiddenUserServer && !evt.Info.SenderAlt.IsEmpty() {
 		to = evt.Info.SenderAlt

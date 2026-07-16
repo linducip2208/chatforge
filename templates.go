@@ -208,6 +208,7 @@ document.querySelectorAll(".msg-full").forEach(function(el){
         <li class="nav-item"><a class="nav-link {{if eq .Active "wa"}}active{{end}}" href="/wa"><i class="la la-whatsapp la-lg"></i> {{T "nav_account_qr"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "send"}}active{{end}}" href="/send"><i class="la la-paper-plane la-lg"></i> {{T "nav_send"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "broadcast"}}active{{end}}" href="/broadcast"><i class="la la-bullhorn la-lg"></i> {{T "nav_broadcast"}}</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "drips"}}active{{end}}" href="/drips"><i class="la la-tint la-lg"></i> Drip Campaign</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "scheduled"}}active{{end}}" href="/scheduled"><i class="la la-clock la-lg"></i> {{T "nav_scheduled"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "sent"}}active{{end}}" href="/sent"><i class="la la-telegram la-lg"></i> {{T "nav_sent"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "received"}}active{{end}}" href="/received"><i class="la la-comment la-lg"></i> {{T "nav_received"}}</a></li>
@@ -865,6 +866,44 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
            </td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center">-</td></tr>{{end}}
         </tbody></table></div>
       </div>
+    </div>
+  </div>
+{{end}}
+
+{{if eq .Page "drips"}}
+  <div class="row">
+    <div class="col-12 col-lg-4">
+      <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> New Drip</h4></div>
+        <div class="card-body"><form method="post" action="/drips/add">
+          <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" placeholder="Welcome Series" required></div>
+          <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
+        </form></div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-8">
+      {{range .Drips}}
+      <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <div><h4 class="card-header-title mb-0">{{.Name}}</h4><small class="text-muted">{{len .Steps}} steps &middot; {{if eq .Status "active"}}<span class="text-success">Active</span>{{else}}<span class="text-muted">Inactive</span>{{end}}</small></div>
+          <div>
+            <form method="post" action="/drips/toggle" style="display:inline"><input type="hidden" name="id" value="{{.ID}}">{{if eq .Status "active"}}<button class="btn btn-sm btn-warning">Pause</button>{{else}}<button class="btn btn-sm btn-success">Resume</button>{{end}}</form>
+            <form method="post" action="/drips/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger"><i class="la la-trash"></i></button></form>
+          </div>
+        </div>
+        <div class="table-responsive"><table class="table table-sm card-table mb-0"><thead><tr><th>#</th><th>Delay</th><th>{{T "col_message"}}</th><th></th></tr></thead><tbody>
+          {{range $i, $s := .Steps}}<tr><td>{{add $i 1}}</td><td>{{if eq $i 0}}Instant{{else}}{{$s.DelayMinutes}} min{{end}}</td><td>{{$s.Message}}</td><td><form method="post" action="/drips/step/delete" style="display:inline"><input type="hidden" name="id" value="{{$s.ID}}"><button class="btn btn-sm btn-danger"><i class="la la-times"></i></button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">No steps yet</td></tr>{{end}}
+        </tbody></table></div>
+        <div class="card-body border-top"><form method="post" action="/drips/step/add" class="row g-2">
+          <input type="hidden" name="drip_id" value="{{.ID}}">
+          <input type="hidden" name="sort_order" value="{{len .Steps}}">
+          <div class="col-md-2"><input type="number" name="delay" class="form-control form-control-sm" placeholder="Min" value="0"></div>
+          <div class="col-md-7"><input type="text" name="message" class="form-control form-control-sm" placeholder="Pesan..." required></div>
+          <div class="col-md-3"><button class="btn btn-sm btn-primary w-100"><i class="la la-plus"></i> Add Step</button></div>
+        </form></div>
+      </div>
+      {{else}}
+      <div class="card"><div class="card-body text-center text-muted py-5">Belum ada drip campaign. Buat yang pertama!</div></div>
+      {{end}}
     </div>
   </div>
 {{end}}

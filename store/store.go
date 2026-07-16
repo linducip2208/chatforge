@@ -157,6 +157,7 @@ func (d *DB) migrate() error {
 	d.migrateInstanceLog()
 	d.migrateStatuses()
 	d.migrateMeta()
+	d.migrateDrip()
 	return nil
 }
 
