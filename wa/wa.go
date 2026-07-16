@@ -611,7 +611,7 @@ skipAIAll:
 
 		rendered := msgtemplate.Render(rule.Reply, tv)
 
-		// AI mode
+		// AI Mode with store context (RAG)
 		if rule.UseAI && rule.AiKeyID > 0 {
 			// force own key check
 			if e.db.GetSetting("force_own_key", "0") == "1" {
@@ -642,6 +642,18 @@ skipAIAll:
 				case "high": temp = 0.9
 				}
 				cooldown := e.fallbackCooldownByPhone(senderPhone)
+				// RAG: inject store catalog + customer profile into AI context
+				prods, _ := e.db.ListProducts()
+				if len(prods) > 0 {
+					sysPrompt += "\nStore Products:\n"
+					for i, p := range prods {
+						if i >= 10 { break }
+						sysPrompt += fmt.Sprintf("- %s: Rp%.0f (Stok:%d)\n", p.Name, p.Price, p.Stock)
+					}
+				}
+				if cp := e.db.GetCustomerProfile(senderPhone); cp != nil && cp.TotalOrders > 0 {
+					sysPrompt += fmt.Sprintf("\nCustomer Profile: %s, %d orders, total Rp%.0f\n", cp.Name, cp.TotalOrders, cp.TotalSpent)
+				}
 				if aiReply, aiErr := aiservice.ReplyWithContext(decKey, aik.Provider, aik.Model, aik.BaseURL, sysPrompt + aik.SystemPrompt, text, krows, cooldown, history, temp); aiErr == nil && aiReply != "" {
 					rendered = aiReply
 					e.db.RecordAiUsage(0, len(text)/4+len(aiReply)/4, aik.Provider, aik.Model)

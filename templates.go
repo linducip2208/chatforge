@@ -256,6 +256,8 @@ document.querySelectorAll(".msg-full").forEach(function(el){
         <li class="nav-item"><a class="nav-link {{if eq .Active "csat"}}active{{end}}" href="/csat"><i class="la la-star la-lg"></i> CSAT</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "recurring"}}active{{end}}" href="/recurring"><i class="la la-redo-alt la-lg"></i> Recurring</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "uploads"}}active{{end}}" href="/uploads"><i class="la la-folder-open la-lg"></i> Files</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "calendar"}}active{{end}}" href="/calendar"><i class="la la-calendar la-lg"></i> Calendar</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "customers"}}active{{end}}" href="/customers"><i class="la la-users la-lg"></i> Customers</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "apikeys"}}active{{end}}" href="/apikeys"><i class="la la-key la-lg"></i> {{T "nav_apikeys"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "webhooks"}}active{{end}}" href="/webhooks"><i class="la la-code-branch la-lg"></i> {{T "nav_webhooks"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "logger"}}active{{end}}" href="/logger"><i class="la la-clipboard-list la-lg"></i> {{T "nav_logger"}}</a></li>
@@ -282,6 +284,7 @@ document.querySelectorAll(".msg-full").forEach(function(el){
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_transactions"}}active{{end}}" href="/admin/transactions"><i class="la la-money-bill la-lg"></i> {{T "adm_transactions"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_paygateways"}}active{{end}}" href="/admin/gateways-pay"><i class="la la-credit-card la-lg"></i> Pay Gateways</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_transactions_pay"}}active{{end}}" href="/admin/transactions-pay"><i class="la la-receipt la-lg"></i> Pay Logs</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "backup"}}active{{end}}" href="/backup"><i class="la la-database la-lg"></i> Backup</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_payouts"}}active{{end}}" href="/admin/payouts"><i class="la la-hand-holding-usd la-lg"></i> {{T "adm_payouts"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_pages"}}active{{end}}" href="/admin/pages"><i class="la la-file la-lg"></i> {{T "adm_pages"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_marketing"}}active{{end}}" href="/admin/marketing"><i class="la la-bullhorn la-lg"></i> {{T "adm_marketing"}}</a></li>
@@ -1243,6 +1246,33 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
     </div>
     <div class="col-12 col-md-4">
       <div class="card text-center"><div class="card-body"><h1 class="display-3 fw-bold text-success">{{printf "%.0f" (mult .CSATAvg 20)}}%</h1><p>Satisfaction Score</p></div></div>
+    </div>
+  </div>
+{{end}}
+
+{{if eq .Page "customers"}}
+  <div class="card"><div class="card-header d-flex justify-content-between"><h4 class="card-header-title">Customer Directory</h4><input type="text" id="custSearch" class="form-control form-control-sm" placeholder="Search phone..." style="width:250px" oninput="var q=this.value.toLowerCase();document.querySelectorAll('.cust-row').forEach(r=>r.style.display=r.textContent.toLowerCase().includes(q)?'':'none')"></div>
+    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>Phone</th><th>Name</th><th>Orders</th><th>Last Active</th><th></th></tr></thead><tbody>
+      {{range .Contacts}}<tr class="cust-row"><td>{{.Phone}}</td><td>{{.Name}}</td><td>-</td><td>-</td><td><a href="/inbox/chat?phone={{.Phone}}" class="btn btn-sm btn-primary">Chat</a></td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center">-</td></tr>{{end}}
+    </tbody></table></div>
+  </div>
+{{end}}
+
+{{if eq .Page "calendar"}}
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-calendar me-1"></i> Campaign Calendar</h4></div>
+    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>Date</th><th>Title</th><th>Type</th></tr></thead><tbody>
+      {{range .CalEvents}}<tr><td>{{.Date}}</td><td>{{.Title}}</td><td><span class="badge badge-soft-{{if eq .Type "Campaign"}}primary{{else if eq .Type "Recurring"}}success{{else}}warning{{end}}">{{.Type}}</span></td></tr>{{else}}<tr><td colspan="3" class="text-muted text-center py-4">No scheduled events.</td></tr>{{end}}
+    </tbody></table></div>
+  </div>
+{{end}}
+
+{{if eq .Page "backup"}}
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-database me-1"></i> Database Backup</h4></div>
+    <div class="card-body text-center py-5">
+      <form method="post" action="/backup">
+        <button class="btn btn-primary btn-lg"><i class="la la-download me-1"></i> Backup Database Now</button>
+      </form>
+      <p class="text-muted mt-2">Backup akan disimpan ke <code>public/backups/</code></p>
     </div>
   </div>
 {{end}}

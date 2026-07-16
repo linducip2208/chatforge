@@ -232,6 +232,11 @@ func main() {
 	mux.HandleFunc("/inbox/label", authMiddleware(handleInboxLabel))
 	mux.HandleFunc("/inbox/filter/", authMiddleware(handleInboxFilter))
 	mux.HandleFunc("/inbox/canned", authMiddleware(handleInboxCanned))
+	mux.HandleFunc("/customers", authMiddleware(p("customers")))
+	mux.HandleFunc("/customers/profile", authMiddleware(handleCustomerProfile))
+	mux.HandleFunc("/calendar", authMiddleware(p("calendar")))
+	mux.HandleFunc("/backup", authMiddleware(handleBackup))
+	mux.HandleFunc("/translate", authMiddleware(handleTranslate))
 		mux.HandleFunc("/scheduled", authMiddleware(handleScheduled))
 	mux.HandleFunc("/scheduled/delete", authMiddleware(crudDel(func(id int64) { db.DeleteScheduled(id) }, "/scheduled")))
 	mux.HandleFunc("/templates", p("templates"))
@@ -387,6 +392,7 @@ type pageData struct {
 	Depts          []store.Department
 	Recurrings     []store.RecurringCampaign
 	Notes          []store.ChatNote
+	CalEvents      []store.CalendarEvent
 	Files          []string
 	Scheduleds     []store.Scheduled
 	Logs       []store.LogEntry
@@ -664,6 +670,10 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Groups, _ = db.ListGroups()
 	case "uploads":
 		d.Files = db.ListUploads("public/uploads")
+	case "customers":
+		d.Contacts, _ = db.ListContacts()
+	case "calendar":
+		d.CalEvents = db.GetCalendarEvents()
 	case "canned":
 		d.Canned, _ = db.ListCanned()
 		d.Users, _ = db.ListUsers()
@@ -869,6 +879,12 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Recurring", "Broadcast", "Auto-Repeat", "la-redo-alt"
 	case "uploads":
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Files", "Tools", "File Manager", "la-folder-open"
+	case "customers":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Customers", "CRM", "Customer Directory", "la-users"
+	case "calendar":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Calendar", "Schedule", "Campaign Calendar", "la-calendar"
+	case "backup":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Backup", "System", "Database Backup", "la-database"
 	case "tracker":
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Link Tracker", T("nav_tools"), "Link Clicks", "la-link"
 	case "abtests":
@@ -1741,11 +1757,48 @@ func handleInboxFilter(w http.ResponseWriter, r *http.Request) {
 	ft := strings.TrimPrefix(r.URL.Path, "/inbox/filter/")
 	w.Header().Set("Content-Type", "application/json")
 	items := db.InboxFiltered(ft)
-	if items == nil {
-		fmt.Fprint(w, "[]")
+	if items == nil { fmt.Fprint(w, "[]"); return }
+	json.NewEncoder(w).Encode(items)
+}
+
+func handleCustomerProfile(w http.ResponseWriter, r *http.Request) {
+	phone := r.URL.Query().Get("phone")
+	if phone == "" { http.Error(w, "phone required", 400); return }
+	p := db.GetCustomerProfile(phone)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(p)
+}
+
+func handleBackup(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		fname := fmt.Sprintf("backup_%s.sql", time.Now().Format("20060102_150405"))
+		db.BackupDB("public/backups/" + fname)
+		http.Redirect(w, r, "/backup?msg=Backup+created:+backup.sql", http.StatusSeeOther)
 		return
 	}
-	json.NewEncoder(w).Encode(items)
+	render(w, r, "backup")
+}
+
+func handleTranslate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST only", 405)
+		return
+	}
+	text := r.FormValue("text")
+	to := r.FormValue("to")
+	if text == "" || to == "" { http.Error(w, "text and to required", 400); return }
+	// use first AI key for translation
+	keys, _ := db.ListAiKeys()
+	if len(keys) == 0 { fmt.Fprint(w, text); return }
+	ak := keys[0]
+	dec, _ := secret.Decrypt(ak.APIKey)
+	if dec == "" { dec = ak.APIKey }
+	prompt := fmt.Sprintf("Translate to %s, return only translation: %s", to, text)
+	if reply, err := aiservice.Reply(dec, ak.Provider, ak.Model, ak.BaseURL, "", prompt, nil, nil); err == nil {
+		fmt.Fprint(w, reply)
+	} else {
+		fmt.Fprint(w, text)
+	}
 }
 
 func handleInboxCanned(w http.ResponseWriter, r *http.Request) {
