@@ -254,6 +254,115 @@ document.querySelectorAll(".msg-full").forEach(function(el){
   </div>
 </nav>{{end}}
 
+{{define "landing"}}<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.AppName}} — WhatsApp Marketing Platform</title>
+<link rel="stylesheet" href="/assets/_assets/css/libs/line-awesome.min.css">
+<link rel="stylesheet" href="/assets/dashboard/css/libs/bootstrap.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a2e;line-height:1.6}
+.navbar{padding:16px 0;position:fixed;top:0;width:100%;z-index:100;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-bottom:1px solid rgba(0,0,0,.06)}
+.navbar .container{max-width:1140px;margin:0 auto;padding:0 24px;display:flex;justify-content:space-between;align-items:center}
+.navbar-brand{font-size:22px;font-weight:800;color:#1a1a2e;text-decoration:none}
+.navbar-brand span{color:#4F46E5}
+.nav-links{display:flex;gap:16px;align-items:center}
+.nav-links a{text-decoration:none;color:#555;font-weight:500;font-size:14px}
+.nav-links .btn-login{padding:8px 20px;background:#4F46E5;color:#fff;border-radius:8px;font-weight:600}
+.hero{padding:140px 24px 80px;text-align:center;max-width:900px;margin:0 auto}
+.hero h1{font-size:3rem;font-weight:800;line-height:1.2;margin-bottom:16px;background:linear-gradient(135deg,#4F46E5,#7C3AED);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:1.15rem;color:#666;max-width:600px;margin:0 auto 32px}
+.hero .cta-group{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.hero .cta-group a{padding:12px 28px;border-radius:10px;font-weight:600;font-size:15px;text-decoration:none;transition:all .2s}
+.hero .btn-primary{background:#4F46E5;color:#fff;box-shadow:0 4px 14px rgba(79,70,229,.3)}
+.hero .btn-primary:hover{background:#4338CA;transform:translateY(-1px)}
+.hero .btn-outline{border:2px solid #ddd;color:#444;background:#fff}
+.hero .btn-outline:hover{border-color:#4F46E5;color:#4F46E5}
+.features{padding:40px 24px 80px;max-width:1140px;margin:0 auto}
+.features h2{text-align:center;font-size:2rem;font-weight:700;margin-bottom:12px}
+.features .subtitle{text-align:center;color:#666;margin-bottom:48px}
+.feature-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:24px}
+.feature-card{padding:28px;border-radius:14px;border:1px solid #eee;transition:all .2s;background:#fff}
+.feature-card:hover{box-shadow:0 8px 30px rgba(0,0,0,.08);transform:translateY(-2px)}
+.feature-card i{font-size:2rem;color:#4F46E5;margin-bottom:12px}
+.feature-card h4{font-size:1.1rem;font-weight:700;margin-bottom:6px}
+.feature-card p{color:#666;font-size:.9rem}
+.demo-section{padding:40px 24px 80px;background:#f8f9fc}
+.demo-section .container{max-width:800px;margin:0 auto}
+.demo-section h2{text-align:center;font-size:1.8rem;font-weight:700;margin-bottom:32px}
+.demo-box{background:#f0f4ff;border:1px solid #d0d7f0;border-radius:12px;padding:20px;font-family:monospace;font-size:14px}
+.demo-row{padding:6px 0}
+.demo-row strong{color:#4F46E5}
+.cta-banner{padding:60px 24px;text-align:center;background:linear-gradient(135deg,#4F46E5,#7C3AED);color:#fff}
+.cta-banner h2{font-size:2rem;font-weight:700;margin-bottom:12px}
+.cta-banner p{margin-bottom:24px;opacity:.9}
+.cta-banner a{padding:14px 32px;background:#fff;color:#4F46E5;border-radius:10px;font-weight:700;text-decoration:none;display:inline-block;font-size:15px}
+.footer{padding:24px;text-align:center;color:#888;font-size:13px;border-top:1px solid #eee}
+@media(max-width:768px){.hero h1{font-size:2rem}.feature-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+<div class="container">
+<a href="/" class="navbar-brand">{{.AppName}}</a>
+<div class="nav-links">
+<a href="/login">Masuk</a>
+<a href="/register" class="btn-login">Daftar Gratis</a>
+</div>
+</div>
+</nav>
+
+<section class="hero">
+<h1>WhatsApp Marketing Jadi Mudah</h1>
+<p>{{.AppName}} adalah platform all-in-one untuk kirim broadcast, auto-reply AI, kelola multi-akun WhatsApp, dan live chat real-time — semua dalam satu dashboard.</p>
+<div class="cta-group">
+<a href="/register" class="btn-primary">Coba Gratis</a>
+<a href="/docs" class="btn-outline">Lihat Dokumentasi</a>
+</div>
+</section>
+
+<section class="features">
+<h2>Fitur Lengkap</h2>
+<p class="subtitle">Semua yang kamu butuhkan untuk WhatsApp marketing</p>
+<div class="feature-grid">
+<div class="feature-card"><i class="la la-comments"></i><h4>Live Chat</h4><p>Inbox real-time dengan SSE, reply langsung, group chat, private/group filter.</p></div>
+<div class="feature-card"><i class="la la-robot"></i><h4>AI Auto Reply</h4><p>Balas otomatis pakai AI (OpenAI/Gemini/Claude/DeepSeek) + knowledge base.</p></div>
+<div class="feature-card"><i class="la la-bullhorn"></i><h4>Broadcast</h4><p>Kirim pesan massal ke grup kontak, round-robin multi-akun WA.</p></div>
+<div class="feature-card"><i class="la la-whatsapp"></i><h4>Multi Akun</h4><p>Kelola banyak nomor WhatsApp sekaligus, scan QR pairing.</p></div>
+<div class="feature-card"><i class="la la-cloud"></i><h4>Meta Cloud API</h4><p>Integrasi resmi WhatsApp Business API + template pesan.</p></div>
+<div class="feature-card"><i class="la la-clock"></i><h4>Pesan Terjadwal</h4><p>Jadwalkan pesan, repeat otomatis, pilih nomor pengirim.</p></div>
+<div class="feature-card"><i class="la la-paint-brush"></i><h4>Whitelabel</h4><p>Ganti logo, nama, email — satu binary, banyak domain.</p></div>
+<div class="feature-card"><i class="la la-chart-bar"></i><h4>Dashboard Analytics</h4><p>Chart aktivitas, statistik pesan, status koneksi real-time.</p></div>
+</div>
+</section>
+
+<section class="demo-section">
+<div class="container">
+<h2>Akun Demo</h2>
+<div class="demo-box" style="max-width:480px;margin:0 auto">
+<div class="demo-row"><strong>Admin:</strong> {{.AppEmail}} / password</div>
+</div>
+<div style="text-align:center;margin-top:24px">
+<a href="/login" style="display:inline-block;padding:12px 28px;border-radius:10px;font-weight:600;text-decoration:none;background:#4F46E5;color:#fff">Masuk ke Dashboard</a>
+</div>
+</div>
+</section>
+
+<section class="cta-banner">
+<h2>Siap Tingkatkan WhatsApp Marketing Kamu?</h2>
+<p>Daftar sekarang — gratis. Tanpa kartu kredit.</p>
+<a href="/register">Daftar Gratis</a>
+</section>
+
+<footer class="footer">&copy; 2026 {{.AppName}}. Powered by ChatGo.</footer>
+
+</body>
+</html>{{end}}
+
 {{define "home"}}{{template "layout" .}}{{end}}
 {{define "content"}}
 {{if eq .Page "home"}}

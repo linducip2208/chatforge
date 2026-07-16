@@ -77,7 +77,7 @@ func main() {
 	mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("web/assets"))))
 	mux.Handle("/web/", http.StripPrefix("/web/", http.FileServer(http.Dir("web"))))
 	mux.Handle("/screens/", http.StripPrefix("/screens/", http.FileServer(http.Dir("public/marketing/screens"))))
-	mux.HandleFunc("/", authMiddleware(handleHome))
+	mux.HandleFunc("/", handleHome)
 	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) { render(w, r, "login") })
 	mux.HandleFunc("/login/post", loginUser)
 	mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) { render(w, r, "register") })
@@ -353,6 +353,14 @@ func getEnv(key, def string) string {
 	return def
 }
 
+func appURL() string {
+	u := getEnv("APP_URL", "http://127.0.0.1:8080")
+	if !strings.HasPrefix(u, "http://") && !strings.HasPrefix(u, "https://") {
+		u = "http://" + u
+	}
+	return strings.TrimRight(u, "/")
+}
+
 func render(w http.ResponseWriter, r *http.Request, page string) {
 	lang := currentLang(r)
 	T := i18n.Translator(lang)
@@ -381,7 +389,7 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		AppName: getEnv("APP_NAME", "ChatGo"),
 		AppLogo: db.GetSetting("app_logo", getEnv("APP_LOGO", "/assets/theme/default-logo-light.png")),
 		AppEmail: getEnv("APP_EMAIL", "admin@chatgo.test"),
-		AppURL: getEnv("APP_URL", "http://127.0.0.1:8080"),
+		AppURL: appURL(),
 	}
 	// pre-rendered translated strings with HTML/format
 	d.WaConnectedDesc = template.HTML(fmt.Sprintf(T("wa_connected_desc"), template.HTMLEscapeString(phone)))
@@ -611,6 +619,8 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Title = "Login"
 	case "register":
 		d.Title = "Register"
+	case "landing":
+		d.Title = d.AppName
 	case "contacts":
 		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_contacts_saved"), T("nav_contacts"), T("nav_contacts_saved"), "la-address-book"
 	case "groups":
@@ -692,6 +702,12 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 	}).Parse(templates))
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if page == "landing" {
+		if err := tpl.ExecuteTemplate(w, "landing", d); err != nil {
+			http.Error(w, err.Error(), 500)
+		}
+		return
+	}
 	if err := tpl.ExecuteTemplate(w, "home", d); err != nil {
 		http.Error(w, err.Error(), 500)
 	}
@@ -700,6 +716,11 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 func handleHome(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
+		return
+	}
+	uid := getUserID(r)
+	if uid == 0 {
+		render(w, r, "landing")
 		return
 	}
 	render(w, r, "home")
