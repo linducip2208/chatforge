@@ -1,0 +1,13 @@
+.env
+data/
+*.exe
+*.exe~
+stderr.log
+run.log
+err.log
+cookies.txt
+node_modules/
+*.tmp
+.env.bak
+*.csv
+/web/screens/

@@ -1,0 +1,5 @@
+﻿# chatgo — Go Build Rules
+Setiap kali build project D:\project laravel\chatgo:
+- JALANKAN `go build` di jendela PowerShell TERPISAH (Start-Process powershell)
+- JANGAN build di foreground / terminal saat ini — supaya tidak blocking opencode
+- Setelah build, restart server otomatis di jendela yang sama

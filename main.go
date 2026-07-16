@@ -1,0 +1,1001 @@
+package main
+
+import (
+	crand "crypto/rand"
+	"encoding/hex"
+	"fmt"
+	"html/template"
+	"io"
+	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
+
+	"chatgo/i18n"
+	"chatgo/msgtemplate"
+	"chatgo/store"
+	"chatgo/wa"
+
+	qrcode "github.com/skip2/go-qrcode"
+)
+
+var (
+	db     *store.DB
+	engine *wa.Engine
+)
+
+func main() {
+	// load .env file if present
+	if _, err := os.Stat(".env"); err == nil {
+		raw, _ := os.ReadFile(".env")
+		for _, line := range strings.Split(string(raw), "\n") {
+			line = strings.TrimSpace(line)
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			kv := strings.SplitN(line, "=", 2)
+			if len(kv) == 2 {
+				k := strings.TrimSpace(kv[0])
+				v := strings.TrimSpace(kv[1])
+				if os.Getenv(k) == "" {
+					os.Setenv(k, v)
+				}
+			}
+		}
+	}
+	dataDir := "data"
+	_ = os.MkdirAll(dataDir, 0o755)
+
+	if err := i18n.Load("lang"); err != nil {
+		log.Fatalf("load lang: %v", err)
+	}
+
+	dsn := os.Getenv("CHATGO_MYSQL")
+	if dsn == "" {
+		dsn = "root:@tcp(127.0.0.1:3306)/chatgo?charset=utf8mb4"
+	}
+	var err error
+	db, err = store.Open(dsn)
+	if err != nil {
+		log.Fatalf("open mysql db: %v", err)
+	}
+
+	engine, err = wa.New(filepath.Join(dataDir, "session.db"), db)
+	if err != nil {
+		log.Fatalf("wa engine: %v", err)
+	}
+	if err := engine.Start(); err != nil {
+		log.Printf("wa start: %v (will retry via QR page)", err)
+	}
+	engine.StartLoops()
+
+	mux := http.NewServeMux()
+	mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("web/assets"))))
+	mux.Handle("/web/", http.StripPrefix("/web/", http.FileServer(http.Dir("web"))))
+	mux.Handle("/screens/", http.StripPrefix("/screens/", http.FileServer(http.Dir("public/marketing/screens"))))
+	mux.HandleFunc("/", authMiddleware(handleHome))
+	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) { render(w, r, "login") })
+	mux.HandleFunc("/login/post", loginUser)
+	mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) { render(w, r, "register") })
+	mux.HandleFunc("/register/post", registerUser)
+	mux.HandleFunc("/logout", logoutUser)
+
+	// REST API (no auth — uses X-API-Key)
+	mux.HandleFunc("/api/send", handleAPISend)
+	mux.HandleFunc("/api/status", handleAPIStatus)
+	mux.HandleFunc("/api/messages", handleAPIMessages)
+	mux.HandleFunc("/api/contacts", handleAPIContacts)
+	mux.HandleFunc("/api/devices", handleAPIDevices)
+
+	// All page routes wrapped with auth middleware
+	mux.HandleFunc("/wa", p("wa"))
+	mux.HandleFunc("/wa/add", authMiddleware(handleWaAdd))
+	mux.HandleFunc("/wa/logout", authMiddleware(handleWaLogout))
+	mux.HandleFunc("/send", authMiddleware(handleSend))
+	mux.HandleFunc("/send/media", authMiddleware(handleSendMedia))
+	mux.HandleFunc("/sent", p("sent"))
+	mux.HandleFunc("/received", p("received"))
+	mux.HandleFunc("/inbox", p("inbox"))
+	mux.HandleFunc("/inbox/chat", authMiddleware(handleInboxChat))
+	mux.HandleFunc("/autoreply", p("autoreply"))
+	mux.HandleFunc("/settings", authMiddleware(handleSettings))
+	mux.HandleFunc("/contacts", p("contacts"))
+	mux.HandleFunc("/contacts/groups", p("groups"))
+	mux.HandleFunc("/contacts/unsub", p("unsub"))
+	mux.HandleFunc("/contacts/add", authMiddleware(crudPost(func(r *http.Request) { db.AddContact(r.FormValue("name"), r.FormValue("phone"), joinVals(r, "groups")) }, "/contacts")))
+	mux.HandleFunc("/contacts/delete", authMiddleware(crudDel(func(id int64) { db.DeleteContact(id) }, "/contacts")))
+	mux.HandleFunc("/groups/add", authMiddleware(crudPost(func(r *http.Request) { db.AddGroup(r.FormValue("name")) }, "/contacts/groups")))
+	mux.HandleFunc("/groups/delete", authMiddleware(crudDel(func(id int64) { db.DeleteGroup(id) }, "/contacts/groups")))
+	mux.HandleFunc("/unsub/add", authMiddleware(crudPost(func(r *http.Request) { db.AddUnsub(r.FormValue("phone")) }, "/contacts/unsub")))
+	mux.HandleFunc("/unsub/delete", authMiddleware(crudDel(func(id int64) { db.DeleteUnsub(id) }, "/contacts/unsub")))
+	mux.HandleFunc("/broadcast", authMiddleware(handleBroadcast))
+	mux.HandleFunc("/broadcast/stop", authMiddleware(crudDel(func(id int64) { db.UpdateCampaignStatus(id, "stopped") }, "/broadcast")))
+	mux.HandleFunc("/broadcast/delete", authMiddleware(crudDel(func(id int64) { db.DeleteCampaign(id) }, "/broadcast")))
+		mux.HandleFunc("/scheduled", authMiddleware(handleScheduled))
+	mux.HandleFunc("/scheduled/delete", authMiddleware(crudDel(func(id int64) { db.DeleteScheduled(id) }, "/scheduled")))
+	mux.HandleFunc("/templates", p("templates"))
+	mux.HandleFunc("/templates/add", authMiddleware(crudPost(func(r *http.Request) { db.AddTemplate(r.FormValue("name"), r.FormValue("content")) }, "/templates")))
+	mux.HandleFunc("/templates/delete", authMiddleware(crudDel(func(id int64) { db.DeleteTemplate(id) }, "/templates")))
+	mux.HandleFunc("/apikeys", p("apikeys"))
+	mux.HandleFunc("/apikeys/add", authMiddleware(crudPost(func(r *http.Request) { db.AddAPIKey(r.FormValue("name"), randSecret()) }, "/apikeys")))
+	mux.HandleFunc("/apikeys/delete", authMiddleware(crudDel(func(id int64) { db.DeleteAPIKey(id) }, "/apikeys")))
+	mux.HandleFunc("/webhooks", p("webhooks"))
+	mux.HandleFunc("/webhooks/add", authMiddleware(crudPost(func(r *http.Request) { db.AddWebhook(r.FormValue("name"), r.FormValue("url"), r.FormValue("event")) }, "/webhooks")))
+	mux.HandleFunc("/webhooks/delete", authMiddleware(crudDel(func(id int64) { db.DeleteWebhook(id) }, "/webhooks")))
+	mux.HandleFunc("/logger", p("logger"))
+	mux.HandleFunc("/logger/clear", authMiddleware(func(w http.ResponseWriter, r *http.Request) { db.ClearLog(); http.Redirect(w, r, "/logger", http.StatusSeeOther) }))
+	registerAdminRoutes(mux)
+	mux.HandleFunc("/lang/", handleLang)
+	mux.HandleFunc("/qr.png", handleQRImage)
+	mux.HandleFunc("/status", handleStatus)
+	mux.HandleFunc("/autoreply/add", authMiddleware(handleAutoReplyAdd))
+	mux.HandleFunc("/autoreply/delete", authMiddleware(handleAutoReplyDelete))
+	mux.HandleFunc("/autoreply/toggle", authMiddleware(handleAutoReplyToggle))
+	mux.HandleFunc("/autoreply/edit", authMiddleware(handleAutoReplyEdit))
+
+	// Contact edit
+	mux.HandleFunc("/contacts/edit", authMiddleware(handleContactEdit))
+
+	// Template edit
+	mux.HandleFunc("/templates/edit", authMiddleware(handleTemplateEdit))
+
+	// Android Hosts
+	mux.HandleFunc("/hosts/android", p("hosts_android"))
+	mux.HandleFunc("/devices/add", authMiddleware(crudPost(func(r *http.Request) { db.AddDevice(r.FormValue("name"), r.FormValue("did"), r.FormValue("manufacturer")) }, "/hosts/android")))
+	mux.HandleFunc("/devices/delete", authMiddleware(crudDel(func(id int64) { db.DeleteDevice(id) }, "/hosts/android")))
+
+	// USSD
+	mux.HandleFunc("/ussd", p("ussd"))
+	mux.HandleFunc("/ussd/add", authMiddleware(crudPost(func(r *http.Request) { db.AddUssd(r.FormValue("code")) }, "/ussd")))
+	mux.HandleFunc("/ussd/delete", authMiddleware(crudDel(func(id int64) { db.DeleteUssd(id) }, "/ussd")))
+
+	addr := "127.0.0.1:8080"
+	if v := os.Getenv("CHATGO_ADDR"); v != "" {
+		addr = v
+	}
+	fmt.Printf("\n  chatgo running at http://%s\n\n", addr)
+	log.Fatal(http.ListenAndServe(addr, mux))
+}
+
+type langInfo struct {
+	Code, Name, Flag string
+}
+
+type pageData struct {
+	Title, Pretitle, Heading, Icon string
+	Active, Page                   string
+	Status, Phone                  string
+	Flash                          string
+	AutoReplies                    []store.AutoReply
+	Sent                           []store.SentMessage
+	Received                       []store.ReceivedMessage
+	CountSent, CountReceived       int
+	// i18n
+	LangCode, LangName, LangFlag string
+	Languages                    []langInfo
+	WaConnectedDesc              template.HTML
+	WaScanHint                   template.HTML
+	// multi-account
+	Accounts          []wa.AccountInfo
+	ConnectedAccounts []wa.AccountInfo
+	HasConnected      bool
+	ScanAccount       string
+	AccountLimit      int
+	ConnectedCount    int
+	DisconnectedCount int
+	// role
+	Role            string
+	EditID          int64
+	EditName        string
+	EditPhone       string
+	EditContent     string
+	EditGroups      string
+	EditKeyword     string
+	EditMatch       string
+	EditReply       string
+	EditUseAI       bool
+	EditAiKeyID     int64
+	EditAccountID   string
+	EditTrainingID  int64
+	WelcomeEnabled  bool
+	WelcomeMessage  string
+	FallbackEnabled bool
+	FallbackMessage string
+	ReplyInGroup    bool
+	AiAllEnabled  bool
+	AiAllKeyID    int64
+	HandoffEnabled   bool
+	HandoffMessage   string
+	HandoffKeywords  string
+	AiFallbackOnly   bool
+	AiMemoryWindow   int
+	AiDelaySeconds   int
+	AiReasoningLevel string
+	BizHoursEnabled  bool
+	BizHoursStart    string
+	BizHoursEnd      string
+	BizHoursOffDays  string
+	ForceOwnKey      bool
+	AiTokenQuota     int64
+	AiTokenUsed      int64
+	ChartLabels       template.JS
+	ChartSent         template.JS
+	ChartReceived     template.JS
+	TotalUsers        int
+	TotalLogins       int
+	LoginsToday       int
+	ActiveAccounts    int
+	RunningCampaigns  int
+	ActiveAccountList []wa.AccountInfo
+	SendTo            string
+	// full-menu entities
+	Contacts   []store.Contact
+	Groups     []store.Group
+	Unsubs     []store.Unsub
+	Templates  []store.Template
+	APIKeys    []store.APIKey
+	Webhooks   []store.Webhook
+	Campaigns  []store.Campaign
+	Scheduleds []store.Scheduled
+	Logs       []store.LogEntry
+	// admin/ai/devices
+	Users         []store.User
+	Roles         []store.Role
+	Packages      []store.Package
+	Vouchers      []store.Voucher
+	Subscriptions []store.Subscription
+	Transactions  []store.Transaction
+	Payouts       []store.Payout
+	Pages         []store.Page
+	Marketings    []store.Marketing
+	LanguagesAdm  []store.Language
+	WaServers     []store.WaServer
+	Gateways      []store.Gateway
+	Shorteners    []store.Shortener
+	Plugins       []store.Plugin
+	AiKeys        []store.AiKey
+	AiPlugins     []store.AiPlugin
+	AiTrainings   []store.AiTraining
+	Devices       []store.Device
+	Ussds         []store.Ussd
+	Knowledges    []store.KnowledgeEntry
+	DocsSteps     []DocsStep
+	// pagination
+	SentPage       int
+	SentPerPage    int
+	SentTotal      int
+	SentPages      []int
+	ReceivedPage   int
+	ReceivedPerPage int
+	ReceivedTotal  int
+	ReceivedPages  []int
+}
+
+type DocsStep struct {
+	Num   int
+	Title string
+	Desc  string
+}
+
+var allDocsSteps = []DocsStep{
+	{1, "Login & Register", "Buka halaman login, masukkan email & password. Admin default: admin@chatgo.test / password. User baru bisa register."},
+	{2, "Setup WA Account", "Buka tab WA > Akun & QR. Klik Tambah Akun. Scan QR code dengan WhatsApp (Linked Devices). Tunggu status Connected."},
+	{3, "Tambah Kontak", "Menu Kontak > Tersimpan. Tambah kontak: nama + nomor WA + grup. Support multiple grup."},
+	{4, "Buat Grup Kontak", "Menu Kontak > Grup. Buat grup untuk broadcast tertarget (VIP, Reseller, dll)."},
+	{5, "Auto Reply - Basic", "Buka Auto Reply > tab Rules. Tambah rule: Match Type (Contains/Exact), Keyword, Reply Text. Support spintax {Halo|Hai}."},
+	{6, "Auto Reply - AI Mode", "Tab AI Config: tambah AI Key (OpenAI/DeepSeek/Gemini). Tab Rules: pilih Match Type AI, centang Use AI, pilih key. AI auto balas."},
+	{7, "Auto Reply - Multi WA", "Pilih nomor WA mana yang reply (checkbox WA Account). Kosongkan = semua nomor. Rule jalan sesuai nomor penerima."},
+	{8, "FAQ / Knowledge Base", "Tab FAQ: tambah FAQ manual atau upload CSV/PDF/URL. AI akan search FAQ sebelum jawab (function calling)."},
+	{9, "Training Campaign", "Tab Training: buat campaign dengan System Prompt berbeda (CS Produk, CS Teknis). Assign ke rule via dropdown."},
+	{10, "AI Settings", "Tab AI Config: AI Global (balas semua chat), Fallback Only, Memory Window, Reasoning Level, Jam Kerja, Force Own Key."},
+	{11, "Human Handoff", "Di AI Config > Controls: enable Handoff. Keyword trigger (admin, operator) → AI stop → kirim kontak admin."},
+	{12, "Kirim Pesan", "Menu Kirim Pesan. Input nomor + pesan. Pilih nomor WA pengirim. Support text + gambar/video/dokumen."},
+	{13, "Broadcast / Campaign", "Menu Broadcast. Pilih grup kontak, pilih nomor WA, set interval (default 300 detik). Round-robin otomatis."},
+	{14, "Pesan Terjadwal", "Menu Terjadwal. Set nama, nomor, pesan, jadwal (datetime), repeat (menit). Pilih nomor WA pengirim."},
+	{15, "Template Pesan", "Menu Template. Simpan template pesan yang sering dipakai. Support variabel {name} {phone}."},
+	{16, "Welcome Message", "Menu Pengaturan > Pesan Sambutan. Dikirim ke kontak baru (24 jam cooldown)."},
+	{17, "Fallback Message", "Menu Pengaturan > Balasan Default. Dikirim saat tidak ada keyword cocok (max 3x/10 menit)."},
+	{18, "API Keys & Webhooks", "Menu API Keys: generate key. REST API: POST /api/send. Menu Webhooks: notifikasi real-time ke URL."},
+	{19, "Multi-User & Paket", "Menu Admin: kelola user, role, paket (limit WA/quota), voucher, subscription. Dashboard SaaS."},
+	{20, "Deployment", "Edit .env untuk MySQL & listen address. Single binary: chatgo.exe. Reverse proxy Nginx. Satu file, zero dependency."},
+}
+
+// current language from cookie (fallback to default)
+func currentLang(r *http.Request) string {
+	if c, err := r.Cookie("chatgo_lang"); err == nil && i18n.Has(c.Value) {
+		return c.Value
+	}
+	return i18n.Default()
+}
+
+func getUserID(r *http.Request) int64 {
+	idStr := r.Header.Get("X-User-ID")
+	if idStr == "" {
+		return 0
+	}
+	id, _ := strconv.ParseInt(idStr, 10, 64)
+	return id
+}
+
+func render(w http.ResponseWriter, r *http.Request, page string) {
+	lang := currentLang(r)
+	T := i18n.Translator(lang)
+
+	status, phone := engine.Status()
+	uid := getUserID(r)
+	ars, _ := db.ListAutoReplies()
+	sent, _ := db.ListSentPaginated(1, 20)
+	received, _ := db.ListReceivedPaginated(1, 20)
+
+	langs := make([]langInfo, 0)
+	for _, l := range i18n.List() {
+		langs = append(langs, langInfo{Code: l.Code, Name: l.Name, Flag: l.Flag})
+	}
+	cur := i18n.Get(lang)
+
+	d := pageData{
+		Page: page, Active: page, Status: status, Phone: phone,
+		Flash:       r.URL.Query().Get("msg"),
+		AutoReplies: ars, Sent: sent, Received: received,
+		CountSent: len(sent), CountReceived: len(received),
+		LangCode: cur.Code, LangName: cur.Name, LangFlag: cur.Flag,
+		Languages: langs,
+		SentPerPage: 20, ReceivedPerPage: 20,
+		SentPage: 1, ReceivedPage: 1,
+	}
+	// pre-rendered translated strings with HTML/format
+	d.WaConnectedDesc = template.HTML(fmt.Sprintf(T("wa_connected_desc"), template.HTMLEscapeString(phone)))
+	d.WaScanHint = template.HTML(T("wa_scan_hint"))
+	if uid > 0 {
+		if u, err := db.GetUserByID(uid); err == nil {
+			d.Role = u.Role
+		}
+	}
+	d.Accounts = engine.Accounts(uid)
+	d.AccountLimit = engine.AccountLimit(uid)
+	for _, a := range d.Accounts {
+		if a.Status == "connected" { d.ConnectedAccounts = append(d.ConnectedAccounts, a) }
+	}
+	d.HasConnected = len(d.ConnectedAccounts) > 0
+	d.SendTo = r.URL.Query().Get("to")
+	d.ConnectedCount = engine.CountConnected(uid)
+	d.DisconnectedCount = engine.CountDisconnected(uid)
+	if scan := r.URL.Query().Get("scan"); scan != "" {
+		d.ScanAccount = scan
+		log.Printf("DEBUG ScanAccount set to: %s", scan)
+	}
+	// force if wa page and there's a new: session
+	if page == "wa" && d.ScanAccount == "" {
+		for _, a := range d.Accounts {
+			if strings.HasPrefix(a.ID, "new:") {
+				d.ScanAccount = a.ID
+				break
+			}
+		}
+	}
+
+	// settings values (for the settings page)
+	d.WelcomeEnabled = db.GetSetting("welcome_enabled", "0") == "1"
+	d.WelcomeMessage = db.GetSetting("welcome_message", "")
+	d.FallbackEnabled = db.GetSetting("fallback_enabled", "0") == "1"
+	d.FallbackMessage = db.GetSetting("fallback_message", "")
+	d.ReplyInGroup = db.GetSetting("reply_in_group", "0") == "1"
+	d.AiAllEnabled = db.GetSetting("ai_all_enabled", "0") == "1"
+	d.AiAllKeyID, _ = strconv.ParseInt(db.GetSetting("ai_all_key_id", "0"), 10, 64)
+	d.HandoffEnabled = db.GetSetting("handoff_enabled", "0") == "1"
+	d.HandoffMessage = db.GetSetting("handoff_message", "Silakan hubungi admin kami di nomor ini.")
+	d.HandoffKeywords = db.GetSetting("handoff_keywords", "admin,telp,manusia,cs,operator")
+	d.AiFallbackOnly = db.GetSetting("ai_fallback_only", "0") == "1"
+	d.AiMemoryWindow, _ = strconv.Atoi(db.GetSetting("ai_memory_window", "5"))
+	d.AiDelaySeconds, _ = strconv.Atoi(db.GetSetting("ai_delay_seconds", "0"))
+	d.AiReasoningLevel = db.GetSetting("ai_reasoning_level", "medium")
+	d.BizHoursEnabled = db.GetSetting("biz_hours_enabled", "0") == "1"
+	d.BizHoursStart = db.GetSetting("biz_hours_start", "08:00")
+	d.BizHoursEnd = db.GetSetting("biz_hours_end", "17:00")
+	d.BizHoursOffDays = db.GetSetting("biz_hours_off_days", "Saturday,Sunday")
+	d.ForceOwnKey = db.GetSetting("force_own_key", "0") == "1"
+	d.AiTokenQuota = int64(db.GetUserAiQuota(uid))
+	d.AiTokenUsed = db.GetAiTokenUsage(uid)
+
+	// load entity lists per page (only what's needed)
+	switch page {
+	case "contacts":
+		d.Contacts, _ = db.ListContacts()
+		d.Groups, _ = db.ListGroups()
+	case "groups":
+		d.Groups, _ = db.ListGroups()
+	case "unsub":
+		d.Unsubs, _ = db.ListUnsub()
+	case "templates":
+		d.Templates, _ = db.ListTemplates()
+	case "apikeys":
+		d.APIKeys, _ = db.ListAPIKeys()
+	case "autoreply":
+		d.AiKeys, _ = db.ListAiKeys()
+		d.Knowledges, _ = db.ListKnowledge()
+		d.AiTrainings, _ = db.ListAiTrainings()
+	case "webhooks":
+		d.Webhooks, _ = db.ListWebhooks()
+	case "broadcast":
+		d.Campaigns, _ = db.ListCampaigns()
+		d.Groups, _ = db.ListGroups()
+	case "scheduled":
+		d.Scheduleds, _ = db.ListScheduled()
+	case "sent":
+		d.SentPage = pageFromQuery(r)
+		d.Sent, _ = db.ListSentPaginated(d.SentPage, d.SentPerPage)
+		d.SentTotal = db.CountSent()
+		d.SentPages = pageNums(d.SentPage, (d.SentTotal+d.SentPerPage-1)/d.SentPerPage)
+	case "inbox","inbox_chat":
+		d.Sent, _ = db.ListSentPaginated(1, 50)
+		d.Received, _ = db.ListReceivedPaginated(1, 50)
+		d.Phone = r.URL.Query().Get("phone")
+	case "received":
+		d.ReceivedPage = pageFromQuery(r)
+		d.Received, _ = db.ListReceivedPaginated(d.ReceivedPage, d.ReceivedPerPage)
+		d.ReceivedTotal = db.CountReceived()
+		d.ReceivedPages = pageNums(d.ReceivedPage, (d.ReceivedTotal+d.ReceivedPerPage-1)/d.ReceivedPerPage)
+	case "logger":
+		d.Logs, _ = db.ListLog(200)
+	case "hosts_android":
+		d.Devices, _ = db.ListDevices()
+	case "ussd":
+		d.Ussds, _ = db.ListUssd()
+	case "ai_keys":
+		d.AiKeys, _ = db.ListAiKeys()
+	case "ai_plugins":
+		d.AiPlugins, _ = db.ListAiPlugins()
+	case "admin_users":
+		d.Users, _ = db.ListUsers()
+	case "admin_roles":
+		d.Roles, _ = db.ListRoles()
+	case "admin_packages":
+		d.Packages, _ = db.ListPackages()
+	case "admin_vouchers":
+		d.Vouchers, _ = db.ListVouchers()
+		d.Packages, _ = db.ListPackages()
+	case "admin_subscriptions":
+		d.Subscriptions, _ = db.ListSubscriptions()
+		d.Packages, _ = db.ListPackages()
+	case "admin_transactions":
+		d.Transactions, _ = db.ListTransactions()
+	case "admin_payouts":
+		d.Payouts, _ = db.ListPayouts()
+	case "admin_pages":
+		d.Roles, _ = db.ListRoles()
+		d.Pages, _ = db.ListPages()
+	case "admin_marketing":
+		d.Marketings, _ = db.ListMarketing()
+	case "admin_languages":
+		d.LanguagesAdm, _ = db.ListLanguagesAdmin()
+	case "admin_waservers":
+		d.WaServers, _ = db.ListWaServers()
+		d.Packages, _ = db.ListPackages()
+		if eid, _ := strconv.ParseInt(r.URL.Query().Get("edit"), 10, 64); eid > 0 {
+			if w, err := db.GetWaServer(eid); err == nil {
+				d.EditID = eid; d.EditName = w.Name; d.EditContent = w.URL
+				d.EditPhone = w.Port; d.EditKeyword = w.Secret
+				d.EditGroups = w.Packages
+			}
+		}
+	case "admin_gateways":
+		d.Gateways, _ = db.ListGateways()
+	case "admin_shorteners":
+		d.Shorteners, _ = db.ListShorteners()
+	case "admin_plugins":
+		d.Plugins, _ = db.ListPlugins()
+	case "knowledge":
+		d.Knowledges, _ = db.ListKnowledge()
+	case "docs":
+		d.DocsSteps = allDocsSteps
+	}
+
+	// edit mode – pre-fill forms
+	if eid, _ := strconv.ParseInt(r.URL.Query().Get("edit"), 10, 64); eid > 0 {
+		d.EditID = eid
+		switch page {
+		case "contacts":
+			if c, err := db.GetContact(eid); err == nil {
+				d.EditName = c.Name; d.EditPhone = c.Phone; d.EditGroups = c.Groups
+			}
+		case "templates":
+			if t, err := db.GetTemplate(eid); err == nil {
+				d.EditName = t.Name; d.EditContent = t.Content
+			}
+		case "autoreply":
+			if a, err := db.GetAutoReply(eid); err == nil {
+				d.EditKeyword = a.Keyword; d.EditMatch = a.Match; d.EditReply = a.Reply; d.EditAccountID = a.AccountID
+				d.EditUseAI = a.UseAI; d.EditAiKeyID = a.AiKeyID; d.EditTrainingID = a.TrainingID
+			}
+		}
+	}
+
+	switch page {
+	case "home":
+		l, s, r := db.MessageChartData()
+		d.ChartLabels = template.JS(l)
+		d.ChartSent = template.JS(s)
+		d.ChartReceived = template.JS(r)
+		d.TotalUsers = db.CountUsers()
+		d.ActiveAccounts = engine.CountConnected(uid)
+		d.ActiveAccountList = d.ConnectedAccounts
+		d.RunningCampaigns, _ = db.CountRunningCampaigns()
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_dashboard"), T("nav_overview"), T("nav_dashboard"), "la-chart-bar"
+		if len(d.Sent) > 8 {
+			d.Sent = d.Sent[:8]
+		}
+		if len(d.Received) > 8 {
+			d.Received = d.Received[:8]
+		}
+	case "wa":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_whatsapp"), T("nav_whatsapp"), T("nav_account_qr"), "la-whatsapp"
+	case "send":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_send"), T("nav_whatsapp"), T("nav_send"), "la-paper-plane"
+	case "sent":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_sent"), T("nav_whatsapp"), T("nav_sent"), "la-telegram"
+	case "received":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_received"), T("nav_whatsapp"), T("nav_received"), "la-comment"
+	case "inbox":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Inbox", "WhatsApp", "Percakapan", "la-comments"
+	case "inbox_chat":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Chat", "WhatsApp", "Percakapan", "la-comment"
+	case "settings":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_settings"), T("nav_tools"), T("nav_settings"), "la-cog"
+	case "autoreply":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_autoreply"), T("nav_tools"), T("nav_autoreply"), "la-robot"
+	case "login":
+		d.Title = "Login"
+	case "register":
+		d.Title = "Register"
+	case "contacts":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_contacts_saved"), T("nav_contacts"), T("nav_contacts_saved"), "la-address-book"
+	case "groups":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_contacts_groups"), T("nav_contacts"), T("nav_contacts_groups"), "la-list"
+	case "unsub":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_contacts_unsub"), T("nav_contacts"), T("nav_contacts_unsub"), "la-unlink"
+	case "broadcast":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_broadcast"), T("nav_whatsapp"), T("nav_broadcast"), "la-bullhorn"
+	case "scheduled":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_scheduled"), T("nav_whatsapp"), T("nav_scheduled"), "la-clock"
+	case "templates":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_templates"), T("nav_tools"), T("nav_templates"), "la-file-alt"
+	case "apikeys":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_apikeys"), T("nav_tools"), T("nav_apikeys"), "la-key"
+	case "webhooks":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_webhooks"), T("nav_tools"), T("nav_webhooks"), "la-code-branch"
+	case "logger":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_logger"), T("nav_tools"), T("nav_logger"), "la-clipboard-list"
+	case "hosts_android":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_hosts_android"), T("nav_hosts"), T("nav_hosts_android"), "la-mobile"
+	case "hosts_whatsapp":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_hosts_whatsapp"), T("nav_hosts"), T("nav_hosts_whatsapp"), "la-whatsapp"
+	case "ussd":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_ussd"), T("nav_android"), T("nav_ussd"), "la-satellite-dish"
+	case "ai_keys":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_ai_keys"), T("nav_ai"), T("nav_ai_keys"), "la-key"
+	case "ai_plugins":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_ai_plugins"), T("nav_ai"), T("nav_ai_plugins"), "la-plug"
+	case "knowledge":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_knowledge"), T("nav_ai"), T("nav_knowledge"), "la-book"
+	case "docs":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_docs"), T("nav_docs"), T("nav_docs"), "la-book"
+	case "admin":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_admin"), T("nav_admin"), T("nav_admin"), "la-shield-alt"
+	case "admin_users":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("adm_users"), T("nav_admin"), T("adm_users"), "la-users"
+	case "admin_roles":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("adm_roles"), T("nav_admin"), T("adm_roles"), "la-user-shield"
+	case "admin_packages":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("adm_packages"), T("nav_admin"), T("adm_packages"), "la-box"
+	case "admin_vouchers":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("adm_vouchers"), T("nav_admin"), T("adm_vouchers"), "la-ticket-alt"
+	case "admin_subscriptions":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("adm_subscriptions"), T("nav_admin"), T("adm_subscriptions"), "la-star"
+	case "admin_transactions":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("adm_transactions"), T("nav_admin"), T("adm_transactions"), "la-money-bill"
+	case "admin_payouts":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("adm_payouts"), T("nav_admin"), T("adm_payouts"), "la-hand-holding-usd"
+	case "admin_pages":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("adm_pages"), T("nav_admin"), T("adm_pages"), "la-file"
+	case "admin_marketing":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("adm_marketing"), T("nav_admin"), T("adm_marketing"), "la-bullhorn"
+	case "admin_languages":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("adm_languages"), T("nav_admin"), T("adm_languages"), "la-language"
+	case "admin_waservers":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("adm_waservers"), T("nav_admin"), T("adm_waservers"), "la-server"
+	case "admin_gateways":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("adm_gateways"), T("nav_admin"), T("adm_gateways"), "la-code"
+	case "admin_shorteners":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("adm_shorteners"), T("nav_admin"), T("adm_shorteners"), "la-link"
+	case "admin_plugins":
+		d.Title, d.Pretitle, d.Heading, d.Icon = T("adm_plugins"), T("nav_admin"), T("adm_plugins"), "la-puzzle-piece"
+	}
+
+	// parse templates with a language-bound T function
+	tpl := template.Must(template.New("").Funcs(template.FuncMap{
+		"T":        T,
+		"contains": strings.Contains,
+	}).Parse(templates))
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := tpl.ExecuteTemplate(w, "home", d); err != nil {
+		http.Error(w, err.Error(), 500)
+	}
+}
+
+func handleHome(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+	render(w, r, "home")
+}
+
+func pageHandler(page string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			return
+		}
+		render(w, r, page)
+	}
+}
+
+// /lang/{code} -> set language cookie
+func handleLang(w http.ResponseWriter, r *http.Request) {
+	code := strings.TrimPrefix(r.URL.Path, "/lang/")
+	if i18n.Has(code) {
+		http.SetCookie(w, &http.Cookie{Name: "chatgo_lang", Value: code, Path: "/", MaxAge: 31536000})
+	}
+	ref := r.Header.Get("Referer")
+	if ref == "" {
+		ref = "/"
+	}
+	http.Redirect(w, r, ref, http.StatusSeeOther)
+}
+
+func handleQRImage(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	var code string
+	if id != "" {
+		code = engine.QRFor(id)
+	}
+	if code == "" {
+		http.Error(w, "no qr", 404)
+		return
+	}
+	png, err := qrcode.Encode(code, qrcode.Medium, 300)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Cache-Control", "no-store")
+	_, _ = w.Write(png)
+}
+
+// add a new WhatsApp account (multi-number)
+func handleWaAdd(w http.ResponseWriter, r *http.Request) {
+	id, err := engine.AddAccount(getUserID(r))
+	if err != nil {
+		http.Redirect(w, r, "/wa?msg="+template.URLQueryEscaper(err.Error()), http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, "/wa?scan="+id, http.StatusSeeOther)
+}
+
+// logout a specific account
+func handleWaLogout(w http.ResponseWriter, r *http.Request) {
+	id := r.FormValue("id")
+	if id != "" {
+		_ = engine.LogoutAccount(id)
+	}
+	http.Redirect(w, r, "/wa", http.StatusSeeOther)
+}
+
+func handleStatus(w http.ResponseWriter, r *http.Request) {
+	status, phone := engine.Status()
+	uid := getUserID(r)
+	hasQR := false
+	for _, a := range engine.Accounts(uid) {
+		if a.Status == "qr" {
+			hasQR = true
+			break
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, `{"status":%q,"phone":%q,"qr":%v}`, status, phone, hasQR)
+}
+
+func handleSend(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		render(w, r, "send")
+		return
+	}
+	T := i18n.Translator(currentLang(r))
+	phone := r.FormValue("phone")
+	message := r.FormValue("message")
+	if phone == "" || message == "" {
+		http.Redirect(w, r, "/send?msg="+template.URLQueryEscaper(T("send_connect_first")), http.StatusSeeOther)
+		return
+	}
+	if err := engine.SendFrom(strings.TrimPrefix(r.FormValue("account_phone"), "+"), phone, msgtemplate.Render(message, msgtemplate.Vars{Phone: phone})); err != nil {
+		http.Redirect(w, r, "/send?msg="+template.URLQueryEscaper(err.Error()), http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, "/send?msg="+template.URLQueryEscaper(T("send_btn")+" OK"), http.StatusSeeOther)
+}
+
+func handleSendMedia(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Redirect(w, r, "/send", http.StatusSeeOther)
+		return
+	}
+	phone := r.FormValue("phone")
+	mediaType := r.FormValue("media_type")
+	caption := r.FormValue("caption")
+	accountPhone := strings.TrimPrefix(r.FormValue("account_phone"), "+")
+	if phone == "" {
+		http.Redirect(w, r, "/send?msg=Phone+required", http.StatusSeeOther)
+		return
+	}
+	file, header, err := r.FormFile("media_file")
+	if err != nil {
+		http.Redirect(w, r, "/send?msg=File+required", http.StatusSeeOther)
+		return
+	}
+	defer file.Close()
+	os.MkdirAll("data/media", 0o755)
+	dest := filepath.Join("data/media", strconv.FormatInt(time.Now().UnixNano(), 36)+"_"+filepath.Base(header.Filename))
+	f, err := os.Create(dest)
+	if err != nil { http.Redirect(w, r, "/send?msg=Save+error", http.StatusSeeOther); return }
+	io.Copy(f, file)
+	f.Close()
+	if err := engine.SendMedia(accountPhone, phone, mediaType, dest, caption); err != nil {
+		http.Redirect(w, r, "/send?msg="+template.URLQueryEscaper(err.Error()), http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, "/send?msg=Media+sent+OK", http.StatusSeeOther)
+}
+func handleInboxChat(w http.ResponseWriter, r *http.Request) {
+	render(w, r, "inbox_chat")
+}
+func handleAutoReplyAdd(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Redirect(w, r, "/autoreply", http.StatusSeeOther)
+		return
+	}
+	keyword := r.FormValue("keyword")
+	match := r.FormValue("match")
+	reply := r.FormValue("reply")
+	useAI := r.FormValue("use_ai") == "on" || r.FormValue("use_ai") == "1"
+	aiKeyID, _ := strconv.ParseInt(r.FormValue("ai_key_id"), 10, 64)
+	if match == "ai" {
+		if faq := r.FormValue("faq"); faq != "" {
+			reply = faq
+		}
+		if keyword == "" {
+			keyword = match // "ai"
+		}
+		if reply == "" && !useAI {
+			http.Redirect(w, r, "/autoreply", http.StatusSeeOther)
+			return
+		}
+	} else {
+		if keyword == "" || (!useAI && reply == "") {
+			http.Redirect(w, r, "/autoreply", http.StatusSeeOther)
+			return
+		}
+	}
+	if match == "" {
+		match = "contains"
+	}
+	_, _ = db.AddAutoReply(keyword, match, reply, useAI, aiKeyID, joinVals(r, "account_ids"), func()int64{t,_:=strconv.ParseInt(r.FormValue("training_id"),10,64);return t}())
+	http.Redirect(w, r, "/autoreply", http.StatusSeeOther)
+}
+
+func handleAutoReplyDelete(w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+	if id > 0 {
+		_ = db.DeleteAutoReply(id)
+	}
+	http.Redirect(w, r, "/autoreply", http.StatusSeeOther)
+}
+
+func handleAutoReplyToggle(w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+	if id > 0 {
+		_ = db.ToggleAutoReply(id)
+	}
+	http.Redirect(w, r, "/autoreply", http.StatusSeeOther)
+}
+func handleAutoReplyEdit(w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+	if r.Method == http.MethodPost {
+		if id > 0 {
+			keyword := r.FormValue("keyword")
+			match := r.FormValue("match")
+			reply := r.FormValue("reply")
+			useAI := r.FormValue("use_ai") == "on" || r.FormValue("use_ai") == "1"
+			aiKeyID, _ := strconv.ParseInt(r.FormValue("ai_key_id"), 10, 64)
+			if match == "" { match = "contains" }
+			_ = db.UpdateAutoReply(id, keyword, match, reply, useAI, aiKeyID, joinVals(r, "account_ids"), func()int64{t,_:=strconv.ParseInt(r.FormValue("training_id"),10,64);return t}())
+		}
+		http.Redirect(w, r, "/autoreply", http.StatusSeeOther)
+		return
+	}
+	render(w, r, "autoreply")
+}
+func handleContactEdit(w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+	if r.Method == http.MethodPost {
+		if id > 0 {
+			_ = db.UpdateContact(id, r.FormValue("name"), r.FormValue("phone"), joinVals(r, "groups"))
+		}
+		http.Redirect(w, r, "/contacts", http.StatusSeeOther)
+		return
+	}
+	render(w, r, "contacts")
+}
+func handleTemplateEdit(w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+	if r.Method == http.MethodPost {
+		if id > 0 {
+			_ = db.UpdateTemplate(id, r.FormValue("name"), r.FormValue("content"))
+		}
+		http.Redirect(w, r, "/templates", http.StatusSeeOther)
+		return
+	}
+	render(w, r, "templates")
+}
+
+
+func handleSettings(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		render(w, r, "settings")
+		return
+	}
+	setBool := func(name, field string) {
+		if r.FormValue(field) == "on" {
+			_ = db.SetSetting(name, "1")
+		} else {
+			_ = db.SetSetting(name, "0")
+		}
+	}
+	setBool("welcome_enabled", "welcome_enabled")
+	_ = db.SetSetting("welcome_message", r.FormValue("welcome_message"))
+	setBool("fallback_enabled", "fallback_enabled")
+	_ = db.SetSetting("fallback_message", r.FormValue("fallback_message"))
+	setBool("reply_in_group", "reply_in_group")
+	setBool("ai_all_enabled", "ai_all_enabled")
+	_ = db.SetSetting("ai_all_key_id", r.FormValue("ai_all_key_id"))
+	setBool("handoff_enabled", "handoff_enabled")
+	_ = db.SetSetting("handoff_message", r.FormValue("handoff_message"))
+	_ = db.SetSetting("handoff_keywords", r.FormValue("handoff_keywords"))
+	setBool("ai_fallback_only", "ai_fallback_only")
+	_ = db.SetSetting("ai_memory_window", r.FormValue("ai_memory_window"))
+	_ = db.SetSetting("ai_delay_seconds", r.FormValue("ai_delay_seconds"))
+	_ = db.SetSetting("ai_reasoning_level", r.FormValue("ai_reasoning_level"))
+	setBool("biz_hours_enabled", "biz_hours_enabled")
+	_ = db.SetSetting("biz_hours_start", r.FormValue("biz_hours_start"))
+	_ = db.SetSetting("biz_hours_end", r.FormValue("biz_hours_end"))
+	_ = db.SetSetting("biz_hours_off_days", r.FormValue("biz_hours_off_days"))
+	setBool("force_own_key", "force_own_key")
+	http.Redirect(w, r, "/settings", http.StatusSeeOther)
+}
+
+// ---- generic CRUD helpers ----
+
+func crudPost(fn func(*http.Request), redirect string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			fn(r)
+		}
+		http.Redirect(w, r, redirect, http.StatusSeeOther)
+	}
+}
+
+func crudDel(fn func(int64), redirect string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+		if id > 0 {
+			fn(id)
+		}
+		http.Redirect(w, r, redirect, http.StatusSeeOther)
+	}
+}
+
+func joinVals(r *http.Request, field string) string {
+	_ = r.ParseForm()
+	vals := r.Form[field]
+	return strings.Join(vals, ",")
+}
+
+func randSecret() string {
+	b := make([]byte, 24)
+	_, _ = crand.Read(b)
+	return hex.EncodeToString(b)
+}
+
+// ---- Broadcast (campaign) ----
+
+func handleBroadcast(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		render(w, r, "broadcast")
+		return
+	}
+	name := r.FormValue("name")
+	message := r.FormValue("message")
+	groups := joinVals(r, "groups")
+	accountID := joinVals(r, "account_ids")
+	if name == "" || message == "" || groups == "" {
+		http.Redirect(w, r, "/broadcast", http.StatusSeeOther)
+		return
+	}
+	// count unique recipients
+	seen := map[string]bool{}
+	for _, gid := range strings.Split(groups, ",") {
+		list, _ := db.ContactsByGroup(strings.TrimSpace(gid))
+		for _, c := range list {
+			seen[c.Phone] = true
+		}
+	}
+	interval, _ := strconv.Atoi(r.FormValue("interval"))
+	if interval <= 0 { interval = 300 }
+	_, _ = db.AddCampaign(name, groups, message, len(seen), accountID, interval)
+	http.Redirect(w, r, "/broadcast", http.StatusSeeOther)
+}
+
+// ---- Scheduled ----
+
+func handleScheduled(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		render(w, r, "scheduled")
+		return
+	}
+	name := r.FormValue("name")
+	phone := r.FormValue("phone")
+	message := r.FormValue("message")
+	sendAt := r.FormValue("send_at") // "2006-01-02T15:04"
+	repeat, _ := strconv.Atoi(r.FormValue("repeat"))
+	if name == "" || phone == "" || message == "" || sendAt == "" {
+		http.Redirect(w, r, "/scheduled", http.StatusSeeOther)
+		return
+	}
+	sendAt = strings.Replace(sendAt, "T", " ", 1) + ":00"
+	accountIDs := joinVals(r, "account_ids")
+	_, _ = db.AddScheduled(name, phone, message, sendAt, repeat, accountIDs)
+	http.Redirect(w, r, "/scheduled", http.StatusSeeOther)
+}
+
+func p(page string) http.HandlerFunc {
+	return authMiddleware(pageHandler(page))
+}
+
+func pageFromQuery(r *http.Request) int {
+	p, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if p < 1 { p = 1 }
+	return p
+}
+func pageNums(current, total int) []int {
+	var out []int
+	start := current - 2
+	if start < 1 { start = 1 }
+	end := start + 4
+	if end > total { end = total; start = end - 4; if start < 1 { start = 1 } }
+	for i := start; i <= end; i++ { out = append(out, i) }
+	return out
+}
+
+
+
+
+
+
+
+
+
+
+
