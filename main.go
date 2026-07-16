@@ -246,6 +246,9 @@ func main() {
 	mux.HandleFunc("/priority/set", authMiddleware(handleSetPriority))
 	mux.HandleFunc("/audit", authMiddleware(p("audit")))
 	mux.HandleFunc("/email-webhook", handleEmailWebhook)
+	mux.HandleFunc("/translate-tool", authMiddleware(p("translatetool")))
+	mux.HandleFunc("/widget-info", authMiddleware(p("widgetinfo")))
+	mux.HandleFunc("/email-wa", authMiddleware(p("emailwa")))
 		mux.HandleFunc("/scheduled", authMiddleware(handleScheduled))
 	mux.HandleFunc("/scheduled/delete", authMiddleware(crudDel(func(id int64) { db.DeleteScheduled(id) }, "/scheduled")))
 	mux.HandleFunc("/templates", p("templates"))
@@ -909,6 +912,12 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Merge", "Contacts", "Merge Duplicates", "la-code-branch"
 	case "audit":
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Audit", "System", "Audit Log", "la-history"
+	case "translatetool":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Translate", "Tools", "Auto Translate", "la-language"
+	case "widgetinfo":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Widget", "Tools", "Web Widget", "la-code"
+	case "emailwa":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Email→WA", "Tools", "Email Gateway", "la-envelope"
 	case "tracker":
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Link Tracker", T("nav_tools"), "Link Clicks", "la-link"
 	case "abtests":

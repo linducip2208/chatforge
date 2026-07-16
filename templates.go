@@ -271,6 +271,9 @@ if(a){var t=a.offsetTop-s.offsetHeight/2;if(t>0)s.scrollTop=t}
         <li class="nav-item"><a class="nav-link {{if eq .Active "customers"}}active{{end}}" href="/customers"><i class="la la-users la-lg"></i> Customers</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "merge"}}active{{end}}" href="/merge"><i class="la la-code-branch la-lg"></i> Merge</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "macros"}}active{{end}}" href="/macros"><i class="la la-bolt la-lg"></i> Macros</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "translate"}}active{{end}}" href="/translate-tool"><i class="la la-language la-lg"></i> Translate</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "widget"}}active{{end}}" href="/widget-info"><i class="la la-code la-lg"></i> Widget</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "emailwa"}}active{{end}}" href="/email-wa"><i class="la la-envelope la-lg"></i> Email→WA</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "apikeys"}}active{{end}}" href="/apikeys"><i class="la la-key la-lg"></i> {{T "nav_apikeys"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "webhooks"}}active{{end}}" href="/webhooks"><i class="la la-code-branch la-lg"></i> {{T "nav_webhooks"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "logger"}}active{{end}}" href="/logger"><i class="la la-clipboard-list la-lg"></i> {{T "nav_logger"}}</a></li>
@@ -1325,6 +1328,51 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
     <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>User</th><th>Action</th><th>Detail</th><th>IP</th><th>{{T "col_time"}}</th></tr></thead><tbody>
       {{range .AuditLogs}}<tr><td>{{.ID}}</td><td>#{{.UserID}}</td><td>{{.Action}}</td><td>{{.Detail}}</td><td>{{.IP}}</td><td class="text-muted small">{{.Created}}</td></tr>{{else}}<tr><td colspan="6" class="text-muted text-center py-4">No audit entries yet.</td></tr>{{end}}
     </tbody></table></div>
+  </div>
+{{end}}
+
+{{if eq .Page "translatetool"}}
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-language me-1"></i> Auto Translate</h4></div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-5"><div class="form-group"><label>Source Text</label><textarea id="srcText" class="form-control" rows="5" placeholder="Masukkan teks..."></textarea></div></div>
+        <div class="col-md-2 d-flex align-items-end pb-3"><button onclick="doTranslate()" class="btn btn-primary w-100"><i class="la la-sync me-1"></i> Translate</button></div>
+        <div class="col-md-5"><div class="form-group"><label>Result <select id="langTo" class="form-select form-select-sm" style="width:auto;display:inline"><option value="id">ID</option><option value="en">EN</option><option value="es">ES</option><option value="fr">FR</option><option value="de">DE</option><option value="zh">ZH</option><option value="ja">JA</option><option value="ko">KO</option><option value="ar">AR</option></select></label><textarea id="resText" class="form-control" rows="5" readonly></textarea></div>
+      </div>
+    </div>
+  </div>
+  <script>
+  function doTranslate(){
+    var t=document.getElementById('srcText').value;
+    var to=document.getElementById('langTo').value;
+    fetch('/translate',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'text='+encodeURIComponent(t)+'&to='+to})
+    .then(r=>r.text()).then(r=>document.getElementById('resText').value=r);
+  }
+  </script>
+{{end}}
+
+{{if eq .Page "widgetinfo"}}
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-code me-1"></i> Web Chat Widget</h4></div>
+    <div class="card-body">
+      <p>Sisipkan script ini di HTML website kamu untuk menampilkan chat widget.</p>
+      <pre class="bg-light p-3 rounded"><code>&lt;script src="{{.AppURL}}/widget.js"&gt;&lt;/script&gt;</code></pre>
+      <p class="text-muted small">Widget akan muncul di pojok kanan bawah website. Pengunjung bisa chat langsung ke WhatsApp kamu.</p>
+      <p class="text-muted small"><strong>Webhook Email:</strong> POST ke <code>{{.AppURL}}/email-webhook</code> dengan field <code>from</code>, <code>subject</code>, <code>text</code> untuk forward email ke WA inbox.</p>
+    </div>
+  </div>
+{{end}}
+
+{{if eq .Page "emailwa"}}
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-envelope me-1"></i> Email → WhatsApp Gateway</h4></div>
+    <div class="card-body">
+      <p>Forward email ke WhatsApp inbox via webhook.</p>
+      <h5 class="mt-3">Setup</h5>
+      <pre class="bg-light p-3 rounded"><code>POST {{.AppURL}}/email-webhook
+Content-Type: application/x-www-form-urlencoded
+
+from=sender@email.com&subject=Judul Email&text=Isi email</code></pre>
+      <p class="text-muted small">Bisa diintegrasikan dengan Zapier, Make, n8n, atau custom webhook dari email provider.</p>
+    </div>
   </div>
 {{end}}
 
