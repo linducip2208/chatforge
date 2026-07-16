@@ -271,15 +271,13 @@ func (d *DB) GetUserByID(id int64) (*User, error) {
 }
 func (d *DB) GetUserPackageLimit(userID int64) int {
 	u, err := d.GetUserByID(userID)
-	if err != nil { return 3 }
-	// find subscription for this user by email
+	if err != nil { return 0 }
 	var pkgName string
 	err = d.sql.QueryRow(`SELECT pkg FROM subscriptions WHERE user=? ORDER BY id DESC LIMIT 1`, u.Email).Scan(&pkgName)
-	if err != nil { return 3 }
-	// find the package and return its device_limit
+	if err != nil { return 0 }
 	var limit int
 	err = d.sql.QueryRow(`SELECT device_limit FROM packages WHERE name=? LIMIT 1`, pkgName).Scan(&limit)
-	if err != nil || limit <= 0 { return 3 }
+	if err != nil { return 0 }
 	return limit
 }
 func (d *DB) SetUserPassword(id int64, hash string) error {

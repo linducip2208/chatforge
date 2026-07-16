@@ -114,7 +114,11 @@ const templates = `
           <div class="dropdown-menu dropdown-menu-end">
             <a class="dropdown-item" href="/settings"><i class="la la-cog me-2"></i> {{T "nav_settings"}}</a>
             <div class="dropdown-divider"></div>
+            {{if .IsImpersonating}}
+            <a class="dropdown-item text-warning" href="/exit-impersonation"><i class="la la-times-circle me-2"></i> Exit Impersonation</a>
+            {{else}}
             <a class="dropdown-item text-danger" href="/logout"><i class="la la-sign-out me-2"></i> Logout</a>
+            {{end}}
           </div>
         </div>
       </div>
@@ -408,8 +412,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;m
 .auth-card .sub{color:#888;margin-bottom:24px;font-size:14px}
 .auth-card .sub a{color:#4F46E5;font-weight:600;text-decoration:none}
 .auth-card .form-group{margin-bottom:14px}
-.auth-card label{font-size:12px;font-weight:600;text-transform:uppercase;color:#888;letter-spacing:.5px;margin-bottom:4px}
-.auth-card input{border-radius:10px;padding:11px 14px;border:1.5px solid #e0e0e0;width:100%;font-size:14px;transition:border .15s}
+.auth-card label{font-size:12px;font-weight:600;text-transform:uppercase;color:#666;letter-spacing:.5px;margin-bottom:4px;display:block}
+.auth-card input{border-radius:10px;padding:11px 14px;border:1.5px solid #e0e0e0;width:100%;font-size:14px;transition:border .15s;background:#fff;color:#1a1a2e;display:block}
 .auth-card input:focus{outline:none;border-color:#4F46E5;box-shadow:0 0 0 3px rgba(79,70,229,.1)}
 .auth-card .btn-submit{width:100%;padding:12px;background:#4F46E5;color:#fff;border:none;border-radius:10px;font-weight:600;font-size:15px;cursor:pointer;box-shadow:0 4px 14px rgba(79,70,229,.3);transition:all .15s}
 .auth-card .btn-submit:hover{background:#4338CA;transform:translateY(-1px)}
@@ -427,16 +431,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;m
 <div class="auth-wrap">
 <div class="auth-left">
 <h1>{{.AppName}}</h1>
-<p>WhatsApp Marketing Platform — broadcast, auto-reply AI, live chat real-time, multi-akun.</p>
+<p>WhatsApp Marketing Platform</p>
 <div class="features">
-<div class="feat"><i class="la la-comments"></i> Live Chat real-time dengan SSE</div>
-<div class="feat"><i class="la la-robot"></i> AI Auto Reply (OpenAI/Gemini/Claude)</div>
-<div class="feat"><i class="la la-bullhorn"></i> Broadcast ke ribuan kontak</div>
+<div class="feat"><i class="la la-comments"></i> Live Chat real-time SSE</div>
+<div class="feat"><i class="la la-robot"></i> AI Auto Reply</div>
+<div class="feat"><i class="la la-bullhorn"></i> Broadcast massal</div>
 </div>
 </div>
-<div class="auth-right">
-{{template "content" .}}
-</div>
+<div class="auth-right">{{if eq .Page "login"}}{{template "login" .}}{{else}}{{template "register" .}}{{end}}</div>
 </div>
 </body>
 </html>{{end}}
@@ -1057,6 +1059,7 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
 <td class="text-muted small">{{.Created}}</td>
 <td class="text-nowrap">
 <a class="btn btn-sm btn-white" href="/admin/users?edit={{.ID}}"><i class="la la-edit"></i></a>
+<a class="btn btn-sm btn-warning" href="/admin/users/impersonate?id={{.ID}}" title="Impersonate"><i class="la la-user-circle"></i></a>
 <form method="post" action="/admin/users/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger"><i class="la la-trash"></i></button></form>
 </td>
 </tr>{{else}}<tr><td colspan="7" class="text-muted text-center py-4">-</td></tr>{{end}}
@@ -1145,7 +1148,7 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
 {{if eq .Page "admin_subscriptions"}}
   <div class="row">
     <div class="col-12 col-lg-4"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "sub_add"}}</h4></div><div class="card-body">
-      <form method="post" action="/admin/subscriptions/add"><div class="form-group"><label>User</label><input name="user" class="form-control" required></div><div class="form-group"><label>{{T "adm_packages"}}</label><select name="pkg" class="form-control">{{range .Packages}}<option value="{{.Name}}">{{.Name}}</option>{{end}}</select></div><div class="form-group"><label>{{T "sub_expire"}}</label><input name="expire" type="date" class="form-control"></div><button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>{{if .EditID}}<a href="/admin/waservers" class="btn btn-white btn-sm ms-2">Batal</a>{{end}}</form></div></div></div>
+      <form method="post" action="/admin/subscriptions/add"><div class="form-group"><label>User</label><select name="user" class="form-control" required>{{range .Users}}<option value="{{.Email}}">{{.Name}} ({{.Email}})</option>{{else}}<option value="">No users</option>{{end}}</select></div><div class="form-group"><label>{{T "adm_packages"}}</label><select name="pkg" class="form-control">{{range .Packages}}<option value="{{.Name}}">{{.Name}}</option>{{end}}</select></div><div class="form-group"><label>{{T "sub_expire"}}</label><input name="expire" type="date" class="form-control"></div><button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>{{if .EditID}}<a href="/admin/waservers" class="btn btn-white btn-sm ms-2">Batal</a>{{end}}</form></div></div></div>
     <div class="col-12 col-lg-8"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "adm_subscriptions"}}</h4></div>
       <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>User</th><th>{{T "adm_packages"}}</th><th>{{T "sub_expire"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
         {{range .Subscriptions}}<tr><td>{{.ID}}</td><td>{{.User}}</td><td>{{.Pkg}}</td><td>{{.Expire}}</td><td><form method="post" action="/admin/subscriptions/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center">-</td></tr>{{end}}

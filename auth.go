@@ -129,3 +129,46 @@ func requireAdmin(next http.HandlerFunc) http.HandlerFunc {
 	})
 }
 
+func handleImpersonate(w http.ResponseWriter, r *http.Request) {
+	uid, _ := strconv.ParseInt(r.Header.Get("X-User-ID"), 10, 64)
+	targetID, _ := strconv.ParseInt(r.URL.Query().Get("id"), 10, 64)
+	if uid == 0 || targetID == 0 || uid == targetID {
+		http.Redirect(w, r, "/admin/users", http.StatusSeeOther)
+		return
+	}
+	u, err := db.GetUserByID(uid)
+	if err != nil || u.Role != "admin" {
+		http.Error(w, "Forbidden", 403)
+		return
+	}
+	target, err := db.GetUserByID(targetID)
+	if err != nil {
+		http.Redirect(w, r, "/admin/users", http.StatusSeeOther)
+		return
+	}
+	origCookie, _ := r.Cookie("chatgo_sess")
+	if origCookie != nil {
+		http.SetCookie(w, &http.Cookie{Name: "chatgo_orig", Value: origCookie.Value, Path: "/", MaxAge: 86400})
+	}
+	token := randToken()
+	saveSession(token, target.ID)
+	http.SetCookie(w, &http.Cookie{Name: "chatgo_sess", Value: token, Path: "/", MaxAge: 86400 * 30})
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func handleExitImpersonation(w http.ResponseWriter, r *http.Request) {
+	c, err := r.Cookie("chatgo_orig")
+	if err != nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+	if _, ok := db.GetSession(c.Value); !ok {
+		http.SetCookie(w, &http.Cookie{Name: "chatgo_orig", Value: "", Path: "/", MaxAge: -1})
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{Name: "chatgo_sess", Value: c.Value, Path: "/", MaxAge: 86400 * 30})
+	http.SetCookie(w, &http.Cookie{Name: "chatgo_orig", Value: "", Path: "/", MaxAge: -1})
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+

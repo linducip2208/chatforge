@@ -110,6 +110,8 @@ func main() {
 	mux.HandleFunc("/inbox/search", authMiddleware(handleInboxSearch))
 	mux.HandleFunc("/autoreply", p("autoreply"))
 	mux.HandleFunc("/settings", authMiddleware(handleSettings))
+	mux.HandleFunc("/admin/users/impersonate", authMiddleware(handleImpersonate))
+	mux.HandleFunc("/exit-impersonation", handleExitImpersonation)
 	mux.HandleFunc("/contacts", p("contacts"))
 	mux.HandleFunc("/contacts/groups", p("groups"))
 	mux.HandleFunc("/contacts/unsub", p("unsub"))
@@ -269,6 +271,7 @@ type pageData struct {
 	Plugins       []store.Plugin
 	MetaAccounts  []store.MetaAccount
 	MetaTemplates []store.MetaTemplate
+	IsImpersonating bool
 	AiKeys        []store.AiKey
 	AiPlugins     []store.AiPlugin
 	AiTrainings   []store.AiTraining
@@ -447,6 +450,7 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 	d.AiTokenQuota = int64(db.GetUserAiQuota(uid))
 	d.AiTokenUsed = db.GetAiTokenUsage(uid)
 	d.UnreadCount = db.UnreadCount()
+	d.IsImpersonating = r.Header.Get("X-Impersonating") == "1"
 
 	// load entity lists per page (only what's needed)
 	switch page {
@@ -527,6 +531,7 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 	case "admin_subscriptions":
 		d.Subscriptions, _ = db.ListSubscriptions()
 		d.Packages, _ = db.ListPackages()
+		d.Users, _ = db.ListUsers()
 	case "admin_transactions":
 		d.Transactions, _ = db.ListTransactions()
 	case "admin_payouts":
@@ -732,6 +737,9 @@ func handleHome(w http.ResponseWriter, r *http.Request) {
 		if uid, ok := db.GetSession(c.Value); ok {
 			r.Header.Set("X-User-ID", strconv.FormatInt(uid, 10))
 		}
+	}
+	if _, err := r.Cookie("chatgo_orig"); err == nil {
+		r.Header.Set("X-Impersonating", "1")
 	}
 	uid := getUserID(r)
 	if uid == 0 {
