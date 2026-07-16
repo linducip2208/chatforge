@@ -2170,6 +2170,7 @@ html{scroll-behavior:smooth}
 .docs-nav a:hover,.docs-nav a.active{border-left-color:#4F46E5;color:#4F46E5;background:rgba(79,70,229,.05)}
 .docs-section{margin-bottom:32px}
 .docs-section h3{font-weight:700;margin-bottom:4px;padding-bottom:8px;border-bottom:2px solid #eee}
+.badge-soft-info{background:rgba(44,123,229,.1);color:#2c7be5}
 </style>
 <div class="row">
 <div class="col-12 col-lg-3">
@@ -2196,7 +2197,7 @@ html{scroll-behavior:smooth}
 <div class="docs-section" id="start"><h3>Quick Start</h3>
 <p class="text-muted">Langkah pertama menggunakan {{.AppName}}</p>
 <p><strong>Demo Login:</strong> <code>{{.AppEmail}}</code> / <code>password</code></p>
-<p class="small text-muted mb-3"><span class="badge badge-soft-success" style="font-size:9px">WA Web</span> = WhatsApp Web (whatsmeow) &nbsp; <span class="badge badge-soft-primary" style="font-size:9px">Meta</span> = WhatsApp Cloud API (Business)</p>
+<p class="small text-muted mb-3"><span class="badge badge-soft-success" style="font-size:10px">WA Web</span> WhatsApp Web (whatsmeow) &nbsp; <span class="badge badge-soft-primary" style="font-size:10px">Meta</span> WhatsApp Cloud API &nbsp; <span class="badge badge-soft-info" style="font-size:10px">Both</span> Tersedia di kedua channel</p>
 <div class="row g-2">
 <div class="col-12 col-md-6"><div class="card"><div class="card-body"><strong>1. Hubungkan WA</strong><p class="small text-muted mb-0">Buka Akun & QR → Scan QR dengan WhatsApp → Connected</p></div></div></div>
 <div class="col-12 col-md-6"><div class="card"><div class="card-body"><strong>2. Tambah Kontak</strong><p class="small text-muted mb-0">Import CSV atau tambah manual di Contacts</p></div></div></div>
@@ -2208,17 +2209,17 @@ html{scroll-behavior:smooth}
 <table class="table table-sm"><thead><tr><th>Fitur</th><th>Lokasi</th><th>Cara</th></tr></thead>
 <tbody>
 <tr><td>WA Web Connect</td><td>/wa</td><td>Klik Tambah Akun → Scan QR <span class="badge badge-soft-success" style="font-size:9px">WA Web</span></td></tr>
-<tr><td>Multi-Akun WA</td><td>/wa</td><td>Tambah beberapa nomor, kelola sekaligus <span class="badge badge-soft-success" style="font-size:9px">WA Web</span></td></tr>
-<tr><td>Meta Cloud API</td><td>/admin/meta</td><td>Input Phone ID + Access Token + Verify Token <span class="badge badge-soft-primary" style="font-size:9px">Meta</span></td></tr>
-<tr><td>Meta Templates</td><td>/admin/metatemplates</td><td>Daftar template WA Business yang sudah approved <span class="badge badge-soft-primary" style="font-size:9px">Meta</span></td></tr>
-<tr><td>Kirim Pesan</td><td>/send</td><td>Kirim pesan langsung ke satu nomor</td></tr>
+<tr><td>Multi-Akun WA</td><td>/wa</td><td>Tambah beberapa nomor <span class="badge badge-soft-success" style="font-size:9px">WA Web</span></td></tr>
+<tr><td>Meta Cloud API</td><td>/admin/meta</td><td>Phone ID + Access Token <span class="badge badge-soft-primary" style="font-size:9px">Meta</span></td></tr>
+<tr><td>Meta Templates</td><td>/admin/metatemplates</td><td>Template WA Business <span class="badge badge-soft-primary" style="font-size:9px">Meta</span></td></tr>
+<tr><td>Kirim Pesan</td><td>/send</td><td>Kirim pesan ke satu nomor <span class="badge badge-soft-success" style="font-size:9px">WA Web</span></td></tr>
 </tbody></table></div>
 
 <div class="docs-section" id="broadcast"><h3>Broadcast & Campaign</h3>
 <table class="table table-sm"><thead><tr><th>Fitur</th><th>Lokasi</th><th>Keterangan</th></tr></thead>
 <tbody>
-<tr><td>Broadcast Massal</td><td>/broadcast</td><td>Pilih grup + nomor langsung + tag filter. Bisa via WA Web atau <span class="badge badge-soft-primary" style="font-size:9px">Meta</span></td></tr>
-<tr><td>Media Broadcast</td><td>/broadcast</td><td>Upload gambar/video/dokumen</td></tr>
+<tr><td>Broadcast Massal</td><td>/broadcast</td><td>Pilih grup + nomor + tag filter <span class="badge badge-soft-info" style="font-size:9px">Both</span></td></tr>
+<tr><td>Media Broadcast</td><td>/broadcast</td><td>Upload gambar/video/dokumen <span class="badge badge-soft-info" style="font-size:9px">Both</span></td></tr>
 <tr><td>Round Robin / Random</td><td>/broadcast</td><td>Radio select di form broadcast</td></tr>
 <tr><td>Pause / Resume</td><td>/broadcast</td><td>Tombol ⏸/▶ di campaign list</td></tr>
 <tr><td>Retry Campaign</td><td>/broadcast</td><td>Tombol ↩ untuk jalankan ulang</td></tr>
