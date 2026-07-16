@@ -121,12 +121,16 @@ func main() {
 	mux.HandleFunc("/contacts/add", authMiddleware(crudPost(func(r *http.Request) { db.AddContact(r.FormValue("name"), r.FormValue("phone"), joinVals(r, "groups")) }, "/contacts")))
 	mux.HandleFunc("/contacts/delete", authMiddleware(crudDel(func(id int64) { db.DeleteContact(id) }, "/contacts")))
 	mux.HandleFunc("/contacts/import", authMiddleware(handleContactImport))
+	mux.HandleFunc("/contacts/export", authMiddleware(handleContactExport))
+	mux.HandleFunc("/contacts/bulk-delete", authMiddleware(handleContactBulkDelete))
 	mux.HandleFunc("/groups/add", authMiddleware(crudPost(func(r *http.Request) { db.AddGroup(r.FormValue("name")) }, "/contacts/groups")))
 	mux.HandleFunc("/groups/delete", authMiddleware(crudDel(func(id int64) { db.DeleteGroup(id) }, "/contacts/groups")))
 	mux.HandleFunc("/unsub/add", authMiddleware(crudPost(func(r *http.Request) { db.AddUnsub(r.FormValue("phone")) }, "/contacts/unsub")))
 	mux.HandleFunc("/unsub/delete", authMiddleware(crudDel(func(id int64) { db.DeleteUnsub(id) }, "/contacts/unsub")))
 	mux.HandleFunc("/broadcast", authMiddleware(handleBroadcast))
 	mux.HandleFunc("/broadcast/stop", authMiddleware(crudDel(func(id int64) { db.UpdateCampaignStatus(id, "stopped") }, "/broadcast")))
+	mux.HandleFunc("/broadcast/pause", authMiddleware(handleCampaignPause))
+	mux.HandleFunc("/broadcast/retry", authMiddleware(handleCampaignRetry))
 	mux.HandleFunc("/broadcast/delete", authMiddleware(crudDel(func(id int64) { db.DeleteCampaign(id) }, "/broadcast")))
 		mux.HandleFunc("/scheduled", authMiddleware(handleScheduled))
 	mux.HandleFunc("/scheduled/delete", authMiddleware(crudDel(func(id int64) { db.DeleteScheduled(id) }, "/scheduled")))
@@ -478,6 +482,8 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 	case "broadcast":
 		d.Campaigns, _ = db.ListCampaigns()
 		d.Groups, _ = db.ListGroups()
+		d.MetaAccounts, _ = db.ListMetaAccounts()
+		d.MetaTemplates, _ = db.ListMetaTemplates()
 	case "scheduled":
 		d.Scheduleds, _ = db.ListScheduled()
 	case "sent":
@@ -1254,9 +1260,44 @@ func handleBroadcast(w http.ResponseWriter, r *http.Request) {
 	}
 	normalizedNumbers := strings.Join(numList, ",")
 
+	metaAccountID, _ := strconv.ParseInt(r.FormValue("meta_account_id"), 10, 64)
+	metaTemplate := r.FormValue("meta_template")
 	interval, _ := strconv.Atoi(r.FormValue("interval"))
 	if interval <= 0 { interval = 300 }
-	_, _ = db.AddCampaign(name, groups, normalizedNumbers, message, len(seen), accountID, sendMode, interval)
+	_, _ = db.AddCampaign(name, groups, normalizedNumbers, message, len(seen), accountID, sendMode, interval, metaAccountID, metaTemplate)
+	http.Redirect(w, r, "/broadcast", http.StatusSeeOther)
+}
+
+func handleCampaignPause(w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+	if id > 0 {
+		camps, _ := db.ListCampaigns()
+		for _, c := range camps {
+			if c.ID == id {
+				if c.Status == "paused" {
+					db.UpdateCampaignStatus(id, "running")
+				} else if c.Status == "running" {
+					db.UpdateCampaignStatus(id, "paused")
+				}
+				break
+			}
+		}
+	}
+	http.Redirect(w, r, "/broadcast", http.StatusSeeOther)
+}
+
+func handleCampaignRetry(w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+	if id > 0 {
+		camps, _ := db.ListCampaigns()
+		for _, c := range camps {
+			if c.ID == id {
+				// clone campaign as new pending
+				db.AddCampaign(c.Name+" (retry)", c.Groups, c.Numbers, c.Message, c.Total, c.AccountIDs, c.SendMode, c.Interval, c.MetaAccountID, c.MetaTemplate)
+				break
+			}
+		}
+	}
 	http.Redirect(w, r, "/broadcast", http.StatusSeeOther)
 }
 
@@ -1338,6 +1379,35 @@ func handleContactImport(w http.ResponseWriter, r *http.Request) {
 	msg := fmt.Sprintf("Imported+%d+contacts", imported)
 	if skipped > 0 { msg += fmt.Sprintf(",+%d+skipped+(duplicate)", skipped) }
 	http.Redirect(w, r, "/contacts?msg="+msg, http.StatusSeeOther)
+}
+
+func handleContactExport(w http.ResponseWriter, r *http.Request) {
+	contacts, _ := db.ListContacts()
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", "attachment; filename=contacts.csv")
+	w.Write([]byte("\xEF\xBB\xBF")) // BOM for Excel
+	cw := csv.NewWriter(w)
+	cw.Write([]string{"name", "phone", "groups"})
+	for _, c := range contacts {
+		cw.Write([]string{c.Name, c.Phone, c.Groups})
+	}
+	cw.Flush()
+}
+
+func handleContactBulkDelete(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Redirect(w, r, "/contacts", http.StatusSeeOther)
+		return
+	}
+	r.ParseForm()
+	count := 0
+	for _, idStr := range r.Form["ids"] {
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil { continue }
+		db.DeleteContact(id)
+		count++
+	}
+	http.Redirect(w, r, fmt.Sprintf("/contacts?msg=Deleted+%d+contacts", count), http.StatusSeeOther)
 }
 
 // ---- Scheduled ----

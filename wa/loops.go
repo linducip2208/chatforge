@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"chatgo/meta"
 	"chatgo/msgtemplate"
 	"chatgo/store"
 
@@ -40,6 +41,9 @@ func (e *Engine) campaignLoop() {
 }
 
 func (e *Engine) runCampaign(c store.Campaign) {
+	// check if paused before starting
+	status := c.Status
+	if status == "paused" { return }
 	// Build sender selector from comma-separated account_ids
 	var sel *SenderSelector
 	sendMode := c.SendMode
@@ -89,26 +93,54 @@ func (e *Engine) runCampaign(c store.Campaign) {
 			targets = append(targets, store.Contact{Phone: n})
 		}
 	}
-	for _, ct := range targets {
-		st, _ := e.Status()
-		if st != "connected" {
-			return
+	// determine Meta client (if selected)
+	var metaClient *meta.Client
+	if c.MetaAccountID > 0 {
+		acc, err := e.db.GetMetaAccount(c.MetaAccountID)
+		if err == nil {
+			metaClient = meta.New(acc.PhoneNumberID, acc.AccessToken, acc.VerifyToken)
 		}
-		if e.campaignStopped(c.ID) {
+	}
+
+	for _, ct := range targets {
+		// check terminated (pause/stop)
+		if e.campaignTerminated(c.ID) {
 			return
 		}
 		if e.db.IsUnsub(ct.Phone) {
 			continue
 		}
-		sendSession := sel.Next(e)
-		if sendSession == nil { continue }
-		msg := msgtemplate.Render(c.Message, msgtemplate.Vars{Name: ct.Name, Phone: ct.Phone, Message: ""})
-		digits := onlyDigits(ct.Phone)
-		if digits != "" {
-			jid := waTypes.NewJID(digits, waTypes.DefaultUserServer)
-			if err := e.sendVia(sendSession, jid, msg); err == nil {
+		var sendErr error
+		if metaClient != nil {
+			// Meta API sending
+			msg := msgtemplate.Render(c.Message, msgtemplate.Vars{Name: ct.Name, Phone: ct.Phone, Message: ""})
+			if c.MetaTemplate != "" {
+				lang := "id"
+				_, sendErr = metaClient.SendTemplate(onlyDigits(ct.Phone), c.MetaTemplate, lang, []string{msg})
+			} else {
+				_, sendErr = metaClient.SendText(onlyDigits(ct.Phone), msg)
+			}
+			if sendErr == nil {
 				_ = e.db.IncCampaignSent(c.ID)
 			}
+			e.db.AppendCampaignSentTo(c.ID, ct.Phone)
+		} else {
+			// WhatsApp Web sending
+			st, _ := e.Status()
+			if st != "connected" {
+				return
+			}
+			sendSession := sel.Next(e)
+			if sendSession == nil { continue }
+			msg := msgtemplate.Render(c.Message, msgtemplate.Vars{Name: ct.Name, Phone: ct.Phone, Message: ""})
+			digits := onlyDigits(ct.Phone)
+			if digits != "" {
+				jid := waTypes.NewJID(digits, waTypes.DefaultUserServer)
+				if sendErr = e.sendVia(sendSession, jid, msg); sendErr == nil {
+					_ = e.db.IncCampaignSent(c.ID)
+				}
+			}
+			_ = e.db.AppendCampaignSentTo(c.ID, ct.Phone)
 		}
 		interval := c.Interval
 		if interval <= 0 { interval = 300 }
@@ -118,10 +150,10 @@ func (e *Engine) runCampaign(c store.Campaign) {
 	e.db.Log("campaign", "done", "Campaign #"+itoa(c.ID)+" ("+c.Name+") finished")
 }
 
-func (e *Engine) campaignStopped(id int64) bool {
+func (e *Engine) campaignTerminated(id int64) bool {
 	for _, c := range mustCampaigns(e) {
 		if c.ID == id {
-			return c.Status == "stopped"
+			return c.Status == "stopped" || c.Status == "paused"
 		}
 	}
 	return false

@@ -44,20 +44,22 @@ type Webhook struct {
 	Created string
 }
 type Campaign struct {
-	ID         int64
-	Name       string
-	Groups     string
-	Numbers    string
-	AccountID  string
-	AccountIDs string
-	SendMode   string
-	Message    string
-	Total      int
-	Sent       int
-	Status     string
-	Interval   int
-	SentTo     string
-	Created    string
+	ID              int64
+	Name            string
+	Groups          string
+	Numbers         string
+	AccountID       string
+	AccountIDs      string
+	MetaAccountID   int64
+	MetaTemplate    string
+	SendMode        string
+	Message         string
+	Total           int
+	Sent            int
+	Status          string
+	Interval        int
+	SentTo          string
+	Created         string
 }
 type Scheduled struct {
 	ID         int64
@@ -97,6 +99,8 @@ func (d *DB) migrateExtra() error {
 	}
 	d.sql.Exec(`ALTER TABLE campaigns ADD COLUMN send_mode VARCHAR(20) NOT NULL DEFAULT 'round_robin' AFTER account_ids`)
 	d.sql.Exec(`ALTER TABLE campaigns ADD COLUMN numbers TEXT NOT NULL AFTER ` + "`groups`")
+	d.sql.Exec(`ALTER TABLE campaigns ADD COLUMN meta_account_id BIGINT NOT NULL DEFAULT 0 AFTER send_mode`)
+	d.sql.Exec(`ALTER TABLE campaigns ADD COLUMN meta_template VARCHAR(255) NOT NULL DEFAULT '' AFTER meta_account_id`)
 	return nil
 }
 
@@ -285,8 +289,8 @@ func (d *DB) WebhooksForEvent(event string) ([]Webhook, error) {
 }
 
 // ---- Campaigns ----
-func (d *DB) AddCampaign(name, groups, numbers, message string, total int, accountIDs, sendMode string, interval int) (int64, error) {
-	res, err := d.sql.Exec("INSERT INTO campaigns (name, `groups`, numbers, message, total, status, account_ids, send_mode, msg_interval) VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?)", name, groups, numbers, message, total, accountIDs, sendMode, interval)
+func (d *DB) AddCampaign(name, groups, numbers, message string, total int, accountIDs, sendMode string, interval int, metaAccountID int64, metaTemplate string) (int64, error) {
+	res, err := d.sql.Exec("INSERT INTO campaigns (name, `groups`, numbers, message, total, status, account_ids, send_mode, meta_account_id, meta_template, msg_interval) VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)", name, groups, numbers, message, total, accountIDs, sendMode, metaAccountID, metaTemplate, interval)
 	if err != nil { return 0, err }
 	return res.LastInsertId()
 }
@@ -304,25 +308,25 @@ func (d *DB) AppendCampaignSentTo(id int64, phone string) error {
 }
 func (d *DB) DeleteCampaign(id int64) error { _, err := d.sql.Exec(`DELETE FROM campaigns WHERE id=?`, id); return err }
 func (d *DB) ListCampaigns() ([]Campaign, error) {
-	rows, err := d.sql.Query("SELECT id, name, `groups`, IFNULL(numbers,''), message, total, sent, status, IFNULL(account_id,''), IFNULL(account_ids,''), IFNULL(send_mode,'round_robin'), IFNULL(msg_interval,3), IFNULL(sent_to,''), created_at FROM campaigns ORDER BY id DESC")
+	rows, err := d.sql.Query("SELECT id, name, `groups`, IFNULL(numbers,''), message, total, sent, status, IFNULL(account_id,''), IFNULL(account_ids,''), IFNULL(send_mode,'round_robin'), IFNULL(meta_account_id,0), IFNULL(meta_template,''), IFNULL(msg_interval,3), IFNULL(sent_to,''), created_at FROM campaigns ORDER BY id DESC")
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []Campaign
 	for rows.Next() {
 		var c Campaign
-		rows.Scan(&c.ID, &c.Name, &c.Groups, &c.Numbers, &c.Message, &c.Total, &c.Sent, &c.Status, &c.AccountID, &c.AccountIDs, &c.SendMode, &c.Interval, &c.SentTo, &c.Created)
+		rows.Scan(&c.ID, &c.Name, &c.Groups, &c.Numbers, &c.Message, &c.Total, &c.Sent, &c.Status, &c.AccountID, &c.AccountIDs, &c.SendMode, &c.MetaAccountID, &c.MetaTemplate, &c.Interval, &c.SentTo, &c.Created)
 		out = append(out, c)
 	}
 	return out, nil
 }
 func (d *DB) PendingCampaigns() ([]Campaign, error) {
-	rows, err := d.sql.Query("SELECT id, name, `groups`, IFNULL(numbers,''), message, total, sent, status, IFNULL(account_id,''), IFNULL(account_ids,''), IFNULL(send_mode,'round_robin'), IFNULL(msg_interval,3), IFNULL(sent_to,''), created_at FROM campaigns WHERE status='running' OR status='pending'")
+	rows, err := d.sql.Query("SELECT id, name, `groups`, IFNULL(numbers,''), message, total, sent, status, IFNULL(account_id,''), IFNULL(account_ids,''), IFNULL(send_mode,'round_robin'), IFNULL(meta_account_id,0), IFNULL(meta_template,''), IFNULL(msg_interval,3), IFNULL(sent_to,''), created_at FROM campaigns WHERE status='running' OR status='pending'")
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []Campaign
 	for rows.Next() {
 		var c Campaign
-		rows.Scan(&c.ID, &c.Name, &c.Groups, &c.Numbers, &c.Message, &c.Total, &c.Sent, &c.Status, &c.AccountID, &c.AccountIDs, &c.SendMode, &c.Interval, &c.SentTo, &c.Created)
+		rows.Scan(&c.ID, &c.Name, &c.Groups, &c.Numbers, &c.Message, &c.Total, &c.Sent, &c.Status, &c.AccountID, &c.AccountIDs, &c.SendMode, &c.MetaAccountID, &c.MetaTemplate, &c.Interval, &c.SentTo, &c.Created)
 		out = append(out, c)
 	}
 	return out, nil
