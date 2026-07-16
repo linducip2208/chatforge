@@ -47,8 +47,10 @@ type Campaign struct {
 	ID         int64
 	Name       string
 	Groups     string
+	Numbers    string
 	AccountID  string
 	AccountIDs string
+	SendMode   string
 	Message    string
 	Total      int
 	Sent       int
@@ -93,6 +95,8 @@ func (d *DB) migrateExtra() error {
 			return err
 		}
 	}
+	d.sql.Exec(`ALTER TABLE campaigns ADD COLUMN send_mode VARCHAR(20) NOT NULL DEFAULT 'round_robin' AFTER account_ids`)
+	d.sql.Exec(`ALTER TABLE campaigns ADD COLUMN numbers TEXT NOT NULL AFTER ` + "`groups`")
 	return nil
 }
 
@@ -115,6 +119,12 @@ func (d *DB) GetContact(id int64) (*Contact, error) {
 func (d *DB) DeleteContact(id int64) error {
 	_, err := d.sql.Exec(`DELETE FROM contacts WHERE id=?`, id)
 	return err
+}
+func (d *DB) FindContactByPhone(phone string) (*Contact, error) {
+	var c Contact
+	err := d.sql.QueryRow(`SELECT id, name, phone, `+"`groups`"+`, created_at FROM contacts WHERE phone=?`, phone).Scan(&c.ID, &c.Name, &c.Phone, &c.Groups, &c.Created)
+	if err != nil { return nil, err }
+	return &c, nil
 }
 func (d *DB) ListContacts() ([]Contact, error) {
 	rows, err := d.sql.Query("SELECT id, name, phone, `groups`, created_at FROM contacts ORDER BY id DESC")
@@ -275,8 +285,8 @@ func (d *DB) WebhooksForEvent(event string) ([]Webhook, error) {
 }
 
 // ---- Campaigns ----
-func (d *DB) AddCampaign(name, groups, message string, total int, accountIDs string, interval int) (int64, error) {
-	res, err := d.sql.Exec("INSERT INTO campaigns (name, `groups`, message, total, status, account_ids, msg_interval) VALUES (?, ?, ?, ?, 'pending', ?, ?)", name, groups, message, total, accountIDs, interval)
+func (d *DB) AddCampaign(name, groups, numbers, message string, total int, accountIDs, sendMode string, interval int) (int64, error) {
+	res, err := d.sql.Exec("INSERT INTO campaigns (name, `groups`, numbers, message, total, status, account_ids, send_mode, msg_interval) VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?)", name, groups, numbers, message, total, accountIDs, sendMode, interval)
 	if err != nil { return 0, err }
 	return res.LastInsertId()
 }
@@ -294,25 +304,25 @@ func (d *DB) AppendCampaignSentTo(id int64, phone string) error {
 }
 func (d *DB) DeleteCampaign(id int64) error { _, err := d.sql.Exec(`DELETE FROM campaigns WHERE id=?`, id); return err }
 func (d *DB) ListCampaigns() ([]Campaign, error) {
-	rows, err := d.sql.Query("SELECT id, name, `groups`, message, total, sent, status, IFNULL(account_id,''), IFNULL(account_ids,''), IFNULL(msg_interval,3), IFNULL(sent_to,''), created_at FROM campaigns ORDER BY id DESC")
+	rows, err := d.sql.Query("SELECT id, name, `groups`, IFNULL(numbers,''), message, total, sent, status, IFNULL(account_id,''), IFNULL(account_ids,''), IFNULL(send_mode,'round_robin'), IFNULL(msg_interval,3), IFNULL(sent_to,''), created_at FROM campaigns ORDER BY id DESC")
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []Campaign
 	for rows.Next() {
 		var c Campaign
-		rows.Scan(&c.ID, &c.Name, &c.Groups, &c.Message, &c.Total, &c.Sent, &c.Status, &c.AccountID, &c.AccountIDs, &c.Interval, &c.SentTo, &c.Created)
+		rows.Scan(&c.ID, &c.Name, &c.Groups, &c.Numbers, &c.Message, &c.Total, &c.Sent, &c.Status, &c.AccountID, &c.AccountIDs, &c.SendMode, &c.Interval, &c.SentTo, &c.Created)
 		out = append(out, c)
 	}
 	return out, nil
 }
 func (d *DB) PendingCampaigns() ([]Campaign, error) {
-	rows, err := d.sql.Query("SELECT id, name, `groups`, message, total, sent, status, IFNULL(account_id,''), IFNULL(account_ids,''), IFNULL(msg_interval,3), IFNULL(sent_to,''), created_at FROM campaigns WHERE status='running' OR status='pending'")
+	rows, err := d.sql.Query("SELECT id, name, `groups`, IFNULL(numbers,''), message, total, sent, status, IFNULL(account_id,''), IFNULL(account_ids,''), IFNULL(send_mode,'round_robin'), IFNULL(msg_interval,3), IFNULL(sent_to,''), created_at FROM campaigns WHERE status='running' OR status='pending'")
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []Campaign
 	for rows.Next() {
 		var c Campaign
-		rows.Scan(&c.ID, &c.Name, &c.Groups, &c.Message, &c.Total, &c.Sent, &c.Status, &c.AccountID, &c.AccountIDs, &c.Interval, &c.SentTo, &c.Created)
+		rows.Scan(&c.ID, &c.Name, &c.Groups, &c.Numbers, &c.Message, &c.Total, &c.Sent, &c.Status, &c.AccountID, &c.AccountIDs, &c.SendMode, &c.Interval, &c.SentTo, &c.Created)
 		out = append(out, c)
 	}
 	return out, nil

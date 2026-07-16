@@ -83,13 +83,14 @@ const templates = `
 
 {{template "sidebar" .}}
 <div class="main-content">
-  <nav class="navbar navbar-expand-md navbar-light d-none d-md-flex" id="topbar">
+  <nav class="navbar navbar-expand-md navbar-light d-none d-md-flex pe-3" id="topbar">
     <div class="container-fluid">
       <div class="me-4">
         <a class="btn btn-md btn-primary mb-1 lift" href="/wa"><i class="la la-whatsapp la-lg me-1"></i> {{T "nav_whatsapp"}}</a>
         <a class="btn btn-md btn-primary mb-1 lift" href="/send"><i class="la la-paper-plane la-lg me-1"></i> {{T "nav_send"}}</a>
       </div>
-      <div class="navbar-user d-flex align-items-center">
+      <div class="ms-auto"></div>
+      <div class="navbar-user d-flex align-items-center me-2">
         <div class="dropdown me-3">
           <a href="#" class="dropdown-toggle text-muted" role="button" data-bs-toggle="dropdown" style="text-decoration:none">
             <span class="flag-icon flag-icon-{{.LangFlag}} lang-flag"></span>{{.LangName}}
@@ -286,7 +287,7 @@ document.querySelectorAll(".msg-full").forEach(function(el){
 </nav>{{end}}
 
 {{define "landing"}}<!DOCTYPE html>
-<html lang="id">
+<html lang="{{.LangCode}}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -303,6 +304,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;c
 .nav-links{display:flex;gap:16px;align-items:center}
 .nav-links a{text-decoration:none;color:#555;font-weight:500;font-size:14px}
 .nav-links .btn-login{padding:8px 20px;background:#4F46E5;color:#fff;border-radius:8px;font-weight:600}
+.lang-switch{position:relative;display:inline-block}
+.lang-switch select{appearance:none;padding:6px 28px 6px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;background:#fff;cursor:pointer;color:#555}
+.lang-switch .flag-icon{position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;font-size:11px;color:#999}
 .hero{padding:140px 24px 80px;text-align:center;max-width:900px;margin:0 auto}
 .hero h1{font-size:3rem;font-weight:800;line-height:1.2;margin-bottom:16px;background:linear-gradient(135deg,#4F46E5,#7C3AED);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .hero p{font-size:1.15rem;color:#666;max-width:600px;margin:0 auto 32px}
@@ -341,60 +345,61 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;c
 <div class="container">
 <a href="/" class="navbar-brand">{{.AppName}}</a>
 <div class="nav-links">
-<a href="/login">Masuk</a>
-<a href="/register" class="btn-login">Daftar Gratis</a>
+<div class="lang-switch"><select onchange="window.location=this.value">{{range .Languages}}<option value="/lang/{{.Code}}" {{if eq .Code $.LangCode}}selected{{end}}>{{.Flag}} {{.Name}}</option>{{end}}</select><span class="flag-icon">&#9660;</span></div>
+<a href="/login">{{if eq .LangCode "id"}}Masuk{{else}}Sign In{{end}}</a>
+<a href="/register" class="btn-login">{{if eq .LangCode "id"}}Daftar Gratis{{else}}Sign Up Free{{end}}</a>
 </div>
 </div>
 </nav>
 
 <section class="hero">
-<h1>WhatsApp Marketing Jadi Mudah</h1>
-<p>{{.AppName}} adalah platform all-in-one untuk kirim broadcast, auto-reply AI, kelola multi-akun WhatsApp, dan live chat real-time — semua dalam satu dashboard.</p>
+<h1>{{if eq .LangCode "id"}}WhatsApp Marketing Jadi Mudah{{else}}WhatsApp Marketing Made Easy{{end}}</h1>
+<p>{{if eq .LangCode "id"}}{{.AppName}} adalah platform all-in-one untuk kirim broadcast, auto-reply AI, kelola multi-akun WhatsApp, dan live chat real-time — semua dalam satu dashboard.{{else}}{{.AppName}} is an all-in-one platform for sending broadcasts, AI auto-reply, managing multiple WhatsApp accounts, and real-time live chat — all in one dashboard.{{end}}</p>
 <div class="cta-group">
-<a href="/register" class="btn-primary">Coba Gratis</a>
-<a href="/docs" class="btn-outline">Lihat Dokumentasi</a>
+<a href="/register" class="btn-primary">{{if eq .LangCode "id"}}Coba Gratis{{else}}Try Free{{end}}</a>
+<a href="/docs" class="btn-outline">{{if eq .LangCode "id"}}Lihat Dokumentasi{{else}}View Documentation{{end}}</a>
 </div>
 <div style="max-width:400px;margin:32px auto 0;background:#fff;border-radius:14px;padding:24px;box-shadow:0 4px 24px rgba(0,0,0,.08)">
 <form method="post" action="/login/post">
 <div style="margin-bottom:12px"><input type="email" name="email" class="form-control" placeholder="Email" value="{{.AppEmail}}" style="border-radius:8px;padding:10px 14px;border:1px solid #ddd;width:100%;font-size:14px"></div>
 <div style="margin-bottom:12px"><input type="password" name="password" class="form-control" placeholder="Password" value="password" style="border-radius:8px;padding:10px 14px;border:1px solid #ddd;width:100%;font-size:14px"></div>
-<button type="submit" style="width:100%;padding:10px;background:#4F46E5;color:#fff;border:none;border-radius:8px;font-weight:600;font-size:14px;cursor:pointer">Masuk</button>
+<button type="submit" style="width:100%;padding:10px;background:#4F46E5;color:#fff;border:none;border-radius:8px;font-weight:600;font-size:14px;cursor:pointer">{{if eq .LangCode "id"}}Masuk{{else}}Sign In{{end}}</button>
 </form>
 <div style="text-align:center;margin-top:12px;font-size:12px;color:#999">Demo: <code style="background:#f0f0f0;padding:2px 6px;border-radius:4px">{{.AppEmail}}</code> / <code style="background:#f0f0f0;padding:2px 6px;border-radius:4px">password</code></div>
 </div>
 </section>
 
 <section class="features">
-<h2>Fitur Lengkap</h2>
-<p class="subtitle">Semua yang kamu butuhkan untuk WhatsApp marketing</p>
+<h2>{{if eq .LangCode "id"}}Fitur Lengkap{{else}}Complete Features{{end}}</h2>
+<p class="subtitle">{{if eq .LangCode "id"}}Semua yang kamu butuhkan untuk WhatsApp marketing{{else}}Everything you need for WhatsApp marketing{{end}}</p>
 <div class="feature-grid">
-<div class="feature-card"><i class="la la-comments"></i><h4>{{T "inbox_title"}}</h4><p>Inbox real-time dengan SSE, reply langsung, group chat, private/group filter.</p></div>
-<div class="feature-card"><i class="la la-robot"></i><h4>AI Auto Reply</h4><p>Balas otomatis pakai AI (OpenAI/Gemini/Claude/DeepSeek) + knowledge base.</p></div>
-<div class="feature-card"><i class="la la-bullhorn"></i><h4>Broadcast</h4><p>Kirim pesan massal ke grup kontak, round-robin multi-akun WA.</p></div>
-<div class="feature-card"><i class="la la-whatsapp"></i><h4>Multi Akun</h4><p>Kelola banyak nomor WhatsApp sekaligus, scan QR pairing.</p></div>
-<div class="feature-card"><i class="la la-cloud"></i><h4>Meta Cloud API</h4><p>Integrasi resmi WhatsApp Business API + template pesan.</p></div>
-<div class="feature-card"><i class="la la-clock"></i><h4>Pesan Terjadwal</h4><p>Jadwalkan pesan, repeat otomatis, pilih nomor pengirim.</p></div>
-<div class="feature-card"><i class="la la-paint-brush"></i><h4>Whitelabel</h4><p>Ganti logo, nama, email — satu binary, banyak domain.</p></div>
-<div class="feature-card"><i class="la la-chart-bar"></i><h4>Dashboard Analytics</h4><p>Chart aktivitas, statistik pesan, status koneksi real-time.</p></div>
+<div class="feature-card"><i class="la la-comments"></i><h4>{{T "inbox_title"}}</h4><p>{{if eq .LangCode "id"}}Inbox real-time dengan SSE, reply langsung, group chat, filter private/group.{{else}}Real-time inbox with SSE, direct reply, group chat, private/group filter.{{end}}</p></div>
+<div class="feature-card"><i class="la la-robot"></i><h4>AI Auto Reply</h4><p>{{if eq .LangCode "id"}}Balas otomatis pakai AI (OpenAI/Gemini/Claude/DeepSeek) + knowledge base.{{else}}Auto reply with AI (OpenAI/Gemini/Claude/DeepSeek) + knowledge base.{{end}}</p></div>
+<div class="feature-card"><i class="la la-bullhorn"></i><h4>Broadcast</h4><p>{{if eq .LangCode "id"}}Kirim pesan massal ke grup kontak, round-robin multi-akun WA.{{else}}Send bulk messages to contact groups, round-robin multi-WA accounts.{{end}}</p></div>
+<div class="feature-card"><i class="la la-whatsapp"></i><h4>{{if eq .LangCode "id"}}Multi Akun{{else}}Multi Account{{end}}</h4><p>{{if eq .LangCode "id"}}Kelola banyak nomor WhatsApp sekaligus, scan QR pairing.{{else}}Manage multiple WhatsApp numbers at once, QR scan pairing.{{end}}</p></div>
+<div class="feature-card"><i class="la la-cloud"></i><h4>Meta Cloud API</h4><p>{{if eq .LangCode "id"}}Integrasi resmi WhatsApp Business API + template pesan.{{else}}Official WhatsApp Business API integration + message templates.{{end}}</p></div>
+<div class="feature-card"><i class="la la-clock"></i><h4>{{if eq .LangCode "id"}}Pesan Terjadwal{{else}}Scheduled Messages{{end}}</h4><p>{{if eq .LangCode "id"}}Jadwalkan pesan, repeat otomatis, pilih nomor pengirim.{{else}}Schedule messages, auto repeat, select sender number.{{end}}</p></div>
+<div class="feature-card"><i class="la la-paint-brush"></i><h4>Whitelabel</h4><p>{{if eq .LangCode "id"}}Ganti logo, nama, email — satu binary, banyak domain.{{else}}Replace logo, name, email — one binary, many domains.{{end}}</p></div>
+<div class="feature-card"><i class="la la-chart-bar"></i><h4>Dashboard Analytics</h4><p>{{if eq .LangCode "id"}}Chart aktivitas, statistik pesan, status koneksi real-time.{{else}}Activity charts, message statistics, real-time connection status.{{end}}</p></div>
 </div>
 </section>
 
 <section class="demo-section">
 <div class="container">
-<h2>Akun Demo</h2>
+<h2>{{if eq .LangCode "id"}}Akun Demo{{else}}Demo Account{{end}}</h2>
 <div class="demo-box" style="max-width:480px;margin:0 auto">
 <div class="demo-row"><strong>Admin:</strong> {{.AppEmail}} / password</div>
 </div>
 <div style="text-align:center;margin-top:24px">
-<a href="/login" style="display:inline-block;padding:12px 28px;border-radius:10px;font-weight:600;text-decoration:none;background:#4F46E5;color:#fff">Masuk ke Dashboard</a>
+<a href="/login" style="display:inline-block;padding:12px 28px;border-radius:10px;font-weight:600;text-decoration:none;background:#4F46E5;color:#fff">{{if eq .LangCode "id"}}Masuk ke Dashboard{{else}}Go to Dashboard{{end}}</a>
 </div>
 </div>
 </section>
 
 <section class="cta-banner">
-<h2>Siap Tingkatkan WhatsApp Marketing Kamu?</h2>
-<p>Daftar sekarang — gratis. Tanpa kartu kredit.</p>
-<a href="/register">Daftar Gratis</a>
+<h2>{{if eq .LangCode "id"}}Siap Tingkatkan WhatsApp Marketing Kamu?{{else}}Ready to Level Up Your WhatsApp Marketing?{{end}}</h2>
+<p>{{if eq .LangCode "id"}}Daftar sekarang — gratis. Tanpa kartu kredit.{{else}}Sign up now — free. No credit card.{{end}}</p>
+<a href="/register">{{if eq .LangCode "id"}}Daftar Gratis{{else}}Sign Up Free{{end}}</a>
 </section>
 
 <footer class="footer">&copy; 2026 {{.AppName}}. Powered by ChatGo.</footer>
@@ -743,6 +748,13 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
           <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
         </form></div>
       </div>
+      <div class="card mt-3"><div class="card-header"><h4 class="card-header-title"><i class="la la-upload me-1"></i> Import CSV</h4></div>
+        <div class="card-body"><form method="post" action="/contacts/import" enctype="multipart/form-data">
+          <div class="form-group"><label>Upload CSV</label><input type="file" name="file" class="form-control" accept=".csv" required></div>
+          <small class="form-text text-muted mb-2 d-block">Kolom: <code>name</code>, <code>phone</code>, <code>groups</code> (nama grup, koma). Group otomatis dibuat jika belum ada.</small>
+          <button class="btn btn-white lift"><i class="la la-cloud-upload me-1"></i> Import</button>
+        </form></div>
+      </div>
     </div>
     {{if .EditID}}
     <div class="col-12 col-lg-4">
@@ -815,8 +827,11 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
       <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "bc_add"}}</h4></div>
         <div class="card-body"><form method="post" action="/broadcast">
           <div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" required></div>
-          <div class="form-group"><label>{{T "bc_groups"}}</label><select name="groups" class="form-control" multiple required>{{range .Groups}}<option value="{{.ID}}">{{.Name}} ({{.Count}})</option>{{end}}</select></div>
-          <div class="form-group"><label>{{T "bc_account"}}</label><div class="border rounded p-2" style="max-height:160px;overflow-y:auto">{{range .ConnectedAccounts}}{{if .Phone}}<div class="form-check"><input class="form-check-input" type="checkbox" name="account_ids" value="+{{.Phone}}" id="bc_{{.Phone}}"><label class="form-check-label small" for="bc_{{.Phone}}">+{{.Phone}}</label></div>{{end}}{{end}}{{if not .HasConnected}}<small class="text-muted">Belum ada nomor terkoneksi</small>{{end}}</div><small class="form-text text-muted">Biarkan kosong = random semua nomor. Checklist = hanya nomor itu.</small><div class="form-group"><label>Interval (detik) <small class="text-muted">jeda antar pesan</small></label><input name="interval" type="number" class="form-control" value="300" min="30" placeholder="300-400"></div></div>
+           <div class="form-group"><label>{{T "bc_groups"}}</label><select name="groups" class="form-control" multiple>{{range .Groups}}<option value="{{.ID}}">{{.Name}} ({{.Count}})</option>{{end}}</select></div>
+           <div class="form-group"><label>Nomor Langsung <small class="text-muted">— satu per baris</small></label><textarea name="numbers" class="form-control" rows="4" placeholder="628123456789&#10;628987654321&#10;..."></textarea><small class="form-text text-muted">Tempel nomor langsung (tanpa grup). Bisa digabung dengan grup di atas.</small></div>
+           <div class="form-group"><label>{{T "bc_account"}}</label><div class="border rounded p-2" style="max-height:160px;overflow-y:auto">{{range .ConnectedAccounts}}{{if .Phone}}<div class="form-check"><input class="form-check-input" type="checkbox" name="account_ids" value="+{{.Phone}}" id="bc_{{.Phone}}"><label class="form-check-label small" for="bc_{{.Phone}}">+{{.Phone}}</label></div>{{end}}{{end}}{{if not .HasConnected}}<small class="text-muted">Belum ada nomor terkoneksi</small>{{end}}</div><small class="form-text text-muted">Biarkan kosong = semua nomor terhubung. Checklist = hanya nomor itu.</small></div>
+           <div class="form-group"><label>Mode Pengiriman</label><div class="border rounded p-2"><div class="form-check"><input class="form-check-input" type="radio" name="send_mode" value="round_robin" id="mode_rr" checked><label class="form-check-label" for="mode_rr"><strong>Round Robin</strong> <small class="text-muted">— kirim bergantian merata ke tiap nomor</small></label></div><div class="form-check mt-1"><input class="form-check-input" type="radio" name="send_mode" value="random" id="mode_rand"><label class="form-check-label" for="mode_rand"><strong>Random</strong> <small class="text-muted">— kirim acak ke nomor manapun</small></label></div></div></div>
+           <div class="form-group"><label>Interval (detik) <small class="text-muted">jeda antar pesan</small></label><input name="interval" type="number" class="form-control" value="300" min="30" placeholder="300-400"></div>
           <div class="form-group"><label>{{T "col_message"}}</label><textarea name="message" class="form-control" rows="3" required></textarea><small class="form-text text-muted">{{T "set_vars_hint"}}</small></div>
           <button class="btn btn-primary lift" {{if not .HasConnected}}disabled{{end}}><i class="la la-bullhorn me-1"></i> {{T "bc_start"}}</button>
         </form></div>
@@ -1099,14 +1114,17 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
 
 {{if eq .Page "admin_roles"}}
   <div class="row">
+    {{if .EditID}}
+    <div class="col-12 col-lg-4"><div class="card border-warning"><div class="card-header bg-warning bg-opacity-10"><h4 class="card-header-title"><i class="la la-edit me-1"></i> Edit Role #{{.EditID}}</h4></div><div class="card-body"><form method="post" action="/admin/roles/edit"><input type="hidden" name="id" value="{{.EditID}}"><div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" value="{{.EditName}}" required></div><div class="form-group"><label>{{T "role_perms"}}</label><select name="permissions" class="form-control" multiple size="18" style="overflow-y:auto;min-height:360px"><option value="manage_users">Users</option><option value="manage_roles">Roles</option><option value="manage_packages">Packages</option><option value="manage_vouchers">Vouchers</option><option value="manage_subscriptions">Subscriptions</option><option value="manage_transactions">Transactions</option><option value="manage_payouts">Payouts</option><option value="manage_pages">Pages</option><option value="manage_marketing">Marketing</option><option value="manage_languages">Languages</option><option value="manage_waservers">WA Servers</option><option value="manage_gateways">Gateways</option><option value="manage_shorteners">Shorteners</option><option value="manage_plugins">Plugins</option><option value="manage_meta">Meta API</option><option value="manage_metatemplates">Meta Templates</option><option value="wa_send">Send Message</option><option value="wa_broadcast">Broadcast</option><option value="wa_scheduled">Scheduled</option><option value="wa_sent">Sent Messages</option><option value="wa_received">Received Messages</option><option value="wa_inbox">Live Chat</option><option value="wa_status">WA Status</option><option value="wa_autoreply">Auto Reply</option><option value="wa_ai_keys">AI Keys</option><option value="wa_ai_plugins">AI Plugins</option><option value="wa_knowledge">Knowledge Base</option><option value="wa_contacts">Contacts</option><option value="wa_groups">Contact Groups</option><option value="wa_unsub">Unsubscribed</option><option value="wa_templates">Templates</option><option value="wa_apikeys">API Keys</option><option value="wa_webhooks">Webhooks</option><option value="wa_logger">Logger</option><option value="wa_settings">Settings</option><option value="wa_docs">Documentation</option><option value="wa_hosts">Hosts</option><option value="wa_ussd">USSD</option><option value="wa_impersonate">Impersonate</option></select></div><button class="btn btn-warning lift"><i class="la la-save me-1"></i> Update</button> <a href="/admin/roles" class="btn btn-white ms-2">{{T "ar_cancel"}}</a></form><script>document.addEventListener('DOMContentLoaded',function(){var s=document.querySelector('form[action=\"/admin/roles/edit\"] select[name=\"permissions\"]');if(s){var v='{{.EditContent}}';v.split(',').forEach(function(p){var o=s.querySelector('option[value=\"'+p.replace(/^\\s+|\\s+$/g,'')+'\"]');if(o)o.selected=true})}})</script></div></div></div>
+    {{else}}
     <div class="col-12 col-lg-4"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "role_add"}}</h4></div><div class="card-body">
       <form method="post" action="/admin/roles/add"><div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" required></div>
       <div class="form-group"><label>{{T "role_perms"}}</label><select name="permissions" class="form-control" multiple size="18" style="overflow-y:auto;min-height:360px"><option value="manage_users">Users</option><option value="manage_roles">Roles</option><option value="manage_packages">Packages</option><option value="manage_vouchers">Vouchers</option><option value="manage_subscriptions">Subscriptions</option><option value="manage_transactions">Transactions</option><option value="manage_payouts">Payouts</option><option value="manage_pages">Pages</option><option value="manage_marketing">Marketing</option><option value="manage_languages">Languages</option><option value="manage_waservers">WA Servers</option><option value="manage_gateways">Gateways</option><option value="manage_shorteners">Shorteners</option><option value="manage_plugins">Plugins</option><option value="manage_meta">Meta API</option><option value="manage_metatemplates">Meta Templates</option><option value="wa_send">Send Message</option><option value="wa_broadcast">Broadcast</option><option value="wa_scheduled">Scheduled</option><option value="wa_sent">Sent Messages</option><option value="wa_received">Received Messages</option><option value="wa_inbox">Live Chat</option><option value="wa_status">WA Status</option><option value="wa_autoreply">Auto Reply</option><option value="wa_ai_keys">AI Keys</option><option value="wa_ai_plugins">AI Plugins</option><option value="wa_knowledge">Knowledge Base</option><option value="wa_contacts">Contacts</option><option value="wa_groups">Contact Groups</option><option value="wa_unsub">Unsubscribed</option><option value="wa_templates">Templates</option><option value="wa_apikeys">API Keys</option><option value="wa_webhooks">Webhooks</option><option value="wa_logger">Logger</option><option value="wa_settings">Settings</option><option value="wa_docs">Documentation</option><option value="wa_hosts">Hosts</option><option value="wa_ussd">USSD</option><option value="wa_impersonate">Impersonate</option></select></div>
-      <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>{{if .EditID}}<a href="/admin/roles" class="btn btn-white btn-sm ms-2">Batal</a>{{end}}</form></div></div>
-    {{if .EditID}}<div class="col-12 col-lg-4"><div class="card border-warning"><div class="card-header bg-warning bg-opacity-10"><h4 class="card-header-title"><i class="la la-edit me-1"></i> Edit Role #{{.EditID}}</h4></div><div class="card-body"><form method="post" action="/admin/roles/edit"><input type="hidden" name="id" value="{{.EditID}}"><div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" value="{{.EditName}}" required></div><div class="form-group"><label>{{T "role_perms"}}</label><select name="permissions" class="form-control" multiple size="18" style="overflow-y:auto;min-height:360px"><option value="manage_users">Users</option><option value="manage_roles">Roles</option><option value="manage_packages">Packages</option><option value="manage_vouchers">Vouchers</option><option value="manage_subscriptions">Subscriptions</option><option value="manage_transactions">Transactions</option><option value="manage_payouts">Payouts</option><option value="manage_pages">Pages</option><option value="manage_marketing">Marketing</option><option value="manage_languages">Languages</option><option value="manage_waservers">WA Servers</option><option value="manage_gateways">Gateways</option><option value="manage_shorteners">Shorteners</option><option value="manage_plugins">Plugins</option><option value="manage_meta">Meta API</option><option value="manage_metatemplates">Meta Templates</option><option value="wa_send">Send Message</option><option value="wa_broadcast">Broadcast</option><option value="wa_scheduled">Scheduled</option><option value="wa_sent">Sent Messages</option><option value="wa_received">Received Messages</option><option value="wa_inbox">Live Chat</option><option value="wa_status">WA Status</option><option value="wa_autoreply">Auto Reply</option><option value="wa_ai_keys">AI Keys</option><option value="wa_ai_plugins">AI Plugins</option><option value="wa_knowledge">Knowledge Base</option><option value="wa_contacts">Contacts</option><option value="wa_groups">Contact Groups</option><option value="wa_unsub">Unsubscribed</option><option value="wa_templates">Templates</option><option value="wa_apikeys">API Keys</option><option value="wa_webhooks">Webhooks</option><option value="wa_logger">Logger</option><option value="wa_settings">Settings</option><option value="wa_docs">Documentation</option><option value="wa_hosts">Hosts</option><option value="wa_ussd">USSD</option><option value="wa_impersonate">Impersonate</option></select></div><button class="btn btn-warning lift"><i class="la la-save me-1"></i> Update</button> <a href="/admin/roles" class="btn btn-white ms-2">Batal</a></form></div></div></div>{{end}}</div>
-    <div class="col-12 col-lg-{{if .EditID}}4{{else}}8{{end}}"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "adm_roles"}}</h4></div>
+      <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button></form></div></div></div>
+    {{end}}
+    <div class="col-12 col-lg-8"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "adm_roles"}}</h4></div>
       <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>{{T "role_perms"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
-        {{range .Roles}}<tr><td>{{.ID}}</td><td><strong>{{.Name}}</strong></td><td style="max-width:400px">{{permBadges .Permissions}}</td><td class="text-nowrap"><a class="btn btn-sm btn-white" href="/admin/roles?edit={{.ID}}"><i class="la la-edit"></i></a> <form method="post" action="/admin/roles/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger"><i class="la la-trash"></i></button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center py-4">-</td></tr>{{end}}
+        {{range .Roles}}<tr class="align-middle"><td>{{.ID}}</td><td><strong>{{.Name}}</strong></td><td style="max-width:480px">{{permBadges .Permissions}}</td><td class="text-nowrap"><a class="btn btn-sm btn-white" href="/admin/roles?edit={{.ID}}"><i class="la la-edit"></i></a> <form method="post" action="/admin/roles/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger"><i class="la la-trash"></i></button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center py-4">-</td></tr>{{end}}
       </tbody></table></div></div></div>
   </div>
 {{end}}

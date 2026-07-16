@@ -42,6 +42,8 @@ func (e *Engine) campaignLoop() {
 func (e *Engine) runCampaign(c store.Campaign) {
 	// Build sender selector from comma-separated account_ids
 	var sel *SenderSelector
+	sendMode := c.SendMode
+	if sendMode == "" { sendMode = "round_robin" }
 	if c.AccountIDs != "" {
 		phones := strings.Split(c.AccountIDs, ",")
 		var clean []string
@@ -50,24 +52,31 @@ func (e *Engine) runCampaign(c store.Campaign) {
 			if p != "" { clean = append(clean, strings.TrimPrefix(p, "+")) }
 		}
 		if len(clean) > 0 {
-			sel = &SenderSelector{Phones: clean, Mode: "round_robin"}
+			sel = &SenderSelector{Phones: clean, Mode: sendMode}
 		}
 	}
-	if sel == nil { sel = &SenderSelector{Mode: "random"} }
-	// gather unique recipients from the selected groups
+	if sel == nil { sel = &SenderSelector{Mode: sendMode} }
+	// gather unique recipients from groups + direct numbers
 	seen := map[string]bool{}
 	var targets []store.Contact
 	for _, gid := range strings.Split(c.Groups, ",") {
 		gid = strings.TrimSpace(gid)
-		if gid == "" {
-			continue
-		}
+		if gid == "" { continue }
 		list, _ := e.db.ContactsByGroup(gid)
 		for _, ct := range list {
-			if !seen[ct.Phone] {
+			if !seen[ct.Phone] && ct.Phone != "" {
 				seen[ct.Phone] = true
 				targets = append(targets, ct)
 			}
+		}
+	}
+	// direct numbers (comma-separated)
+	if c.Numbers != "" {
+		for _, n := range strings.Split(c.Numbers, ",") {
+			n = strings.TrimSpace(n)
+			if n == "" || seen[n] { continue }
+			seen[n] = true
+			targets = append(targets, store.Contact{Phone: n})
 		}
 	}
 	for _, ct := range targets {

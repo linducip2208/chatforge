@@ -2,6 +2,7 @@ package main
 
 import (
 	crand "crypto/rand"
+	"encoding/csv"
 	"encoding/hex"
 	"fmt"
 	"html/template"
@@ -119,6 +120,7 @@ func main() {
 	mux.HandleFunc("/contacts/unsub", p("unsub"))
 	mux.HandleFunc("/contacts/add", authMiddleware(crudPost(func(r *http.Request) { db.AddContact(r.FormValue("name"), r.FormValue("phone"), joinVals(r, "groups")) }, "/contacts")))
 	mux.HandleFunc("/contacts/delete", authMiddleware(crudDel(func(id int64) { db.DeleteContact(id) }, "/contacts")))
+	mux.HandleFunc("/contacts/import", authMiddleware(handleContactImport))
 	mux.HandleFunc("/groups/add", authMiddleware(crudPost(func(r *http.Request) { db.AddGroup(r.FormValue("name")) }, "/contacts/groups")))
 	mux.HandleFunc("/groups/delete", authMiddleware(crudDel(func(id int64) { db.DeleteGroup(id) }, "/contacts/groups")))
 	mux.HandleFunc("/unsub/add", authMiddleware(crudPost(func(r *http.Request) { db.AddUnsub(r.FormValue("phone")) }, "/contacts/unsub")))
@@ -726,7 +728,7 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 				c := "secondary"
 				if strings.HasPrefix(p, "manage_") { c = "primary" }
 				if strings.HasPrefix(p, "wa_") { c = "success" }
-				buf.WriteString(fmt.Sprintf(`<span class="badge badge-soft-%s me-1 mb-1">%s</span>`, c, p))
+				buf.WriteString(fmt.Sprintf(`<span class="badge badge-soft-%s me-1" style="line-height:1.4;margin-bottom:2px">%s</span>`, c, p))
 			}
 			return template.HTML(buf.String())
 		},
@@ -1219,22 +1221,123 @@ func handleBroadcast(w http.ResponseWriter, r *http.Request) {
 	message := r.FormValue("message")
 	groups := joinVals(r, "groups")
 	accountID := joinVals(r, "account_ids")
-	if name == "" || message == "" || groups == "" {
+	sendMode := r.FormValue("send_mode")
+	if sendMode != "round_robin" && sendMode != "random" { sendMode = "round_robin" }
+	numbers := strings.TrimSpace(r.FormValue("numbers"))
+	if name == "" || message == "" || (groups == "" && numbers == "") {
 		http.Redirect(w, r, "/broadcast", http.StatusSeeOther)
 		return
 	}
-	// count unique recipients
+	// count unique recipients from groups + direct numbers
 	seen := map[string]bool{}
 	for _, gid := range strings.Split(groups, ",") {
 		list, _ := db.ContactsByGroup(strings.TrimSpace(gid))
 		for _, c := range list {
-			seen[c.Phone] = true
+			if c.Phone != "" { seen[c.Phone] = true }
 		}
 	}
+	if numbers != "" {
+		for _, n := range strings.Split(numbers, "\n") {
+			n = strings.TrimSpace(n)
+			// strip +, -, spaces from phone
+			n = strings.Map(func(r rune) rune {
+				if r == '+' || r == '-' || r == ' ' { return -1 }
+				return r
+			}, n)
+			if n != "" { seen[n] = true }
+		}
+	}
+	// normalize numbers to comma-separated (strip duplicates from groups)
+	var numList []string
+	for n := range seen {
+		numList = append(numList, n)
+	}
+	normalizedNumbers := strings.Join(numList, ",")
+
 	interval, _ := strconv.Atoi(r.FormValue("interval"))
 	if interval <= 0 { interval = 300 }
-	_, _ = db.AddCampaign(name, groups, message, len(seen), accountID, interval)
+	_, _ = db.AddCampaign(name, groups, normalizedNumbers, message, len(seen), accountID, sendMode, interval)
 	http.Redirect(w, r, "/broadcast", http.StatusSeeOther)
+}
+
+// ---- Contact CSV Import ----
+func handleContactImport(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Redirect(w, r, "/contacts", http.StatusSeeOther)
+		return
+	}
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		http.Redirect(w, r, "/contacts?msg=File+required", http.StatusSeeOther)
+		return
+	}
+	defer file.Close()
+	reader := csv.NewReader(file)
+	headers, err := reader.Read()
+	if err != nil {
+		http.Redirect(w, r, "/contacts?msg=Invalid+CSV", http.StatusSeeOther)
+		return
+	}
+	colName := -1; colPhone := -1; colGroups := -1
+	for i, h := range headers {
+		h = strings.ToLower(strings.TrimSpace(h))
+		switch h {
+		case "name", "nama": colName = i
+		case "phone", "no", "nomor", "telepon": colPhone = i
+		case "groups", "group", "grup": colGroups = i
+		}
+	}
+	if colPhone < 0 {
+		http.Redirect(w, r, "/contacts?msg=CSV+must+have+phone+column", http.StatusSeeOther)
+		return
+	}
+	// Preload all existing groups into a name→id map
+	existingGroups, _ := db.ListGroups()
+	gnameToID := map[string]int64{}
+	for _, g := range existingGroups { gnameToID[strings.ToLower(strings.TrimSpace(g.Name))] = g.ID }
+
+	imported := 0; skipped := 0
+	for {
+		record, err := reader.Read()
+		if err == io.EOF { break }
+		if err != nil { continue }
+		phone := strings.TrimSpace(safeGet(record, colPhone))
+		name := strings.TrimSpace(safeGet(record, colName))
+		if phone == "" { continue }
+		// Resolve groups from the CSV — auto-create missing groups
+		var gids []string
+		groupStr := strings.TrimSpace(safeGet(record, colGroups))
+		if groupStr != "" {
+			for _, gn := range strings.Split(groupStr, ",") {
+				gn = strings.TrimSpace(gn)
+				if gn == "" { continue }
+				key := strings.ToLower(gn)
+				gid, ok := gnameToID[key]
+				if !ok {
+					id, err := db.AddGroup(gn)
+					if err == nil {
+						gnameToID[key] = id
+						gid = id
+					}
+				}
+				if gid > 0 { gids = append(gids, strconv.FormatInt(gid, 10)) }
+			}
+		}
+		gidStr := strings.Join(gids, ",")
+		// Deduplicate by phone
+		existing, _ := db.FindContactByPhone(phone)
+		if existing != nil {
+			skipped++
+			continue
+		}
+		if name == "" { name = phone }
+		if _, err := db.AddContact(name, phone, gidStr); err == nil {
+			imported++
+		}
+	}
+	msg := fmt.Sprintf("Imported+%d+contacts", imported)
+	if skipped > 0 { msg += fmt.Sprintf(",+%d+skipped+(duplicate)", skipped) }
+	http.Redirect(w, r, "/contacts?msg="+msg, http.StatusSeeOther)
 }
 
 // ---- Scheduled ----
