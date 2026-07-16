@@ -25,6 +25,7 @@ func (e *Engine) StartLoops() {
 	go e.dripLoop()
 	go e.reminderLoop()
 	go e.recurringLoop()
+	go e.autoCloseLoop()
 }
 
 // campaignLoop drains running campaigns, sending to each contact in the target groups.
@@ -436,6 +437,32 @@ func (e *Engine) recurringLoop() {
 			}
 			e.db.MarkRecurringRun(c.ID)
 			e.db.Log("recurring", "run", fmt.Sprintf("%s sent to %d contacts", c.Name, len(seen)))
+		}
+	}
+}
+
+func (e *Engine) autoCloseLoop() {
+	for {
+		time.Sleep(1 * time.Hour)
+		hours, _ := strconv.Atoi(e.db.GetSetting("auto_close_hours", "0"))
+		if hours <= 0 { continue }
+		phones := e.db.IdleConversations(hours)
+		msg := e.db.GetSetting("auto_close_message", "Chat ini ditutup otomatis.")
+		e.mu.RLock()
+		var s *session
+		for _, ss := range e.sessions {
+			if ss.status == "connected" { s = ss; break }
+		}
+		e.mu.RUnlock()
+		if s == nil { continue }
+		for _, phone := range phones {
+			e.db.CloseConversation(phone)
+			digits := onlyDigits(phone)
+			if digits != "" {
+				jid := waTypes.NewJID(digits, waTypes.DefaultUserServer)
+				e.sendVia(s, jid, msg)
+			}
+			time.Sleep(2 * time.Second)
 		}
 	}
 }
