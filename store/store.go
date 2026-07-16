@@ -162,6 +162,7 @@ func (d *DB) migrate() error {
 	d.migrateStatuses()
 	d.migrateMeta()
 	d.migrateDrip()
+	d.migratePayment()
 	return nil
 }
 

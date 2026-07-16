@@ -271,6 +271,8 @@ document.querySelectorAll(".msg-full").forEach(function(el){
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_vouchers"}}active{{end}}" href="/admin/vouchers"><i class="la la-ticket-alt la-lg"></i> {{T "adm_vouchers"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_subscriptions"}}active{{end}}" href="/admin/subscriptions"><i class="la la-star la-lg"></i> {{T "adm_subscriptions"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_transactions"}}active{{end}}" href="/admin/transactions"><i class="la la-money-bill la-lg"></i> {{T "adm_transactions"}}</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_paygateways"}}active{{end}}" href="/admin/gateways-pay"><i class="la la-credit-card la-lg"></i> Pay Gateways</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_transactions_pay"}}active{{end}}" href="/admin/transactions-pay"><i class="la la-receipt la-lg"></i> Pay Logs</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_payouts"}}active{{end}}" href="/admin/payouts"><i class="la la-hand-holding-usd la-lg"></i> {{T "adm_payouts"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_pages"}}active{{end}}" href="/admin/pages"><i class="la la-file la-lg"></i> {{T "adm_pages"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_marketing"}}active{{end}}" href="/admin/marketing"><i class="la la-bullhorn la-lg"></i> {{T "adm_marketing"}}</a></li>
@@ -286,6 +288,7 @@ document.querySelectorAll(".msg-full").forEach(function(el){
       <hr class="navbar-divider my-3">
       <h6 class="navbar-heading">{{T "nav_docs"}}</h6>
       <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link {{if eq .Active "subscribe"}}active{{end}}" href="/subscribe"><i class="la la-shopping-cart la-lg"></i> Upgrade</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "docs"}}active{{end}}" href="/docs"><i class="la la-book la-lg"></i> {{T "nav_docs"}}</a></li>
       </ul>
     </div>
@@ -1017,6 +1020,75 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
     </div>
     <div class="modal-footer"><button class="btn btn-primary">Create</button></div>
   </form></div></div></div>
+{{end}}
+
+{{if eq .Page "subscribe"}}
+  <div class="row">
+    <div class="col-12"><h2 class="mb-4">Pilih Paket Langganan</h2></div>
+    {{range .Packages}}
+    <div class="col-12 col-md-6 col-lg-4 mb-4">
+      <div class="card border-0 shadow-sm h-100" style="border-radius:14px">
+        <div class="card-body text-center p-4">
+          <h4 class="fw-bold">{{.Name}}</h4>
+          <div class="display-4 fw-bold text-primary my-3">{{.Price}}</div>
+          <p class="text-muted small">
+            Send: {{.SendLimit}} | Device: {{.DeviceLimit}} | WA: {{.WaAccountLimit}}<br>
+            Contact: {{.ContactLimit}} | AI: {{if .KeyLimit}}{{.KeyLimit}}{{else}}0{{end}}
+          </p>
+          {{range $.PaymentGateways}}
+          {{if eq .Status "active"}}
+          <form method="post" action="/subscribe/checkout" class="mt-2">
+            <input type="hidden" name="package_id" value="{{$.ID}}">
+            <input type="hidden" name="gateway_id" value="{{.ID}}">
+            <button class="btn btn-primary w-100"><i class="la la-credit-card me-1"></i> Bayar via {{.Name}}</button>
+          </form>
+          {{end}}
+          {{end}}
+          {{if not $.PaymentGateways}}<p class="text-muted small mt-2">Belum ada gateway pembayaran.</p>{{end}}
+        </div>
+      </div>
+    </div>
+    {{else}}
+    <div class="col-12 text-center py-5 text-muted">Belum ada paket tersedia.</div>
+    {{end}}
+  </div>
+{{end}}
+
+{{if eq .Page "admin_paygateways"}}
+  <div class="row">
+    <div class="col-12 col-lg-5">
+      <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> Add Gateway</h4></div>
+        <div class="card-body"><form method="post" action="/admin/gateways-pay/add">
+          <div class="form-group"><label>Provider</label><select name="provider" class="form-control"><option value="midtrans">Midtrans (ID)</option><option value="xendit">Xendit (ID)</option><option value="paypal">PayPal (Intl)</option><option value="stripe">Stripe (Intl)</option></select></div>
+          <div class="form-group"><label>Nama</label><input name="name" class="form-control" placeholder="My Gateway"></div>
+          <div class="form-group"><label>API Key</label><input name="api_key" class="form-control"></div>
+          <div class="form-group"><label>API Secret</label><input name="api_secret" class="form-control"></div>
+          <div class="form-group"><label>Webhook Secret</label><input name="webhook_secret" class="form-control"></div>
+          <div class="form-group"><label>Currency</label><select name="currency" class="form-control"><option value="IDR">IDR</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="SGD">SGD</option></select></div>
+          <div class="form-group"><label>Base URL (optional)</label><input name="base_url" class="form-control" placeholder="Kosongkan untuk default"></div>
+          <button class="btn btn-primary"><i class="la la-plus me-1"></i> Add</button>
+        </form></div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-7">
+      <div class="card"><div class="card-header"><h4 class="card-header-title">Payment Gateways</h4></div>
+        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Name</th><th>Provider</th><th>Currency</th><th>Status</th><th></th></tr></thead><tbody>
+          {{range .PaymentGateways}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.Provider}}</td><td>{{.Currency}}</td><td>{{if eq .Status "active"}}<span class="badge badge-soft-success">Active</span>{{else}}<span class="badge badge-soft-secondary">Inactive</span>{{end}}</td><td>
+            <form method="post" action="/admin/gateways-pay/toggle" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-white">{{if eq .Status "active"}}Disable{{else}}Enable{{end}}</button></form>
+            <form method="post" action="/admin/gateways-pay/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">Del</button></form>
+          </td></tr>{{else}}<tr><td colspan="6" class="text-muted text-center">-</td></tr>{{end}}
+        </tbody></table></div>
+      </div>
+    </div>
+  </div>
+{{end}}
+
+{{if eq .Page "admin_transactions_pay"}}
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-receipt me-1"></i> Payment Transactions</h4></div>
+    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Invoice</th><th>User</th><th>Package</th><th>Amount</th><th>Status</th><th>{{T "col_time"}}</th></tr></thead><tbody>
+      {{range .Txs}}<tr><td>{{.ID}}</td><td><code>{{.InvoiceID}}</code></td><td>#{{.UserID}}</td><td>#{{.PackageID}}</td><td>{{.Amount}} {{.Currency}}</td><td>{{if eq .Status "paid"}}<span class="badge badge-soft-success">Paid</span>{{else if eq .Status "failed"}}<span class="badge badge-soft-danger">Failed</span>{{else}}<span class="badge badge-soft-warning">{{.Status}}</span>{{end}}</td><td class="text-muted small">{{.Created}}</td></tr>{{else}}<tr><td colspan="7" class="text-muted text-center py-4">No transactions yet.</td></tr>{{end}}
+    </tbody></table></div>
+  </div>
 {{end}}
 
 {{if eq .Page "templates"}}

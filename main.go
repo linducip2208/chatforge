@@ -20,6 +20,7 @@ import (
 	"chatgo/i18n"
 	"chatgo/meta"
 	"chatgo/msgtemplate"
+	"chatgo/payment"
 	"chatgo/secret"
 	"chatgo/store"
 	"chatgo/wa"
@@ -160,6 +161,9 @@ func main() {
 		http.Redirect(w, r, "/ab-tests", http.StatusSeeOther)
 	}))
 	mux.HandleFunc("/track/", handleLinkTrack)
+	mux.HandleFunc("/subscribe", authMiddleware(handleSubscribe))
+	mux.HandleFunc("/subscribe/checkout", authMiddleware(handleCheckout))
+	mux.HandleFunc("/payment/callback/", handlePaymentCallback)
 	mux.HandleFunc("/inbox/canned", authMiddleware(handleInboxCanned))
 		mux.HandleFunc("/scheduled", authMiddleware(handleScheduled))
 	mux.HandleFunc("/scheduled/delete", authMiddleware(crudDel(func(id int64) { db.DeleteScheduled(id) }, "/scheduled")))
@@ -296,8 +300,10 @@ type pageData struct {
 	Tags       []store.Tag
 	Canned     []store.CannedResponse
 	LClicks    []store.LinkClick
-	ABTests    []store.ABTest
-	Scheduleds []store.Scheduled
+	ABTests        []store.ABTest
+	PaymentGateways []store.PaymentGateway
+	Txs            []store.PaymentTransaction
+	Scheduleds     []store.Scheduled
 	Logs       []store.LogEntry
 	// admin/ai/devices
 	Users         []store.User
@@ -534,6 +540,13 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 	case "abtests":
 		d.ABTests, _ = db.ListABTests()
 		d.Campaigns, _ = db.ListCampaigns()
+	case "subscribe":
+		d.Packages, _ = db.ListPackages()
+		d.PaymentGateways, _ = db.ListPaymentGateways()
+	case "admin_paygateways":
+		d.PaymentGateways, _ = db.ListPaymentGateways()
+	case "admin_transactions_pay":
+		d.Txs, _ = db.ListPayTransactions()
 	case "canned":
 		d.Canned, _ = db.ListCanned()
 		d.Users, _ = db.ListUsers()
@@ -720,6 +733,12 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Link Tracker", T("nav_tools"), "Link Clicks", "la-link"
 	case "abtests":
 		d.Title, d.Pretitle, d.Heading, d.Icon = "A/B Tests", T("nav_whatsapp"), "A/B Testing", "la-balance-scale"
+	case "subscribe":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Pilih Paket", "Subscription", "Pricing", "la-shopping-cart"
+	case "admin_paygateways":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Payment Gateways", "Admin", "Pay Gateways", "la-credit-card"
+	case "admin_transactions_pay":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Payment Transactions", "Admin", "Transactions", "la-receipt"
 	case "scheduled":
 		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_scheduled"), T("nav_whatsapp"), T("nav_scheduled"), "la-clock"
 	case "templates":
@@ -1506,6 +1525,104 @@ func handleInboxCanned(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(list)
+}
+
+// ---- Payment / Subscription ----
+
+func handleSubscribe(w http.ResponseWriter, r *http.Request) {
+	render(w, r, "subscribe")
+}
+
+func handleCheckout(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Redirect(w, r, "/subscribe", http.StatusSeeOther)
+		return
+	}
+	uid := getUserID(r)
+	packageID, _ := strconv.ParseInt(r.FormValue("package_id"), 10, 64)
+	gatewayID, _ := strconv.ParseInt(r.FormValue("gateway_id"), 10, 64)
+	if uid == 0 || packageID == 0 || gatewayID == 0 {
+		http.Redirect(w, r, "/subscribe?msg=Invalid", http.StatusSeeOther)
+		return
+	}
+	pkg, err := db.GetPackage(packageID)
+	if err != nil {
+		http.Redirect(w, r, "/subscribe?msg=Package+not+found", http.StatusSeeOther)
+		return
+	}
+	gw, err := db.GetPaymentGateway(gatewayID)
+	if err != nil || gw.Status != "active" {
+		http.Redirect(w, r, "/subscribe?msg=Gateway+not+available", http.StatusSeeOther)
+		return
+	}
+	price, _ := strconv.ParseFloat(pkg.Price, 64)
+	if price <= 0 { price = 99000 }
+	currency := gw.Currency
+	invoiceID := store.GenInvoiceID()
+
+	cfg := payment.GatewayConfig{
+		APIKey: gw.APIKey, APISecret: gw.APISecret,
+		WebhookSecret: gw.WebhookSecret, BaseURL: gw.BaseURL, Currency: currency,
+	}
+	pg, err := payment.New(gw.Provider, cfg)
+	if err != nil {
+		http.Error(w, "Gateway error: "+err.Error(), 500)
+		return
+	}
+	user, _ := db.GetUserByID(uid)
+	email := ""
+	if user != nil { email = user.Email }
+	callbackURL := appURL() + "/payment/callback/" + gw.Provider
+	result, err := pg.CreateCharge(payment.ChargeParams{
+		InvoiceID: invoiceID, Amount: price, Currency: currency,
+		Description: pkg.Name + " Subscription",
+		CustomerName: r.FormValue("name"), CustomerEmail: email,
+		Items:       []payment.ChargeItem{{ID: pkg.Name, Name: pkg.Name, Price: price, Quantity: 1}},
+		CallbackURL: callbackURL, ReturnURL: appURL() + "/subscribe",
+	})
+	if err != nil {
+		http.Error(w, "Payment error: "+err.Error(), 500)
+		return
+	}
+	db.CreateTransaction(uid, packageID, gatewayID, price, currency, invoiceID, result.RedirectURL, result.ExternalID)
+	http.Redirect(w, r, result.RedirectURL, http.StatusSeeOther)
+}
+
+func handlePaymentCallback(w http.ResponseWriter, r *http.Request) {
+	provider := strings.TrimPrefix(r.URL.Path, "/payment/callback/")
+	body, _ := io.ReadAll(r.Body)
+	gateways, _ := db.ListPaymentGateways()
+	var gw *store.PaymentGateway
+	for _, g := range gateways {
+		if g.Provider == provider && g.Status == "active" { gw = &g; break }
+	}
+	if gw == nil { http.Error(w, "Unknown gateway", 400); return }
+	cfg := payment.GatewayConfig{
+		APIKey: gw.APIKey, APISecret: gw.APISecret,
+		WebhookSecret: gw.WebhookSecret, BaseURL: gw.BaseURL, Currency: gw.Currency,
+	}
+	pg, err := payment.New(provider, cfg)
+	if err != nil { http.Error(w, err.Error(), 500); return }
+	headers := map[string]string{}
+	for k := range r.Header {
+		headers[k] = r.Header.Get(k)
+	}
+	result, err := pg.VerifyCallback(body, headers)
+	if err != nil {
+		db.Log("payment", "verify_error", fmt.Sprintf("%s: %s", provider, err.Error()))
+		http.Error(w, "Verification failed", 400)
+		return
+	}
+	if result.Status == "paid" {
+		trx, _ := db.GetTransactionByInvoice(result.InvoiceID)
+		if trx != nil && trx.Status != "paid" {
+			db.UpdateTransactionStatus(result.InvoiceID, "paid")
+			db.ActivateSubscription(trx.UserID, trx.PackageID)
+			db.Log("payment", "paid", fmt.Sprintf("%s paid via %s: %.0f %s", result.InvoiceID, provider, result.Amount, gw.Currency))
+		}
+	}
+	w.WriteHeader(200)
+	w.Write([]byte("OK"))
 }
 
 // ---- Contact CSV Import ----

@@ -198,6 +198,22 @@ func registerAdminRoutes(mux *http.ServeMux) {
 	}, "/admin/metatemplates"))
 	mux.HandleFunc("/admin/metatemplates/delete", acd(func(id int64) { db.DeleteMetaTemplate(id) }, "/admin/metatemplates"))
 
+	// Payment Gateways
+	mux.HandleFunc("/admin/gateways-pay", ap("admin_paygateways"))
+	mux.HandleFunc("/admin/gateways-pay/add", a(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			db.AddPaymentGateway(r.FormValue("name"), r.FormValue("provider"), r.FormValue("api_key"), r.FormValue("api_secret"), r.FormValue("webhook_secret"), r.FormValue("base_url"), r.FormValue("currency"), r.FormValue("config"))
+			http.Redirect(w, r, "/admin/gateways-pay", http.StatusSeeOther)
+		}
+	}))
+	mux.HandleFunc("/admin/gateways-pay/delete", acd(func(id int64) { db.DeletePaymentGateway(id) }, "/admin/gateways-pay"))
+	mux.HandleFunc("/admin/gateways-pay/toggle", a(func(w http.ResponseWriter, r *http.Request) {
+		id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+		if id > 0 { db.TogglePaymentGateway(id) }
+		http.Redirect(w, r, "/admin/gateways-pay", http.StatusSeeOther)
+	}))
+	mux.HandleFunc("/admin/transactions-pay", ap("admin_transactions_pay"))
+
 	// Docs
 	mux.HandleFunc("/docs", ap("docs"))
 }
