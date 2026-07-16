@@ -28,6 +28,7 @@ const templates = `
   .status-dot{height:9px;width:9px;border-radius:50%;display:inline-block;margin-right:5px}
   .badge-soft-success{background:rgba(0,217,126,.1);color:#00d97e}
   .badge-soft-danger{background:rgba(230,55,87,.1);color:#e63757}
+  .badge-soft-primary{background:rgba(44,123,229,.12);color:#2c7be5}
   .badge-soft-warning{background:rgba(246,195,67,.15);color:#f6c343}
   .badge-soft-secondary{background:rgba(110,120,140,.12);color:#6e788c}
   .lang-flag{width:20px;height:15px;border-radius:2px;margin-right:6px;object-fit:cover}
