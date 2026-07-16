@@ -136,6 +136,9 @@ func (d *DB) migrate() error {
 	if err := d.migrateExtra(); err != nil {
 		return err
 	}
+	if err := d.migrateAdmin(); err != nil {
+		return err
+	}
 	if _, err := d.sql.Exec(`ALTER TABLE received ADD COLUMN is_read TINYINT NOT NULL DEFAULT 0`); err != nil {
 		if !strings.Contains(err.Error(), "Duplicate") && !strings.Contains(err.Error(), "1060") {
 			return fmt.Errorf("add is_read: %w", err)
