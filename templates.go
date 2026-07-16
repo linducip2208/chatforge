@@ -15,6 +15,7 @@ const templates = `
 <link rel="stylesheet" href="/assets/dashboard/css/style.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
+  .navbar-vertical{overflow-y:auto;max-height:100vh}
   .navbar-vibrant{background:#0B1220}
   .navbar-vertical .navbar-heading{color:#5a6780;font-size:0.68rem;font-weight:700;letter-spacing:0.08em;padding:12px 24px 6px;text-transform:uppercase}
   .navbar-vertical .nav-link{color:#8895b7;font-size:0.85rem;padding:8px 24px;margin:1px 8px;border-radius:8px;transition:all .15s}
@@ -1859,7 +1860,25 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
     <p class="small text-muted">Copy URL ini ke Facebook Developer Console &gt; WhatsApp &gt; Configuration &gt; Webhook:</p>
     <code id="webhookUrl" style="word-break:break-all">{{.AppURL}}/webhook/meta</code>
     <p class="small text-muted mt-2">Verify Token: sesuai yang diisi di form atas.</p>
-  </div></div>
+</div></div>
+<script>
+(function(){
+var navs=document.querySelectorAll('.docs-nav a');
+var sections=document.querySelectorAll('.docs-section');
+function onScroll(){
+var scroll=window.scrollY+90;
+sections.forEach(function(sec, i){
+var top=sec.offsetTop;
+var h=sec.offsetHeight;
+navs.forEach(function(a){a.classList.remove('active')});
+if(scroll >= top && scroll < top+h && navs[i]) navs[i].classList.add('active');
+});
+}
+window.addEventListener('scroll',onScroll);
+navs.forEach(function(a){a.addEventListener('click',function(e){e.preventDefault();var id=this.getAttribute('href').slice(1);var el=document.getElementById(id);if(el)el.scrollIntoView({behavior:'smooth',block:'start'})})});
+onScroll();
+})();
+</script>
 {{end}}
 
 {{if eq .Page "admin_metatemplates"}}
@@ -2145,13 +2164,12 @@ document.getElementById('chatInput').focus();
 {{end}}
 {{if eq .Page "docs"}}
 <style>
+html{scroll-behavior:smooth}
 .docs-nav{position:sticky;top:80px}
 .docs-nav a{display:block;padding:4px 12px;color:#555;text-decoration:none;font-size:13px;border-left:2px solid transparent;transition:.15s}
 .docs-nav a:hover,.docs-nav a.active{border-left-color:#4F46E5;color:#4F46E5;background:rgba(79,70,229,.05)}
 .docs-section{margin-bottom:32px}
 .docs-section h3{font-weight:700;margin-bottom:4px;padding-bottom:8px;border-bottom:2px solid #eee}
-.badge-done{background:#00d97e;color:#fff}
-.badge-beta{background:#f6c343;color:#fff}
 </style>
 <div class="row">
 <div class="col-12 col-lg-3">
