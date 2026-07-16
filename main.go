@@ -249,6 +249,12 @@ func main() {
 	mux.HandleFunc("/translate-tool", authMiddleware(p("translatetool")))
 	mux.HandleFunc("/widget-info", authMiddleware(p("widgetinfo")))
 	mux.HandleFunc("/email-wa", authMiddleware(p("emailwa")))
+	mux.HandleFunc("/meta/send", authMiddleware(handleMetaSend))
+	mux.HandleFunc("/meta/campaigns", authMiddleware(p("meta_campaigns")))
+	mux.HandleFunc("/meta/inbox", authMiddleware(p("meta_inbox")))
+	mux.HandleFunc("/meta/logs", authMiddleware(p("meta_logs")))
+	mux.HandleFunc("/meta/analytics", authMiddleware(p("meta_analytics")))
+	mux.HandleFunc("/meta/webhook", authMiddleware(p("meta_webhook")))
 		mux.HandleFunc("/scheduled", authMiddleware(handleScheduled))
 	mux.HandleFunc("/scheduled/delete", authMiddleware(crudDel(func(id int64) { db.DeleteScheduled(id) }, "/scheduled")))
 	mux.HandleFunc("/templates", p("templates"))
@@ -918,6 +924,21 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Widget", "Tools", "Web Widget", "la-code"
 	case "emailwa":
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Email→WA", "Tools", "Email Gateway", "la-envelope"
+	case "meta_send":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Meta Send", "Meta", "Send via Cloud API", "la-paper-plane"
+		d.MetaAccounts, _ = db.ListMetaAccounts()
+	case "meta_campaigns":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Meta Campaigns", "Meta", "Campaign via Cloud API", "la-bullhorn"
+		d.Campaigns, _ = db.ListCampaigns()
+	case "meta_inbox":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Meta Inbox", "Meta", "Meta Live Chat", "la-comments"
+	case "meta_logs":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Meta Logs", "Meta", "Webhook Activity", "la-clipboard-list"
+		d.Logs, _ = db.ListLog(50)
+	case "meta_analytics":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Meta Stats", "Meta", "Cloud API Analytics", "la-chart-bar"
+	case "meta_webhook":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Meta Webhook", "Meta", "Webhook Config", "la-link"
 	case "tracker":
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Link Tracker", T("nav_tools"), "Link Clicks", "la-link"
 	case "abtests":
@@ -1886,6 +1907,20 @@ func handleEmailWebhook(w http.ResponseWriter, r *http.Request) {
 	db.LogReceived(from, subject, msg, false, "", "", "email")
 	engine.Notify(from)
 	w.WriteHeader(200)
+}
+
+func handleMetaSend(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		accID, _ := strconv.ParseInt(r.FormValue("account_id"), 10, 64)
+		acc, err := db.GetMetaAccount(accID)
+		if err == nil {
+			mc := meta.New(acc.PhoneNumberID, acc.AccessToken, acc.VerifyToken)
+			mc.SendText(r.FormValue("phone"), r.FormValue("message"))
+			http.Redirect(w, r, "/meta/send?msg=Sent", http.StatusSeeOther)
+			return
+		}
+	}
+	render(w, r, "meta_send")
 }
 
 func handleInboxCanned(w http.ResponseWriter, r *http.Request) {

@@ -312,6 +312,12 @@ if(a){var t=a.offsetTop-s.offsetHeight/2;if(t>0)s.scrollTop=t}
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_plugins"}}active{{end}}" href="/admin/plugins"><i class="la la-puzzle-piece la-lg"></i> {{T "adm_plugins"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_meta"}}active{{end}}" href="/admin/meta"><i class="la la-cloud la-lg"></i> Meta API<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;font-weight:600;padding:2px 5px;border-radius:3px">META</span></a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_metatemplates"}}active{{end}}" href="/admin/metatemplates"><i class="la la-file-alt la-lg"></i> Templates<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;font-weight:600;padding:2px 5px;border-radius:3px">META</span></a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "meta_send"}}active{{end}}" href="/meta/send"><i class="la la-paper-plane la-lg"></i> Meta Send<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;font-weight:600;padding:2px 5px;border-radius:3px">META</span></a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "meta_campaigns"}}active{{end}}" href="/meta/campaigns"><i class="la la-bullhorn la-lg"></i> Meta Campaign<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;font-weight:600;padding:2px 5px;border-radius:3px">META</span></a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "meta_inbox"}}active{{end}}" href="/meta/inbox"><i class="la la-comments la-lg"></i> Meta Inbox<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;font-weight:600;padding:2px 5px;border-radius:3px">META</span></a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "meta_logs"}}active{{end}}" href="/meta/logs"><i class="la la-clipboard-list la-lg"></i> Meta Logs<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;font-weight:600;padding:2px 5px;border-radius:3px">META</span></a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "meta_analytics"}}active{{end}}" href="/meta/analytics"><i class="la la-chart-bar la-lg"></i> Meta Stats<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;font-weight:600;padding:2px 5px;border-radius:3px">META</span></a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "meta_webhook"}}active{{end}}" href="/meta/webhook"><i class="la la-link la-lg"></i> Meta Webhook<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;font-weight:600;padding:2px 5px;border-radius:3px">META</span></a></li>
       </ul>
       {{end}}
       <hr class="navbar-divider my-3">
@@ -1372,6 +1378,79 @@ Content-Type: application/x-www-form-urlencoded
 
 from=sender@email.com&subject=Judul Email&text=Isi email</code></pre>
       <p class="text-muted small">Bisa diintegrasikan dengan Zapier, Make, n8n, atau custom webhook dari email provider.</p>
+    </div>
+  </div>
+{{end}}
+
+{{if eq .Page "meta_send"}}
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-paper-plane me-1"></i> Send via Meta Cloud API</h4></div>
+    <div class="card-body"><form method="post" action="/meta/send">
+      <div class="row">
+        <div class="col-md-4"><select name="account_id" class="form-control" required><option value="">Pilih Meta Account</option>{{range .MetaAccounts}}<option value="{{.ID}}">{{.Name}} ({{.PhoneNumberID}})</option>{{end}}</select></div>
+        <div class="col-md-4"><input name="phone" class="form-control" placeholder="628123456789" required></div>
+        <div class="col-md-4"><button class="btn btn-primary w-100"><i class="la la-paper-plane"></i> Send</button></div>
+      </div>
+      <textarea name="message" class="form-control mt-2" rows="4" placeholder="Tulis pesan..." required></textarea>
+    </form></div>
+  </div>
+{{end}}
+
+{{if eq .Page "meta_campaigns"}}
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-bullhorn me-1"></i> Campaign via Meta Cloud API</h4></div>
+    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Name</th><th>Groups</th><th>Progress</th><th>Status</th></tr></thead><tbody>
+      {{range .Campaigns}}{{if .MetaAccountID}}<tr><td>{{.ID}}</td><td>{{.Name}}<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:9px">META</span></td><td>{{.Groups}}</td><td>{{.Sent}}/{{.Total}}</td><td>{{.Status}}</td></tr>{{end}}{{else}}<tr><td colspan="5" class="text-muted text-center py-4">Belum ada campaign via Meta.</td></tr>{{end}}
+    </tbody></table></div>
+  </div>
+{{end}}
+
+{{if eq .Page "meta_inbox"}}
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-comments me-1"></i> Meta Live Chat</h4></div>
+    <div class="card-body text-center py-5">
+      <p class="text-muted">Meta Cloud API menerima pesan real-time via webhook.</p>
+      <p>Webhook URL: <code>{{.AppURL}}/webhook/meta</code></p>
+      <p class="small text-muted">Copy URL ini ke Facebook Developer Console → Webhook Configuration</p>
+      <a href="/inbox" class="btn btn-primary">Lihat Inbox</a>
+    </div>
+  </div>
+{{end}}
+
+{{if eq .Page "meta_logs"}}
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-clipboard-list me-1"></i> Meta Webhook Activity</h4></div>
+    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Type</th><th>Reason</th><th>Content</th></tr></thead><tbody>
+      {{range .Logs}}{{if eq .Type "meta"}}<tr><td>{{.ID}}</td><td>{{.Type}}</td><td>{{.Reason}}</td><td>{{.Content}}</td></tr>{{end}}{{else}}<tr><td colspan="4" class="text-muted text-center">No Meta activity.</td></tr>{{end}}
+    </tbody></table></div>
+  </div>
+{{end}}
+
+{{if eq .Page "meta_analytics"}}
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-chart-bar me-1"></i> Meta Cloud API Stats</h4></div>
+    <div class="card-body">
+      <div class="row text-center">
+        <div class="col-4"><div class="display-4 fw-bold text-primary">{{.CountSent}}</div><small class="text-muted">Sent</small></div>
+        <div class="col-4"><div class="display-4 fw-bold text-success">{{.CountReceived}}</div><small class="text-muted">Received</small></div>
+        <div class="col-4"><div class="display-4 fw-bold text-info">{{len .MetaAccounts}}</div><small class="text-muted">Accounts</small></div>
+      </div>
+    </div>
+  </div>
+{{end}}
+
+{{if eq .Page "meta_webhook"}}
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-link me-1"></i> Meta Webhook Configuration</h4></div>
+    <div class="card-body">
+      <p><strong>Webhook URL:</strong> <code>{{.AppURL}}/webhook/meta</code></p>
+      <p class="text-muted">Masukkan URL ini di Facebook Developer Console:</p>
+      <ol class="small">
+        <li>Buka <a href="https://developers.facebook.com" target="_blank">developers.facebook.com</a></li>
+        <li>Pilih App → WhatsApp → Configuration</li>
+        <li>Edit Webhook Callback URL → paste URL di atas</li>
+        <li>Verify Token = token dari form Meta Account</li>
+        <li>Subscribe ke field <code>messages</code></li>
+      </ol>
+      <hr>
+      <h5>Meta Accounts Terdaftar</h5>
+      <table class="table table-sm"><thead><tr><th>Name</th><th>Phone ID</th><th>Verify Token</th></tr></thead><tbody>
+        {{range .MetaAccounts}}<tr><td>{{.Name}}</td><td><code>{{.PhoneNumberID}}</code></td><td><code>{{.VerifyToken}}</code></td></tr>{{else}}<tr><td colspan="3" class="text-muted">Belum ada Meta account.</td></tr>{{end}}
+      </tbody></table>
     </div>
   </div>
 {{end}}
