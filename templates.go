@@ -742,7 +742,7 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
     <div class="col-12 col-lg-4">
       <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "ct_add"}}</h4></div>
         <div class="card-body"><form method="post" action="/contacts/add">
-          <div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" required></div>
+          <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
           <div class="form-group"><label>{{T "col_from"}}</label><input name="phone" class="form-control" placeholder="628xxx" required></div>
           <div class="form-group"><label>{{T "nav_contacts_groups"}}</label><select name="groups" class="form-control" multiple>{{range .Groups}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select></div>
           <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
@@ -761,7 +761,7 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
       <div class="card border-warning"><div class="card-header bg-warning bg-opacity-10"><h4 class="card-header-title"><i class="la la-edit me-1"></i> Edit</h4></div>
         <div class="card-body"><form method="post" action="/contacts/edit">
           <input type="hidden" name="id" value="{{.EditID}}">
-          <div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" value="{{.EditName}}" required></div>
+          <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" value="{{.EditName}}" required></div>
           <div class="form-group"><label>{{T "col_from"}}</label><input name="phone" class="form-control" value="{{.EditPhone}}" required></div>
           <div class="form-group"><label>{{T "nav_contacts_groups"}}</label><select name="groups" class="form-control" multiple>{{range .Groups}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select></div>
           <button class="btn btn-primary lift"><i class="la la-save me-1"></i> {{T "set_save"}}</button> <a href="/contacts" class="btn btn-white ms-2">{{T "ar_cancel"}}</a>
@@ -797,7 +797,7 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
     <div class="col-12 col-lg-4">
       <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "grp_add"}}</h4></div>
         <div class="card-body"><form method="post" action="/groups/add">
-          <div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" required></div>
+          <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
           <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
         </form></div>
       </div>
@@ -837,7 +837,7 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
     <div class="col-12 col-lg-5">
       <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "bc_add"}}</h4></div>
         <div class="card-body"><form method="post" action="/broadcast">
-          <div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" required></div>
+          <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
            <div class="form-group"><label>{{T "bc_groups"}}</label><select name="groups" class="form-control" multiple>{{range .Groups}}<option value="{{.ID}}">{{.Name}} ({{.Count}})</option>{{end}}</select></div>
            <div class="form-group"><label>Nomor Langsung <small class="text-muted">— satu per baris</small></label><textarea name="numbers" class="form-control" rows="4" placeholder="628123456789&#10;628987654321&#10;..."></textarea><small class="form-text text-muted">Tempel nomor langsung (tanpa grup). Bisa digabung dengan grup di atas.</small></div>
            <div class="form-group"><label>{{T "bc_account"}}</label><div class="border rounded p-2" style="max-height:160px;overflow-y:auto">{{range .ConnectedAccounts}}{{if .Phone}}<div class="form-check"><input class="form-check-input" type="checkbox" name="account_ids" value="+{{.Phone}}" id="bc_{{.Phone}}"><label class="form-check-label small" for="bc_{{.Phone}}">+{{.Phone}}</label></div>{{end}}{{end}}{{if not .HasConnected}}<small class="text-muted">Belum ada nomor terkoneksi</small>{{end}}</div><small class="form-text text-muted">Biarkan kosong = semua nomor terhubung. Checklist = hanya nomor itu.</small></div>
@@ -874,7 +874,7 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
     <div class="col-12 col-lg-5">
       <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "sch_add"}}</h4></div>
         <div class="card-body"><form method="post" action="/scheduled">
-          <div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" required></div>
+          <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
           <div class="form-group"><label>{{T "col_to"}}</label><input name="phone" class="form-control" placeholder="628xxx" required></div>
           <div class="form-group"><label>{{T "sch_time"}}</label><input type="datetime-local" name="send_at" class="form-control" required></div>
           <div class="form-group"><label>{{T "sch_repeat"}}</label><input type="number" name="repeat" class="form-control" value="0"><small class="form-text text-muted">{{T "sch_repeat_hint"}}</small></div>
@@ -898,7 +898,7 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
     <div class="col-12 col-lg-5">
       <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "tpl_add"}}</h4></div>
         <div class="card-body"><form method="post" action="/templates/add">
-          <div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" required></div>
+          <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
           <div class="form-group"><label>{{T "col_message"}}</label><textarea name="content" class="form-control" rows="4" required></textarea><small class="form-text text-muted">{{T "set_vars_hint"}}</small></div>
           <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
         </form></div>
@@ -909,7 +909,7 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
       <div class="card border-warning"><div class="card-header bg-warning bg-opacity-10"><h4 class="card-header-title"><i class="la la-edit me-1"></i> Edit</h4></div>
         <div class="card-body"><form method="post" action="/templates/edit">
           <input type="hidden" name="id" value="{{.EditID}}">
-          <div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" value="{{.EditName}}" required></div>
+          <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" value="{{.EditName}}" required></div>
           <div class="form-group"><label>{{T "col_message"}}</label><textarea name="content" class="form-control" rows="4" required>{{.EditContent}}</textarea></div>
           <button class="btn btn-primary lift"><i class="la la-save me-1"></i> {{T "set_save"}}</button> <a href="/templates" class="btn btn-white ms-2">{{T "ar_cancel"}}</a>
         </form></div>
@@ -933,7 +933,7 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
     <div class="col-12 col-lg-4">
       <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "key_add"}}</h4></div>
         <div class="card-body"><form method="post" action="/apikeys/add">
-          <div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" required></div>
+          <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
           <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "key_generate"}}</button>
         </form></div>
       </div>
@@ -953,7 +953,7 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
     <div class="col-12 col-lg-5">
       <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "wh_add"}}</h4></div>
         <div class="card-body"><form method="post" action="/webhooks/add">
-          <div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" required></div>
+          <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
           <div class="form-group"><label>URL</label><input name="url" class="form-control" placeholder="https://..." required></div>
           <div class="form-group"><label>{{T "wh_event"}}</label><select name="event" class="form-control"><option value="all">{{T "wh_all"}}</option><option value="received">{{T "nav_received"}}</option><option value="sent">{{T "nav_sent"}}</option></select></div>
           <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
@@ -986,7 +986,7 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
   <div class="row">
     <div class="col-12 col-lg-4"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "dev_add"}}</h4></div><div class="card-body">
       <form method="post" action="/devices/add">
-        <div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" required></div>
+        <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
         <div class="form-group"><label>Device ID</label><input name="did" class="form-control"></div>
         <div class="form-group"><label>{{T "dev_manuf"}}</label><input name="manufacturer" class="form-control"></div>
         <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
@@ -1023,7 +1023,7 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
   <div class="row">
     <div class="col-12 col-lg-5"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "aik_add"}}</h4></div><div class="card-body">
       <form method="post" action="/ai/keys/add">
-        <div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" required></div>
+        <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
         <div class="form-group"><label>Provider</label><select name="provider" class="form-control"><option value="openai">OpenAI</option><option value="geminiai">Gemini</option><option value="claudeai">Claude</option><option value="deepseekai">DeepSeek</option></select></div>
         <div class="form-group"><label>Model</label><input name="model" class="form-control" placeholder="gpt-4o"></div>
         <div class="form-group"><label>API Key</label><input name="apikey" class="form-control" required></div>
@@ -1040,7 +1040,7 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 {{if eq .Page "ai_plugins"}}
   <div class="row">
     <div class="col-12 col-lg-5"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "aip_add"}}</h4></div><div class="card-body">
-      <form method="post" action="/ai/plugins/add"><div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" required></div><div class="form-group"><label>Endpoint</label><input name="endpoint" class="form-control" placeholder="https://..."></div><button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>{{if .EditID}}<a href="/admin/waservers" class="btn btn-white btn-sm ms-2">Batal</a>{{end}}</form></div></div></div>
+      <form method="post" action="/ai/plugins/add"><div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div><div class="form-group"><label>Endpoint</label><input name="endpoint" class="form-control" placeholder="https://..."></div><button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>{{if .EditID}}<a href="/admin/waservers" class="btn btn-white btn-sm ms-2">Batal</a>{{end}}</form></div></div></div>
     <div class="col-12 col-lg-7"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "nav_ai_plugins"}}</h4></div>
       <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>Endpoint</th><th>{{T "col_action"}}</th></tr></thead><tbody>
         {{range .AiPlugins}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.Endpoint}}</td><td><form method="post" action="/ai/plugins/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
@@ -1095,7 +1095,7 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
 <div class="col-12"><div class="card"><div class="card-header d-flex justify-content-between"><h4 class="card-header-title">{{T "adm_users"}}</h4><button class="btn btn-primary btn-sm lift" onclick="document.getElementById('addUserForm').style.display=document.getElementById('addUserForm').style.display==='none'?'block':'none'"><i class="la la-plus me-1"></i> {{T "usr_add"}}</button></div>
 <div id="addUserForm" style="display:none;border-bottom:1px solid #eee;padding:16px"><form method="post" action="/admin/users/add">
 <div class="row">
-<div class="col-md-6"><div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" required></div></div>
+<div class="col-md-6"><div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div></div>
 <div class="col-md-6"><div class="form-group"><label>Email</label><input name="email" type="email" class="form-control" required></div></div>
 <div class="col-md-6"><div class="form-group"><label>Password</label><input name="password" type="password" class="form-control"></div></div>
 <div class="col-md-6"><div class="form-group"><label>{{T "usr_role"}}</label><select name="role" class="form-control">{{range .Roles}}<option value="{{.Name}}">{{.Name}}</option>{{end}}</select></div></div>
@@ -1120,7 +1120,7 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
 <div class="card-body"><form method="post" action="/admin/users/edit">
 <input type="hidden" name="id" value="{{.EditID}}">
 <div class="row">
-<div class="col-md-6"><div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" value="{{.EditName}}" required></div></div>
+<div class="col-md-6"><div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" value="{{.EditName}}" required></div></div>
 <div class="col-md-6"><div class="form-group"><label>Email</label><input name="email" type="email" class="form-control" value="{{.EditPhone}}"></div></div>
 <div class="col-md-6"><div class="form-group"><label>Password (biarkan kosong)</label><input name="password" type="password" class="form-control" placeholder="••••••"></div></div>
 <div class="col-md-6"><div class="form-group"><label>{{T "usr_role"}}</label><select name="role" class="form-control">{{range .Roles}}<option value="{{.Name}}" {{if eq .Name $.EditRole}}selected{{end}}>{{.Name}}</option>{{end}}</select></div></div>
@@ -1134,10 +1134,10 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
 {{if eq .Page "admin_roles"}}
   <div class="row">
     {{if .EditID}}
-    <div class="col-12 col-lg-4"><div class="card border-warning"><div class="card-header bg-warning bg-opacity-10"><h4 class="card-header-title"><i class="la la-edit me-1"></i> Edit Role #{{.EditID}}</h4></div><div class="card-body"><form method="post" action="/admin/roles/edit"><input type="hidden" name="id" value="{{.EditID}}"><div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" value="{{.EditName}}" required></div><div class="form-group"><label>{{T "role_perms"}}</label><select name="permissions" class="form-control" multiple size="18" style="overflow-y:auto;min-height:360px"><option value="manage_users">Users</option><option value="manage_roles">Roles</option><option value="manage_packages">Packages</option><option value="manage_vouchers">Vouchers</option><option value="manage_subscriptions">Subscriptions</option><option value="manage_transactions">Transactions</option><option value="manage_payouts">Payouts</option><option value="manage_pages">Pages</option><option value="manage_marketing">Marketing</option><option value="manage_languages">Languages</option><option value="manage_waservers">WA Servers</option><option value="manage_gateways">Gateways</option><option value="manage_shorteners">Shorteners</option><option value="manage_plugins">Plugins</option><option value="manage_meta">Meta API</option><option value="manage_metatemplates">Meta Templates</option><option value="wa_send">Send Message</option><option value="wa_broadcast">Broadcast</option><option value="wa_scheduled">Scheduled</option><option value="wa_sent">Sent Messages</option><option value="wa_received">Received Messages</option><option value="wa_inbox">Live Chat</option><option value="wa_status">WA Status</option><option value="wa_autoreply">Auto Reply</option><option value="wa_ai_keys">AI Keys</option><option value="wa_ai_plugins">AI Plugins</option><option value="wa_knowledge">Knowledge Base</option><option value="wa_contacts">Contacts</option><option value="wa_groups">Contact Groups</option><option value="wa_unsub">Unsubscribed</option><option value="wa_templates">Templates</option><option value="wa_apikeys">API Keys</option><option value="wa_webhooks">Webhooks</option><option value="wa_logger">Logger</option><option value="wa_settings">Settings</option><option value="wa_docs">Documentation</option><option value="wa_hosts">Hosts</option><option value="wa_ussd">USSD</option><option value="wa_impersonate">Impersonate</option></select></div><button class="btn btn-warning lift"><i class="la la-save me-1"></i> Update</button> <a href="/admin/roles" class="btn btn-white ms-2">{{T "ar_cancel"}}</a></form><script>document.addEventListener('DOMContentLoaded',function(){var s=document.querySelector('form[action=\"/admin/roles/edit\"] select[name=\"permissions\"]');if(s){var v='{{.EditContent}}';v.split(',').forEach(function(p){var o=s.querySelector('option[value=\"'+p.replace(/^\\s+|\\s+$/g,'')+'\"]');if(o)o.selected=true})}})</script></div></div></div>
+    <div class="col-12 col-lg-4"><div class="card border-warning"><div class="card-header bg-warning bg-opacity-10"><h4 class="card-header-title"><i class="la la-edit me-1"></i> Edit Role #{{.EditID}}</h4></div><div class="card-body"><form method="post" action="/admin/roles/edit"><input type="hidden" name="id" value="{{.EditID}}"><div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" value="{{.EditName}}" required></div><div class="form-group"><label>{{T "role_perms"}}</label><select name="permissions" class="form-control" multiple size="18" style="overflow-y:auto;min-height:360px"><option value="manage_users">Users</option><option value="manage_roles">Roles</option><option value="manage_packages">Packages</option><option value="manage_vouchers">Vouchers</option><option value="manage_subscriptions">Subscriptions</option><option value="manage_transactions">Transactions</option><option value="manage_payouts">Payouts</option><option value="manage_pages">Pages</option><option value="manage_marketing">Marketing</option><option value="manage_languages">Languages</option><option value="manage_waservers">WA Servers</option><option value="manage_gateways">Gateways</option><option value="manage_shorteners">Shorteners</option><option value="manage_plugins">Plugins</option><option value="manage_meta">Meta API</option><option value="manage_metatemplates">Meta Templates</option><option value="wa_send">Send Message</option><option value="wa_broadcast">Broadcast</option><option value="wa_scheduled">Scheduled</option><option value="wa_sent">Sent Messages</option><option value="wa_received">Received Messages</option><option value="wa_inbox">Live Chat</option><option value="wa_status">WA Status</option><option value="wa_autoreply">Auto Reply</option><option value="wa_ai_keys">AI Keys</option><option value="wa_ai_plugins">AI Plugins</option><option value="wa_knowledge">Knowledge Base</option><option value="wa_contacts">Contacts</option><option value="wa_groups">Contact Groups</option><option value="wa_unsub">Unsubscribed</option><option value="wa_templates">Templates</option><option value="wa_apikeys">API Keys</option><option value="wa_webhooks">Webhooks</option><option value="wa_logger">Logger</option><option value="wa_settings">Settings</option><option value="wa_docs">Documentation</option><option value="wa_hosts">Hosts</option><option value="wa_ussd">USSD</option><option value="wa_impersonate">Impersonate</option></select></div><button class="btn btn-warning lift"><i class="la la-save me-1"></i> Update</button> <a href="/admin/roles" class="btn btn-white ms-2">{{T "ar_cancel"}}</a></form><script>document.addEventListener('DOMContentLoaded',function(){var s=document.querySelector('form[action=\"/admin/roles/edit\"] select[name=\"permissions\"]');if(s){var v='{{.EditContent}}';v.split(',').forEach(function(p){var o=s.querySelector('option[value=\"'+p.replace(/^\\s+|\\s+$/g,'')+'\"]');if(o)o.selected=true})}})</script></div></div></div>
     {{else}}
     <div class="col-12 col-lg-4"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "role_add"}}</h4></div><div class="card-body">
-      <form method="post" action="/admin/roles/add"><div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" required></div>
+      <form method="post" action="/admin/roles/add"><div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
       <div class="form-group"><label>{{T "role_perms"}}</label><select name="permissions" class="form-control" multiple size="18" style="overflow-y:auto;min-height:360px"><option value="manage_users">Users</option><option value="manage_roles">Roles</option><option value="manage_packages">Packages</option><option value="manage_vouchers">Vouchers</option><option value="manage_subscriptions">Subscriptions</option><option value="manage_transactions">Transactions</option><option value="manage_payouts">Payouts</option><option value="manage_pages">Pages</option><option value="manage_marketing">Marketing</option><option value="manage_languages">Languages</option><option value="manage_waservers">WA Servers</option><option value="manage_gateways">Gateways</option><option value="manage_shorteners">Shorteners</option><option value="manage_plugins">Plugins</option><option value="manage_meta">Meta API</option><option value="manage_metatemplates">Meta Templates</option><option value="wa_send">Send Message</option><option value="wa_broadcast">Broadcast</option><option value="wa_scheduled">Scheduled</option><option value="wa_sent">Sent Messages</option><option value="wa_received">Received Messages</option><option value="wa_inbox">Live Chat</option><option value="wa_status">WA Status</option><option value="wa_autoreply">Auto Reply</option><option value="wa_ai_keys">AI Keys</option><option value="wa_ai_plugins">AI Plugins</option><option value="wa_knowledge">Knowledge Base</option><option value="wa_contacts">Contacts</option><option value="wa_groups">Contact Groups</option><option value="wa_unsub">Unsubscribed</option><option value="wa_templates">Templates</option><option value="wa_apikeys">API Keys</option><option value="wa_webhooks">Webhooks</option><option value="wa_logger">Logger</option><option value="wa_settings">Settings</option><option value="wa_docs">Documentation</option><option value="wa_hosts">Hosts</option><option value="wa_ussd">USSD</option><option value="wa_impersonate">Impersonate</option></select></div>
       <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button></form></div></div></div>
     {{end}}
@@ -1152,7 +1152,7 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
   <div class="row">
     <div class="col-12 col-lg-5"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "pkg_add"}}</h4></div><div class="card-body">
       <form method="post" action="/admin/packages/add">
-        <div class="form-row"><div class="form-group col-6"><label>{{T "col_name"}}</label><input name class="form-control" required></div>
+        <div class="form-row"><div class="form-group col-6"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
         <div class="form-group col-3"><label>{{T "pkg_price"}}</label><input name="price" class="form-control" value="0"></div>
         <div class="form-group col-3"><label>{{T "pkg_hidden"}}</label><select name="hidden" class="form-control"><option value="1">Hidden</option><option value="2">Visible</option></select></div></div>
         <div class="form-group"><label>{{T "pkg_services"}}</label><select name="services" class="form-control" multiple><option value="whatsapp">WhatsApp</option><option value="api">API</option><option value="webhooks">Webhooks</option><option value="templates">Templates</option><option value="ai">AI</option></select></div>
@@ -1188,7 +1188,7 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
   <div class="row">
     <div class="col-12 col-lg-4"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "vch_add"}}</h4></div><div class="card-body">
       <form method="post" action="/admin/vouchers/add">
-        <div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" required></div>
+        <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
         <div class="form-row"><div class="form-group col-6"><label>{{T "vch_count"}}</label><input name="count" type="number" class="form-control" value="1"></div>
         <div class="form-group col-6"><label>{{T "vch_duration"}}</label><input name="duration" type="number" class="form-control" value="30"></div></div>
         <div class="form-group"><label>{{T "adm_packages"}}</label><select name="pkg" class="form-control">{{range .Packages}}<option value="{{.Name}}">{{.Name}}</option>{{end}}</select></div>
@@ -1261,7 +1261,7 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
   <div class="row">
     <div class="col-12 col-lg-4"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "lng_add"}}</h4></div><div class="card-body">
       <form method="post" action="/admin/languages/add">
-        <div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" required></div>
+        <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
         <div class="form-row"><div class="form-group col-6"><label>ISO</label><input name="iso" class="form-control" value="us" maxlength="2"></div>
         <div class="form-group col-6"><label>RTL</label><select name="rtl" class="form-control"><option value="2">LTR</option><option value="1">RTL</option></select></div></div>
         <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
@@ -1308,7 +1308,7 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
   <div class="row">
     <div class="col-12 col-lg-5"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "gw_add"}}</h4></div><div class="card-body">
       <form method="post" action="/admin/gateways/add">
-        <div class="form-row"><div class="form-group col-8"><label>{{T "col_name"}}</label><input name class="form-control" required></div>
+        <div class="form-row"><div class="form-group col-8"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
         <div class="form-group col-4"><label>{{T "gw_controller"}}</label><input name="controller" class="form-control" placeholder="gateway.php"></div></div>
         <div class="form-row"><div class="form-group col-4"><label>{{T "gw_callback"}}</label><select name="callback" class="form-control"><option value="1">On</option><option value="2">Off</option></select></div>
         <div class="form-group col-8"><label>{{T "gw_callback_id"}}</label><input name="callback_id" class="form-control"></div></div>
@@ -1324,7 +1324,7 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
 {{if eq .Page "admin_shorteners"}}
   <div class="row">
     <div class="col-12 col-lg-4"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "sh_add"}}</h4></div><div class="card-body">
-      <form method="post" action="/admin/shorteners/add"><div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" required></div><button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>{{if .EditID}}<a href="/admin/waservers" class="btn btn-white btn-sm ms-2">Batal</a>{{end}}</form></div></div></div>
+      <form method="post" action="/admin/shorteners/add"><div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div><button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>{{if .EditID}}<a href="/admin/waservers" class="btn btn-white btn-sm ms-2">Batal</a>{{end}}</form></div></div></div>
     <div class="col-12 col-lg-8"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "adm_shorteners"}}</h4></div>
       <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
         {{range .Shorteners}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td><form method="post" action="/admin/shorteners/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="3" class="text-muted text-center">-</td></tr>{{end}}
@@ -1335,7 +1335,7 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
 {{if eq .Page "admin_plugins"}}
   <div class="row">
     <div class="col-12 col-lg-4"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "plg_add"}}</h4></div><div class="card-body">
-      <form method="post" action="/admin/plugins/add"><div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" required></div><div class="form-group"><label>{{T "plg_dir"}}</label><input name="dir" class="form-control"></div><button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>{{if .EditID}}<a href="/admin/waservers" class="btn btn-white btn-sm ms-2">Batal</a>{{end}}</form></div></div></div>
+      <form method="post" action="/admin/plugins/add"><div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div><div class="form-group"><label>{{T "plg_dir"}}</label><input name="dir" class="form-control"></div><button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>{{if .EditID}}<a href="/admin/waservers" class="btn btn-white btn-sm ms-2">Batal</a>{{end}}</form></div></div></div>
     <div class="col-12 col-lg-8"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "adm_plugins"}}</h4></div>
       <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>{{T "plg_dir"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
         {{range .Plugins}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.Dir}}</td><td><form method="post" action="/admin/plugins/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
@@ -1734,3 +1734,4 @@ document.getElementById('chatInput').focus();
     </div>
   </div>
 {{end}}{{end}}`
+
