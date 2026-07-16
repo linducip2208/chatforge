@@ -245,6 +245,8 @@ document.querySelectorAll(".msg-full").forEach(function(el){
         <li class="nav-item"><a class="nav-link {{if eq .Active "autoreply"}}active{{end}}" href="/autoreply"><i class="la la-robot la-lg"></i> {{T "nav_autoreply"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "templates"}}active{{end}}" href="/templates"><i class="la la-file-alt la-lg"></i> {{T "nav_templates"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "canned"}}active{{end}}" href="/canned"><i class="la la-comment-dots la-lg"></i> Canned</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "tracker"}}active{{end}}" href="/tracker"><i class="la la-link la-lg"></i> Links</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "abtests"}}active{{end}}" href="/ab-tests"><i class="la la-balance-scale la-lg"></i> A/B Test</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "apikeys"}}active{{end}}" href="/apikeys"><i class="la la-key la-lg"></i> {{T "nav_apikeys"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "webhooks"}}active{{end}}" href="/webhooks"><i class="la la-code-branch la-lg"></i> {{T "nav_webhooks"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "logger"}}active{{end}}" href="/logger"><i class="la la-clipboard-list la-lg"></i> {{T "nav_logger"}}</a></li>
@@ -990,6 +992,31 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
       </div>
     </div>
   </div>
+{{end}}
+
+{{if eq .Page "tracker"}}
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-link me-1"></i> Link Clicks</h4></div>
+    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>URL</th><th>Campaign</th><th>Phone</th><th>Clicked</th><th>{{T "col_time"}}</th></tr></thead><tbody>
+      {{range .LClicks}}<tr><td>{{.ID}}</td><td style="max-width:300px;word-break:break-all"><a href="/track/{{.Token}}" target="_blank">{{.URL}}</a></td><td>{{if .CampaignID}}#{{.CampaignID}}{{else}}-{{end}}</td><td>{{.Phone}}</td><td>{{if .Clicked}}<span class="badge badge-soft-success">Yes</span>{{else}}<span class="badge badge-soft-secondary">No</span>{{end}}</td><td class="text-muted small">{{.Created}}</td></tr>{{else}}<tr><td colspan="6" class="text-muted text-center py-4">Belum ada link yang di-track.</td></tr>{{end}}
+    </tbody></table></div>
+  </div>
+{{end}}
+
+{{if eq .Page "abtests"}}
+  <div class="card"><div class="card-header d-flex justify-content-between"><h4 class="card-header-title"><i class="la la-balance-scale me-1"></i> A/B Test Results</h4><button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#abModal"><i class="la la-plus"></i> New Test</button></div>
+    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Campaign</th><th>Variant A</th><th>Variant B</th><th>A Sent</th><th>B Sent</th></tr></thead><tbody>
+      {{range .ABTests}}<tr><td>{{.ID}}</td><td>#{{.CampaignID}}</td><td style="max-width:200px">{{.VariantA}}</td><td style="max-width:200px">{{.VariantB}}</td><td>{{.ASent}}</td><td>{{.BSent}}</td></tr>{{else}}<tr><td colspan="6" class="text-muted text-center py-4">Belum ada A/B test.</td></tr>{{end}}
+    </tbody></table></div>
+  </div>
+  <div class="modal fade" id="abModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="post" action="/ab-tests/add">
+    <div class="modal-header"><h5>New A/B Test</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Campaign ID</label><input type="number" name="campaign_id" class="form-control" required></div>
+      <div class="form-group"><label>Variant A</label><textarea name="variant_a" class="form-control" rows="2" required></textarea></div>
+      <div class="form-group"><label>Variant B</label><textarea name="variant_b" class="form-control" rows="2" required></textarea></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-primary">Create</button></div>
+  </form></div></div></div>
 {{end}}
 
 {{if eq .Page "templates"}}

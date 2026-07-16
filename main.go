@@ -148,6 +148,17 @@ func main() {
 	mux.HandleFunc("/canned/delete", authMiddleware(crudDel(func(id int64) { db.DeleteCanned(id) }, "/canned")))
 	mux.HandleFunc("/inbox/assign", authMiddleware(handleInboxAssign))
 	mux.HandleFunc("/inbox/close", authMiddleware(handleInboxClose))
+	mux.HandleFunc("/tracker", authMiddleware(p("tracker")))
+	mux.HandleFunc("/ab-tests", authMiddleware(p("abtests")))
+	mux.HandleFunc("/ab-tests/add", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			cid, _ := strconv.ParseInt(r.FormValue("campaign_id"), 10, 64)
+			if cid > 0 {
+				db.CreateABTest(cid, r.FormValue("variant_a"), r.FormValue("variant_b"))
+			}
+		}
+		http.Redirect(w, r, "/ab-tests", http.StatusSeeOther)
+	}))
 	mux.HandleFunc("/track/", handleLinkTrack)
 	mux.HandleFunc("/inbox/canned", authMiddleware(handleInboxCanned))
 		mux.HandleFunc("/scheduled", authMiddleware(handleScheduled))
@@ -284,6 +295,8 @@ type pageData struct {
 	Drips      []store.Drip
 	Tags       []store.Tag
 	Canned     []store.CannedResponse
+	LClicks    []store.LinkClick
+	ABTests    []store.ABTest
 	Scheduleds []store.Scheduled
 	Logs       []store.LogEntry
 	// admin/ai/devices
@@ -516,6 +529,11 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Drips, _ = db.ListDrips()
 	case "tags":
 		d.Tags, _ = db.ListTags()
+	case "tracker":
+		d.LClicks, _ = db.ListLinkClicks()
+	case "abtests":
+		d.ABTests, _ = db.ListABTests()
+		d.Campaigns, _ = db.ListCampaigns()
 	case "canned":
 		d.Canned, _ = db.ListCanned()
 		d.Users, _ = db.ListUsers()
@@ -698,6 +716,10 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Tags", T("nav_contacts"), "Contact Tags", "la-tags"
 	case "canned":
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Canned Responses", T("nav_tools"), "Canned Responses", "la-comment-dots"
+	case "tracker":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Link Tracker", T("nav_tools"), "Link Clicks", "la-link"
+	case "abtests":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "A/B Tests", T("nav_whatsapp"), "A/B Testing", "la-balance-scale"
 	case "scheduled":
 		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_scheduled"), T("nav_whatsapp"), T("nav_scheduled"), "la-clock"
 	case "templates":

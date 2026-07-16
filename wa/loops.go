@@ -146,6 +146,15 @@ func (e *Engine) runCampaign(c store.Campaign) {
 		}
 		var sendErr error
 		msg := msgtemplate.Render(c.Message, msgtemplate.Vars{Name: ct.Name, Phone: ct.Phone, Message: ""})
+		// A/B test: check if there's a test for this campaign, alternate variants
+		if ab, abErr := e.db.GetABTest(c.ID); abErr == nil {
+			if ab.ASent+ab.BSent < ab.ASent*2+10 {
+				var v string
+				if ab.ASent <= ab.BSent { msg = ab.VariantA; v = "a" } else { msg = ab.VariantB; v = "b" }
+				msg = msgtemplate.Render(msg, msgtemplate.Vars{Name: ct.Name, Phone: ct.Phone, Message: ""})
+				e.db.IncABSent(c.ID, v)
+			}
+		}
 		// link tracking: replace URLs with tracking links
 		msg = replaceTrackURLs(e, msg, c.ID, ct.Phone)
 		if metaClient != nil {

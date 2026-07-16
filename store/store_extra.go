@@ -586,6 +586,18 @@ func (d *DB) LinkClicks(campaignID int64) int {
 	d.sql.QueryRow(`SELECT COUNT(*) FROM link_clicks WHERE campaign_id=? AND clicked_at > created_at`, campaignID).Scan(&n)
 	return n
 }
+func (d *DB) ListLinkClicks() ([]LinkClick, error) {
+	rows, err := d.sql.Query(`SELECT id, token, url, campaign_id, phone, clicked_at > created_at as is_clicked, created_at FROM link_clicks ORDER BY id DESC LIMIT 200`)
+	if err != nil { return nil, err }
+	defer rows.Close()
+	var out []LinkClick
+	for rows.Next() {
+		var v LinkClick
+		rows.Scan(&v.ID, &v.Token, &v.URL, &v.CampaignID, &v.Phone, &v.Clicked, &v.Created)
+		out = append(out, v)
+	}
+	return out, nil
+}
 
 // ---- A/B Testing ----
 type ABTest struct {
@@ -600,6 +612,16 @@ type ABTest struct {
 	Created    string
 }
 
+type LinkClick struct {
+	ID         int64
+	Token      string
+	URL        string
+	CampaignID int64
+	Phone      string
+	Clicked    bool
+	Created    string
+}
+
 func (d *DB) CreateABTest(campaignID int64, variantA, variantB string) (int64, error) {
 	res, err := d.sql.Exec(`INSERT INTO ab_tests (campaign_id, variant_a, variant_b) VALUES (?, ?, ?)`, campaignID, variantA, variantB)
 	if err != nil { return 0, err }
@@ -610,4 +632,23 @@ func (d *DB) GetABTest(campaignID int64) (*ABTest, error) {
 	err := d.sql.QueryRow(`SELECT id, campaign_id, variant_a, variant_b, a_sent, b_sent, a_replied, b_replied, created_at FROM ab_tests WHERE campaign_id=?`, campaignID).Scan(&ab.ID, &ab.CampaignID, &ab.VariantA, &ab.VariantB, &ab.ASent, &ab.BSent, &ab.AReplied, &ab.BReplied, &ab.Created)
 	if err != nil { return nil, err }
 	return &ab, nil
+}
+func (d *DB) ListABTests() ([]ABTest, error) {
+	rows, err := d.sql.Query(`SELECT id, campaign_id, variant_a, variant_b, a_sent, b_sent, a_replied, b_replied, created_at FROM ab_tests ORDER BY id DESC LIMIT 50`)
+	if err != nil { return nil, err }
+	defer rows.Close()
+	var out []ABTest
+	for rows.Next() {
+		var ab ABTest
+		rows.Scan(&ab.ID, &ab.CampaignID, &ab.VariantA, &ab.VariantB, &ab.ASent, &ab.BSent, &ab.AReplied, &ab.BReplied, &ab.Created)
+		out = append(out, ab)
+	}
+	return out, nil
+}
+func (d *DB) IncABSent(campaignID int64, variant string) {
+	if variant == "b" {
+		d.sql.Exec(`UPDATE ab_tests SET b_sent=b_sent+1 WHERE campaign_id=?`, campaignID)
+	} else {
+		d.sql.Exec(`UPDATE ab_tests SET a_sent=a_sent+1 WHERE campaign_id=?`, campaignID)
+	}
 }
