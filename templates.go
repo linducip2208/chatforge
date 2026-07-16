@@ -1026,6 +1026,7 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
   <div class="row">
     <div class="col-12"><h2 class="mb-4">Pilih Paket Langganan</h2></div>
     {{range .Packages}}
+    {{$pkgID := .ID}}
     <div class="col-12 col-md-6 col-lg-4 mb-4">
       <div class="card border-0 shadow-sm h-100" style="border-radius:14px">
         <div class="card-body text-center p-4">
@@ -1038,7 +1039,7 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
           {{range $.PaymentGateways}}
           {{if eq .Status "active"}}
           <form method="post" action="/subscribe/checkout" class="mt-2">
-            <input type="hidden" name="package_id" value="{{$.ID}}">
+            <input type="hidden" name="package_id" value="{{$pkgID}}">
             <input type="hidden" name="gateway_id" value="{{.ID}}">
             <button class="btn btn-primary w-100"><i class="la la-credit-card me-1"></i> Bayar via {{.Name}}</button>
           </form>
