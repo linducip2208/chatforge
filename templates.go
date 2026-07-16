@@ -252,6 +252,8 @@ document.querySelectorAll(".msg-full").forEach(function(el){
         <li class="nav-item"><a class="nav-link {{if eq .Active "forms"}}active{{end}}" href="/forms"><i class="la la-wpforms la-lg"></i> Forms</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "reminders"}}active{{end}}" href="/reminders"><i class="la la-bell la-lg"></i> Reminders</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "analytics"}}active{{end}}" href="/analytics"><i class="la la-chart-pie la-lg"></i> Analytics</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "blacklist"}}active{{end}}" href="/blacklist"><i class="la la-ban la-lg"></i> Blacklist</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "csat"}}active{{end}}" href="/csat"><i class="la la-star la-lg"></i> CSAT</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "apikeys"}}active{{end}}" href="/apikeys"><i class="la la-key la-lg"></i> {{T "nav_apikeys"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "webhooks"}}active{{end}}" href="/webhooks"><i class="la la-code-branch la-lg"></i> {{T "nav_webhooks"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "logger"}}active{{end}}" href="/logger"><i class="la la-clipboard-list la-lg"></i> {{T "nav_logger"}}</a></li>
@@ -830,8 +832,10 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
     </div>
     <div class="col-12 col-lg-8">
       <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "nav_contacts_groups"}}</h4></div>
-        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>{{T "grp_members"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
-          {{range .Groups}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.Count}}</td><td><form method="post" action="/groups/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
+        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>{{T "grp_members"}}</th><th>Lang</th><th>{{T "col_action"}}</th></tr></thead><tbody>
+          {{range .Groups}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.Count}}</td><td>
+            <form method="post" action="/groups/language" style="display:inline"><input type="hidden" name="group_id" value="{{.ID}}"><select name="language" class="form-select form-select-sm" style="width:80px;font-size:11px" onchange="this.form.submit()"><option value="" {{if not .Language}}selected{{end}}>-</option><option value="id" {{if eq .Language "id"}}selected{{end}}>ID</option><option value="en" {{if eq .Language "en"}}selected{{end}}>EN</option></select></form>
+          </td><td><form method="post" action="/groups/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center">-</td></tr>{{end}}
         </tbody></table></div>
       </div>
     </div>
@@ -887,7 +891,7 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
           <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
            <div class="form-group"><label>{{T "bc_groups"}}</label><select name="groups" class="form-control" multiple>{{range .Groups}}<option value="{{.ID}}">{{.Name}} ({{.Count}})</option>{{end}}</select></div>
            {{if .Tags}}<div class="form-group"><label>Tags <small class="text-muted">— filter by tag</small></label><select name="tags" class="form-control" multiple>{{range .Tags}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select><small class="form-text text-muted">Pilih tag untuk kirim hanya ke kontak dengan tag tsb.</small></div>{{end}}
-           <div class="form-group"><label>Nomor Langsung <small class="text-muted">— satu per baris</small></label><textarea name="numbers" class="form-control" rows="4" placeholder="628123456789&#10;628987654321&#10;..."></textarea><small class="form-text text-muted">Tempel nomor langsung (tanpa grup). Bisa digabung dengan grup di atas.</small></div>
+           <div class="form-group"><label>Nomor Langsung <small class="text-muted">— satu per baris</small></label><textarea name="numbers" class="form-control" rows="4" placeholder="628123456789&#10;628987654321&#10;..."></textarea><small class="form-text text-muted">Tempel nomor langsung (tanpa grup). <form method="post" action="/validate" style="display:inline" target="_blank"><input type="hidden" name="numbers" value="" id="validateInput"><button type="button" class="btn btn-sm btn-outline-warning" onclick="document.getElementById('validateInput').value=document.querySelector('textarea[name=numbers]').value;this.form.submit()">Validate</button></form></small></div>
            <div class="form-group"><label><i class="la la-image me-1"></i> Media <small class="text-muted">— opsional</small></label><input type="file" name="media_file" class="form-control" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx"><small class="form-text text-muted">Upload gambar/video/dokumen untuk dikirim bersama pesan.</small></div>
            <div class="form-group"><label>{{T "bc_account"}}</label><div class="border rounded p-2" style="max-height:160px;overflow-y:auto">{{range .ConnectedAccounts}}{{if .Phone}}<div class="form-check"><input class="form-check-input" type="checkbox" name="account_ids" value="+{{.Phone}}" id="bc_{{.Phone}}"><label class="form-check-label small" for="bc_{{.Phone}}">+{{.Phone}}</label></div>{{end}}{{end}}{{if not .HasConnected}}<small class="text-muted">Belum ada nomor terkoneksi</small>{{end}}</div><small class="form-text text-muted">Biarkan kosong = semua nomor terhubung. Checklist = hanya nomor itu.</small></div>
            <div class="form-group"><label>Mode Pengiriman</label><div class="border rounded p-2"><div class="form-check"><input class="form-check-input" type="radio" name="send_mode" value="round_robin" id="mode_rr" checked><label class="form-check-label" for="mode_rr"><strong>Round Robin</strong> <small class="text-muted">— kirim bergantian merata ke tiap nomor</small></label></div><div class="form-check mt-1"><input class="form-check-input" type="radio" name="send_mode" value="random" id="mode_rand"><label class="form-check-label" for="mode_rand"><strong>Random</strong> <small class="text-muted">— kirim acak ke nomor manapun</small></label></div></div></div>
@@ -1127,6 +1131,47 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
     <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>Agent</th><th>Chats</th><th>Replies</th><th>Avg Response (s)</th></tr></thead><tbody>
       {{range .AgentMetrics}}<tr><td>{{.AgentName}}</td><td>{{.Chats}}</td><td>{{.Replied}}</td><td>{{printf "%.0f" .AvgTime}}</td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center py-4">No data yet.</td></tr>{{end}}
     </tbody></table></div>
+  </div>
+{{end}}
+
+{{if eq .Page "blacklist"}}
+  <div class="row">
+    <div class="col-12 col-lg-4">
+      <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> Add to Blacklist</h4></div>
+        <div class="card-body"><form method="post" action="/blacklist/add">
+          <div class="form-group"><label>Phone</label><input name="phone" class="form-control" placeholder="628xxx" required></div>
+          <div class="form-group"><label>Reason</label><input name="reason" class="form-control" placeholder="spam / abuse"></div>
+          <button class="btn btn-danger"><i class="la la-ban me-1"></i> Block</button>
+        </form></div>
+      </div>
+      <div class="card mt-3"><div class="card-header"><h4 class="card-header-title">Validate Numbers</h4></div>
+        <div class="card-body"><form method="post" action="/validate">
+          <textarea name="numbers" class="form-control" rows="6" placeholder="628xxx&#10;628xxx" required></textarea>
+          <button class="btn btn-primary mt-2"><i class="la la-check me-1"></i> Validate</button>
+        </form></div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-8">
+      <div class="card"><div class="card-header"><h4 class="card-header-title">Blocked Numbers</h4></div>
+        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Phone</th><th>Reason</th><th>{{T "col_time"}}</th><th></th></tr></thead><tbody>
+          {{range .Blacklist}}<tr><td>{{.ID}}</td><td>{{.Phone}}</td><td>{{.Reason}}</td><td class="text-muted small">{{.Created}}</td><td><form method="post" action="/blacklist/remove"><input type="hidden" name="phone" value="{{.Phone}}"><button class="btn btn-sm btn-success">Unblock</button></form></td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center py-4">Blacklist kosong.</td></tr>{{end}}
+        </tbody></table></div>
+      </div>
+    </div>
+  </div>
+{{end}}
+
+{{if eq .Page "csat"}}
+  <div class="row">
+    <div class="col-12 col-md-4">
+      <div class="card text-center"><div class="card-body"><h1 class="display-3 fw-bold text-warning">{{printf "%.1f" .CSATAvg}}</h1><p>Average Rating (30d)</p></div></div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="card text-center"><div class="card-body"><h1 class="display-3 fw-bold text-primary">{{.CSATCount}}</h1><p>Total Responses</p></div></div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="card text-center"><div class="card-body"><h1 class="display-3 fw-bold text-success">{{printf "%.0f" (mult .CSATAvg 20)}}%</h1><p>Satisfaction Score</p></div></div>
+    </div>
   </div>
 {{end}}
 

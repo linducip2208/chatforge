@@ -186,6 +186,20 @@ func main() {
 		http.Redirect(w, r, "/reminders", http.StatusSeeOther)
 	}))
 	mux.HandleFunc("/analytics", authMiddleware(handleAnalytics))
+	mux.HandleFunc("/blacklist", authMiddleware(p("blacklist")))
+	mux.HandleFunc("/blacklist/add", authMiddleware(crudPost(func(r *http.Request) { db.AddBlacklist(r.FormValue("phone"), r.FormValue("reason")) }, "/blacklist")))
+	mux.HandleFunc("/blacklist/remove", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			db.RemoveBlacklist(r.FormValue("phone"))
+		}
+		http.Redirect(w, r, "/blacklist", http.StatusSeeOther)
+	}))
+	mux.HandleFunc("/csat", authMiddleware(p("csat")))
+	mux.HandleFunc("/groups/language", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		gid, _ := strconv.ParseInt(r.FormValue("group_id"), 10, 64); db.SetGroupLanguage(gid, r.FormValue("language"))
+		http.Redirect(w, r, "/contacts/groups", http.StatusSeeOther)
+	}))
+	mux.HandleFunc("/validate", authMiddleware(handleValidate))
 	mux.HandleFunc("/inbox/canned", authMiddleware(handleInboxCanned))
 		mux.HandleFunc("/scheduled", authMiddleware(handleScheduled))
 	mux.HandleFunc("/scheduled/delete", authMiddleware(crudDel(func(id int64) { db.DeleteScheduled(id) }, "/scheduled")))
@@ -332,6 +346,9 @@ type pageData struct {
 	Submissions    []store.FormSubmission
 	Reminders      []store.PaymentReminder
 	AgentMetrics   []store.AgentMetric
+	Blacklist      []store.BlacklistEntry
+	CSATAvg        float64
+	CSATCount      int
 	Scheduleds     []store.Scheduled
 	Logs       []store.LogEntry
 	// admin/ai/devices
@@ -591,6 +608,11 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Reminders, _ = db.ListReminders()
 	case "analytics":
 		d.AgentMetrics = db.AgentMetrics()
+	case "blacklist":
+		d.Blacklist, _ = db.ListBlacklist()
+	case "csat":
+		d.CSATAvg = db.CSATAverage(30)
+		d.CSATCount = db.CSATCount()
 	case "canned":
 		d.Canned, _ = db.ListCanned()
 		d.Users, _ = db.ListUsers()
@@ -785,6 +807,10 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Reminders", "Tools", "Payment Reminders", "la-bell"
 	case "analytics":
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Analytics", "Reports", "Conversation Analytics", "la-chart-pie"
+	case "blacklist":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Blacklist", "Safety", "Blocked Numbers", "la-ban"
+	case "csat":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "CSAT", "Reports", "Customer Satisfaction", "la-star"
 	case "tracker":
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Link Tracker", T("nav_tools"), "Link Clicks", "la-link"
 	case "abtests":
@@ -866,6 +892,7 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		},
 		"js": func(s string) template.JS { return template.JS(s) },
 		"add": func(a, b int) int { return a + b },
+		"mult": func(a, b float64) float64 { return a * b },
 		"permBadges": func(perms string) template.HTML {
 			if perms == "" { return "-" }
 			parts := strings.Split(perms, ",")
@@ -1559,7 +1586,13 @@ func handleInboxAssign(w http.ResponseWriter, r *http.Request) {
 
 func handleInboxClose(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		db.CloseConversation(r.FormValue("phone"))
+		phone := r.FormValue("phone")
+		db.CloseConversation(phone)
+		// send CSAT survey
+		if s := engine.FirstSession(); s != nil {
+			msg := "Terima kasih! Bagaimana pengalaman Anda? Balas dengan rating 1-5 ⭐"
+			engine.SendFrom(s.Phone, phone, msg)
+		}
 	}
 	http.Redirect(w, r, "/inbox", http.StatusSeeOther)
 }
@@ -1575,6 +1608,25 @@ func handleLinkTrack(w http.ResponseWriter, r *http.Request) {
 
 func handleAnalytics(w http.ResponseWriter, r *http.Request) {
 	render(w, r, "analytics")
+}
+
+func handleValidate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Redirect(w, r, "/broadcast", http.StatusSeeOther)
+		return
+	}
+	phones := strings.Split(r.FormValue("numbers"), "\n")
+	var valid, invalid int
+	for _, p := range phones {
+		p = strings.TrimSpace(p)
+		if p == "" { continue }
+		if store.ValidFormat(strings.TrimPrefix(strings.TrimPrefix(p, "+"), "0")) && !db.IsBlacklisted(p) && !db.IsUnsub(p) {
+			valid++
+		} else {
+			invalid++
+		}
+	}
+	http.Redirect(w, r, fmt.Sprintf("/broadcast?msg=Valid:+%d,+Invalid:+%d", valid, invalid), http.StatusSeeOther)
 }
 
 func handleInboxCanned(w http.ResponseWriter, r *http.Request) {

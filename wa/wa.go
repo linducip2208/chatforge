@@ -37,7 +37,7 @@ type session struct {
 	client    *whatsmeow.Client
 	status    string
 	qr        string
-	phone     string
+	Phone     string
 	createdAt time.Time
 	userID    int64
 }
@@ -108,7 +108,7 @@ func (e *Engine) connectDevice(dev *wmstore.Device) *session {
 	}
 	s := &session{id: id, client: client, status: "connecting", createdAt: time.Now()}
 	if dev.ID != nil {
-		s.phone = dev.ID.User
+		s.Phone = dev.ID.User
 	}
 	e.mu.Lock()
 	e.sessions[id] = s
@@ -162,7 +162,7 @@ func (e *Engine) AddAccount(userID int64) (string, error) {
 				// re-key session under the real device id
 				if client.Store.ID != nil {
 					newID := client.Store.ID.String()
-					s.phone = client.Store.ID.User
+					s.Phone = client.Store.ID.User
 					delete(e.sessions, id)
 					s.id = newID
 					e.sessions[newID] = s
@@ -208,10 +208,10 @@ func (e *Engine) Accounts(userID int64) []AccountInfo {
 		if s.userID != 0 && s.userID != userID {
 			continue
 		}
-		if s.phone == "" && s.status != "connected" && s.createdAt.Add(5*time.Minute).Before(now) {
+		if s.Phone == "" && s.status != "connected" && s.createdAt.Add(5*time.Minute).Before(now) {
 			continue
 		}
-		out = append(out, AccountInfo{ID: id, Phone: s.phone, Status: s.status})
+		out = append(out, AccountInfo{ID: id, Phone: s.Phone, Status: s.status})
 	}
 	return out
 }
@@ -268,7 +268,7 @@ func (e *Engine) StatusFor(id string) (string, string) {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	if s := e.sessions[id]; s != nil {
-		return s.status, s.phone
+		return s.status, s.Phone
 	}
 	return "offline", ""
 }
@@ -279,7 +279,7 @@ func (e *Engine) Status() (string, string) {
 	defer e.mu.RUnlock()
 	for _, s := range e.sessions {
 		if s.status == "connected" {
-			return "connected", s.phone
+			return "connected", s.Phone
 		}
 	}
 	for _, s := range e.sessions {
@@ -350,28 +350,32 @@ func (e *Engine) firstConnected() *session {
 	return nil
 }
 
+func (e *Engine) FirstSession() *session {
+	return e.firstConnected()
+}
+
 func (e *Engine) handleEvent(s *session, rawEvt interface{}) {
 	switch evt := rawEvt.(type) {
 	case *events.Connected:
 		e.mu.Lock()
 		s.status = "connected"
 		if s.client.Store.ID != nil {
-			s.phone = s.client.Store.ID.User
+			s.Phone = s.client.Store.ID.User
 		}
 		e.mu.Unlock()
-		e.db.LogInstance(s.phone, "connected")
+		e.db.LogInstance(s.Phone, "connected")
 	case *events.Disconnected:
 		e.mu.Lock()
 		if s.status != "qr" {
 			s.status = "disconnected"
 		}
 		e.mu.Unlock()
-		e.db.LogInstance(s.phone, "disconnected")
+		e.db.LogInstance(s.Phone, "disconnected")
 	case *events.LoggedOut:
 		e.mu.Lock()
 		s.status = "disconnected"
 		e.mu.Unlock()
-		e.db.LogInstance(s.phone, "logged_out")
+		e.db.LogInstance(s.Phone, "logged_out")
 	case *events.Message:
 		e.onMessage(s, evt)
 	}
@@ -424,6 +428,11 @@ func (e *Engine) onMessage(s *session, evt *events.Message) {
 		e.log.Infof("group msg: %s → %s: %s", name, groupName, text)
 	} else {
 		e.db.LogReceived(senderPhone, name, text, false, "", "", "whatsmeow"); e.db.Log("received", "private", fmt.Sprintf("%s (%s): %s", name, senderPhone, text))
+		// spam detection
+		if e.db.TrackSpam(senderPhone, fmt.Sprintf("%x", text[:minInt(len(text), 20)])) {
+			e.db.AddBlacklist(senderPhone, "auto: spam detected")
+			e.db.Log("safety", "blacklisted", fmt.Sprintf("%s auto-blocked for spam", senderPhone))
+		}
 		// auto-assign round robin for new conversations
 		if e.db.GetAssignedAgent(senderPhone) == 0 {
 			e.db.AssignNextRoundRobin(senderPhone)
@@ -476,7 +485,7 @@ func (e *Engine) onMessage(s *session, evt *events.Message) {
 	if e.db.GetSetting("ai_all_enabled", "0") == "1" && !evt.Info.IsGroup {
 		// Fallback-only mode: skip if auto-reply already would have matched
 		if e.db.GetSetting("ai_fallback_only", "0") == "1" {
-			if e.hasKeywordMatch(text, s.phone) {
+			if e.hasKeywordMatch(text, s.Phone) {
 				goto skipAIAll
 			}
 		}
@@ -515,7 +524,7 @@ skipAIAll:
 	}
 
 	// Basic auto reply — filter by account (comma-separated)
-	rule, ok := e.db.FindReplyFullForAccount(text, s.phone)
+	rule, ok := e.db.FindReplyFullForAccount(text, s.Phone)
 	if !ok {
 		rule, ok = e.db.FindReplyFullForAccount(text, "") // fallback: rules with no account set
 	}
@@ -645,7 +654,7 @@ func (e *Engine) findSession(accountPhone string) *session {
 	for _, s := range e.sessions {
 		if s.status != "connected" { continue }
 		if accountPhone != "" {
-			if s.phone == accountPhone { return s }
+			if s.Phone == accountPhone { return s }
 		} else {
 			return s
 		}
@@ -672,7 +681,7 @@ func (sel *SenderSelector) Next(e *Engine) *session {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	for _, s := range e.sessions {
-		if s.status == "connected" && s.phone == phone {
+		if s.status == "connected" && s.Phone == phone {
 			return s
 		}
 	}

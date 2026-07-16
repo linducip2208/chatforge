@@ -137,7 +137,9 @@ func (e *Engine) runCampaign(c store.Campaign) {
 
 	for _, ct := range targets {
 		if e.campaignTerminated(c.ID) { return }
-		if e.db.IsUnsub(ct.Phone) { continue }
+		if e.db.IsUnsub(ct.Phone) || e.db.IsBlacklisted(ct.Phone) { continue }
+		// validate number format
+		if !store.ValidFormat(ct.Phone) { continue }
 		// rate limit
 		if maxDaily > 0 {
 			todaySent := e.db.TodaySentCount("")
@@ -181,9 +183,9 @@ func (e *Engine) runCampaign(c store.Campaign) {
 			digits := onlyDigits(ct.Phone)
 			if digits != "" {
 				if c.MediaURL != "" && c.MediaType == "image" {
-					sendErr = e.SendMedia(sendSession.phone, ct.Phone, "image", c.MediaURL, msg)
+					sendErr = e.SendMedia(sendSession.Phone, ct.Phone, "image", c.MediaURL, msg)
 				} else if c.MediaURL != "" && c.MediaType == "document" {
-					sendErr = e.SendMedia(sendSession.phone, ct.Phone, "document", c.MediaURL, msg)
+					sendErr = e.SendMedia(sendSession.Phone, ct.Phone, "document", c.MediaURL, msg)
 				} else {
 					jid := waTypes.NewJID(digits, waTypes.DefaultUserServer)
 					sendErr = e.sendVia(sendSession, jid, msg)
@@ -294,14 +296,14 @@ func (e *Engine) heartbeatLoop() {
 			if s.status == "connected" && s.client != nil {
 				if !s.client.IsConnected() {
 					e.log.Warnf("heartbeat: %s lost, reconnecting (backoff)...", s.id)
-					e.db.LogInstance(s.phone, "heartbeat_fail")
+					e.db.LogInstance(s.Phone, "heartbeat_fail")
 					retry := retryCounts[s.id]
 					retryCounts[s.id] = retry + 1
 					// exponential backoff 5s → 10s → 20s → ... max 5min
 					backoffSec := 5 << minInt(retry, 6) // 5,10,20,40,80,160,~320
 					if backoffSec > 300 { backoffSec = 300 }
 					if retry > 10 {
-						e.db.LogInstance(s.phone, "max_retries")
+						e.db.LogInstance(s.Phone, "max_retries")
 						continue
 					}
 					time.Sleep(time.Duration(backoffSec) * time.Second)

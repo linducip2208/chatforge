@@ -14,10 +14,11 @@ type Contact struct {
 	Created string
 }
 type Group struct {
-	ID      int64
-	Name    string
-	Count   int
-	Created string
+	ID       int64
+	Name     string
+	Count    int
+	Language string
+	Created  string
 }
 type Template struct {
 	ID      int64
@@ -183,13 +184,13 @@ func (d *DB) DeleteGroup(id int64) error {
 	return err
 }
 func (d *DB) ListGroups() ([]Group, error) {
-	rows, err := d.sql.Query(`SELECT g.id, g.name, COUNT(c.id), g.created_at FROM contact_groups g LEFT JOIN contacts c ON FIND_IN_SET(g.id, REPLACE(c.`+"`groups`"+`, ' ', '')) GROUP BY g.id ORDER BY g.id DESC`)
+	rows, err := d.sql.Query(`SELECT g.id, g.name, COUNT(c.id), IFNULL(g.language,''), g.created_at FROM contact_groups g LEFT JOIN contacts c ON FIND_IN_SET(g.id, REPLACE(c.`+"`groups`"+`, ' ', '')) GROUP BY g.id ORDER BY g.id DESC`)
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []Group
 	for rows.Next() {
 		var g Group
-		rows.Scan(&g.ID, &g.Name, &g.Count, &g.Created)
+		rows.Scan(&g.ID, &g.Name, &g.Count, &g.Language, &g.Created)
 		out = append(out, g)
 	}
 	return out, nil

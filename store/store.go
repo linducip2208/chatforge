@@ -164,6 +164,7 @@ func (d *DB) migrate() error {
 	d.migrateDrip()
 	d.migratePayment()
 	d.migrateStore()
+	d.migrateSafety()
 	return nil
 }
 
