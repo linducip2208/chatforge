@@ -247,6 +247,11 @@ document.querySelectorAll(".msg-full").forEach(function(el){
         <li class="nav-item"><a class="nav-link {{if eq .Active "canned"}}active{{end}}" href="/canned"><i class="la la-comment-dots la-lg"></i> Canned</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "tracker"}}active{{end}}" href="/tracker"><i class="la la-link la-lg"></i> Links</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "abtests"}}active{{end}}" href="/ab-tests"><i class="la la-balance-scale la-lg"></i> A/B Test</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "store"}}active{{end}}" href="/store"><i class="la la-store la-lg"></i> Store</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "orders"}}active{{end}}" href="/store/orders"><i class="la la-shopping-bag la-lg"></i> Orders</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "forms"}}active{{end}}" href="/forms"><i class="la la-wpforms la-lg"></i> Forms</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "reminders"}}active{{end}}" href="/reminders"><i class="la la-bell la-lg"></i> Reminders</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "analytics"}}active{{end}}" href="/analytics"><i class="la la-chart-pie la-lg"></i> Analytics</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "apikeys"}}active{{end}}" href="/apikeys"><i class="la la-key la-lg"></i> {{T "nav_apikeys"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "webhooks"}}active{{end}}" href="/webhooks"><i class="la la-code-branch la-lg"></i> {{T "nav_webhooks"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "logger"}}active{{end}}" href="/logger"><i class="la la-clipboard-list la-lg"></i> {{T "nav_logger"}}</a></li>
@@ -1020,6 +1025,109 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
     </div>
     <div class="modal-footer"><button class="btn btn-primary">Create</button></div>
   </form></div></div></div>
+{{end}}
+
+{{if eq .Page "store"}}
+  <div class="row">
+    <div class="col-12 col-lg-4">
+      <div class="card mb-3"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> Add Product</h4></div>
+        <div class="card-body"><form method="post" action="/store/add">
+          <div class="form-group"><label>Nama</label><input name="name" class="form-control" required></div>
+          <div class="form-group"><label>Deskripsi</label><textarea name="desc" class="form-control" rows="2"></textarea></div>
+          <div class="form-group"><label>Harga</label><input name="price" type="number" step="0.01" class="form-control" required></div>
+          <div class="form-group"><label>Gambar URL</label><input name="image_url" class="form-control"></div>
+          <div class="form-group"><label>Kategori</label><select name="category" class="form-control">{{range .Categories}}<option value="{{.Name}}">{{.Name}}</option>{{end}}</select></div>
+          <div class="form-group"><label>Stok</label><input name="stock" type="number" class="form-control" value="0"></div>
+          <button class="btn btn-primary"><i class="la la-plus"></i> Add</button>
+        </form></div>
+      </div>
+      <div class="card"><div class="card-header"><h4 class="card-header-title">Kategori</h4></div>
+        <div class="card-body"><form method="post" action="/store/category/add"><div class="input-group"><input name="name" class="form-control" placeholder="Nama kategori"><button class="btn btn-primary">Add</button></div></form>
+          <div class="mt-2">{{range .Categories}}<span class="badge badge-soft-primary me-1 mb-1">{{.Name}} <form method="post" action="/store/category/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button style="background:none;border:none;color:inherit;cursor:pointer;font-size:10px">&times;</button></form></span>{{end}}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-8">
+      <div class="card"><div class="card-header"><h4 class="card-header-title">Products</h4></div>
+        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Image</th><th>Nama</th><th>Price</th><th>Category</th><th>Stock</th><th></th></tr></thead><tbody>
+          {{range .Products}}<tr><td>{{.ID}}</td><td>{{if .ImageURL}}<img src="{{.ImageURL}}" style="width:40px;height:40px;object-fit:cover;border-radius:6px">{{else}}-{{end}}</td><td>{{.Name}}</td><td>{{.Price}}</td><td>{{.Category}}</td><td>{{.Stock}}</td><td><form method="post" action="/store/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">Del</button></form></td></tr>{{else}}<tr><td colspan="7" class="text-muted text-center">-</td></tr>{{end}}
+        </tbody></table></div>
+      </div>
+    </div>
+  </div>
+{{end}}
+
+{{if eq .Page "orders"}}
+  <div class="card"><div class="card-header"><h4 class="card-header-title">Orders</h4></div>
+    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Phone</th><th>Name</th><th>Product</th><th>Qty</th><th>Total</th><th>Status</th><th></th></tr></thead><tbody>
+      {{range .Orders}}<tr><td>{{.ID}}</td><td>{{.Phone}}</td><td>{{.Name}}</td><td>#{{.ProductID}}</td><td>{{.Quantity}}</td><td>{{.Total}}</td><td><span class="badge badge-soft-{{if eq .Status "new"}}warning{{else if eq .Status "paid"}}success{{else}}secondary{{end}}">{{.Status}}</span></td><td>
+        <form method="post" action="/store/orders/update" style="display:inline" class="d-flex gap-1"><input type="hidden" name="id" value="{{.ID}}"><select name="status" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()"><option value="new" selected>New</option><option value="confirmed">Confirmed</option><option value="paid">Paid</option><option value="shipped">Shipped</option><option value="cancelled">Cancelled</option></select></form>
+      </td></tr>{{else}}<tr><td colspan="8" class="text-muted text-center">-</td></tr>{{end}}
+    </tbody></table></div>
+  </div>
+{{end}}
+
+{{if eq .Page "forms"}}
+  <div class="row">
+    <div class="col-12 col-lg-4">
+      <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> Create Form</h4></div>
+        <div class="card-body"><form method="post" action="/forms/add">
+          <div class="form-group"><label>Nama Form</label><input name="name" class="form-control" required></div>
+          <div class="form-group"><label>Fields (JSON)</label><textarea name="fields" class="form-control" rows="6" placeholder='[{"label":"Nama","type":"text"},{"label":"Email","type":"text"},{"label":"Rating","type":"number"}]'></textarea><small class="form-text text-muted">Array of {label, type}. Type: text, number, email, textarea.</small></div>
+          <button class="btn btn-primary"><i class="la la-plus"></i> Create</button>
+        </form></div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-8">
+      <div class="card"><div class="card-header"><h4 class="card-header-title">Forms</h4></div>
+        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Name</th><th>Fields</th><th></th></tr></thead><tbody>
+          {{range .Forms}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td><code>{{.Fields}}</code></td><td><a href="/forms/submissions?form_id={{.ID}}" class="btn btn-sm btn-white">Data</a> <form method="post" action="/forms/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">Del</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
+        </tbody></table></div>
+      </div>
+    </div>
+  </div>
+{{end}}
+
+{{if eq .Page "submissions"}}
+  <div class="card"><div class="card-header d-flex justify-content-between"><h4 class="card-header-title">Form Submissions</h4>
+    <select class="form-select form-select-sm" style="width:auto" onchange="window.location='?form_id='+this.value"><option value="">Pilih Form</option>{{range .Forms}}<option value="{{.ID}}" {{if eq .ID $.QueryFormID}}selected{{end}}>{{.Name}}</option>{{end}}</select>
+  </div>
+    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Phone</th><th>Data</th><th>{{T "col_time"}}</th></tr></thead><tbody>
+      {{range .Submissions}}<tr><td>{{.ID}}</td><td>{{.Phone}}</td><td><code>{{.Data}}</code></td><td class="text-muted small">{{.Created}}</td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
+    </tbody></table></div>
+  </div>
+{{end}}
+
+{{if eq .Page "reminders"}}
+  <div class="row">
+    <div class="col-12 col-lg-4">
+      <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> Add Reminder</h4></div>
+        <div class="card-body"><form method="post" action="/reminders/add">
+          <div class="form-group"><label>Nama</label><input name="name" class="form-control"></div>
+          <div class="form-group"><label>Phone</label><input name="phone" class="form-control" required></div>
+          <div class="form-group"><label>Amount</label><input name="amount" type="number" step="0.01" class="form-control" required></div>
+          <div class="form-group"><label>Due Date</label><input type="date" name="due_date" class="form-control" required></div>
+          <div class="form-group"><label>Pesan</label><textarea name="message" class="form-control" rows="2">Pengingat: tagihan sebesar {amount} jatuh tempo {date}.</textarea></div>
+          <button class="btn btn-primary"><i class="la la-plus"></i> Add</button>
+        </form></div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-8">
+      <div class="card"><div class="card-header"><h4 class="card-header-title">Payment Reminders</h4></div>
+        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Phone</th><th>Name</th><th>Amount</th><th>Due</th><th>Status</th></tr></thead><tbody>
+          {{range .Reminders}}<tr><td>{{.ID}}</td><td>{{.Phone}}</td><td>{{.Name}}</td><td>{{.Amount}}</td><td>{{.DueDate}}</td><td>{{.Status}}</td></tr>{{else}}<tr><td colspan="6" class="text-muted text-center">-</td></tr>{{end}}
+        </tbody></table></div>
+      </div>
+    </div>
+  </div>
+{{end}}
+
+{{if eq .Page "analytics"}}
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-chart-pie me-1"></i> Agent Performance (30 Hari)</h4></div>
+    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>Agent</th><th>Chats</th><th>Replies</th><th>Avg Response (s)</th></tr></thead><tbody>
+      {{range .AgentMetrics}}<tr><td>{{.AgentName}}</td><td>{{.Chats}}</td><td>{{.Replied}}</td><td>{{printf "%.0f" .AvgTime}}</td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center py-4">No data yet.</td></tr>{{end}}
+    </tbody></table></div>
+  </div>
 {{end}}
 
 {{if eq .Page "subscribe"}}

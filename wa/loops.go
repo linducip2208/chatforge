@@ -3,6 +3,7 @@ package wa
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -22,6 +23,7 @@ func (e *Engine) StartLoops() {
 	go e.scheduledLoop()
 	go e.heartbeatLoop()
 	go e.dripLoop()
+	go e.reminderLoop()
 }
 
 // campaignLoop drains running campaigns, sending to each contact in the target groups.
@@ -350,6 +352,34 @@ func (e *Engine) dripLoop() {
 			}
 			e.db.AdvanceDripStep(en.ID, nextDelay)
 			time.Sleep(2 * time.Second)
+		}
+	}
+}
+
+// reminderLoop checks for due payment reminders and sends them.
+func (e *Engine) reminderLoop() {
+	for {
+		time.Sleep(4 * time.Hour)
+		reminders, err := e.db.DueReminders()
+		if err != nil { continue }
+		e.mu.RLock()
+		var s *session
+		for _, ss := range e.sessions {
+			if ss.status == "connected" { s = ss; break }
+		}
+		e.mu.RUnlock()
+		if s == nil { continue }
+		for _, r := range reminders {
+			msg := strings.ReplaceAll(r.Message, "{amount}", fmt.Sprintf("%.0f", r.Amount))
+			msg = strings.ReplaceAll(msg, "{date}", r.DueDate)
+			digits := onlyDigits(r.Phone)
+			if digits != "" {
+				jid := waTypes.NewJID(digits, waTypes.DefaultUserServer)
+				if err := e.sendVia(s, jid, msg); err == nil {
+					e.db.MarkReminderSent(r.ID)
+				}
+			}
+			time.Sleep(3 * time.Second)
 		}
 	}
 }

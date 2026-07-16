@@ -164,6 +164,28 @@ func main() {
 	mux.HandleFunc("/subscribe", authMiddleware(handleSubscribe))
 	mux.HandleFunc("/subscribe/checkout", authMiddleware(handleCheckout))
 	mux.HandleFunc("/payment/callback/", handlePaymentCallback)
+	mux.HandleFunc("/store", authMiddleware(p("store")))
+	mux.HandleFunc("/store/add", authMiddleware(crudPost(func(r *http.Request) { p, _ := strconv.ParseFloat(r.FormValue("price"), 64); s, _ := strconv.Atoi(r.FormValue("stock")); db.AddProduct(r.FormValue("name"), r.FormValue("desc"), p, r.FormValue("image_url"), r.FormValue("category"), s) }, "/store")))
+	mux.HandleFunc("/store/delete", authMiddleware(crudDel(func(id int64) { db.DeleteProduct(id) }, "/store")))
+	mux.HandleFunc("/store/category/add", authMiddleware(crudPost(func(r *http.Request) { db.AddCategory(r.FormValue("name")) }, "/store")))
+	mux.HandleFunc("/store/category/delete", authMiddleware(crudDel(func(id int64) { db.DeleteCategory(id) }, "/store")))
+	mux.HandleFunc("/store/orders", authMiddleware(p("orders")))
+	mux.HandleFunc("/store/orders/update", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+		if id > 0 { db.UpdateOrderStatus(id, r.FormValue("status")) }
+		http.Redirect(w, r, "/store/orders", http.StatusSeeOther)
+	}))
+	mux.HandleFunc("/forms", authMiddleware(p("forms")))
+	mux.HandleFunc("/forms/add", authMiddleware(crudPost(func(r *http.Request) { db.AddForm(r.FormValue("name"), r.FormValue("fields")) }, "/forms")))
+	mux.HandleFunc("/forms/delete", authMiddleware(crudDel(func(id int64) { db.DeleteForm(id) }, "/forms")))
+	mux.HandleFunc("/forms/submissions", authMiddleware(p("submissions")))
+	mux.HandleFunc("/reminders", authMiddleware(p("reminders")))
+	mux.HandleFunc("/reminders/add", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		amt, _ := strconv.ParseFloat(r.FormValue("amount"), 64)
+		db.AddReminder(r.FormValue("phone"), r.FormValue("name"), amt, r.FormValue("due_date"), r.FormValue("message"))
+		http.Redirect(w, r, "/reminders", http.StatusSeeOther)
+	}))
+	mux.HandleFunc("/analytics", authMiddleware(handleAnalytics))
 	mux.HandleFunc("/inbox/canned", authMiddleware(handleInboxCanned))
 		mux.HandleFunc("/scheduled", authMiddleware(handleScheduled))
 	mux.HandleFunc("/scheduled/delete", authMiddleware(crudDel(func(id int64) { db.DeleteScheduled(id) }, "/scheduled")))
@@ -303,6 +325,13 @@ type pageData struct {
 	ABTests        []store.ABTest
 	PaymentGateways []store.PaymentGateway
 	Txs            []store.PaymentTransaction
+	Products       []store.Product
+	Categories     []store.ProductCategory
+	Orders         []store.Order
+	Forms          []store.ChatForm
+	Submissions    []store.FormSubmission
+	Reminders      []store.PaymentReminder
+	AgentMetrics   []store.AgentMetric
 	Scheduleds     []store.Scheduled
 	Logs       []store.LogEntry
 	// admin/ai/devices
@@ -547,6 +576,21 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.PaymentGateways, _ = db.ListPaymentGateways()
 	case "admin_transactions_pay":
 		d.Txs, _ = db.ListPayTransactions()
+	case "store":
+		d.Products, _ = db.ListProducts()
+		d.Categories, _ = db.ListCategories()
+	case "orders":
+		d.Orders, _ = db.ListOrders()
+	case "forms":
+		d.Forms, _ = db.ListForms()
+	case "submissions":
+		d.Forms, _ = db.ListForms()
+		fid, _ := strconv.ParseInt(r.URL.Query().Get("form_id"), 10, 64)
+		if fid > 0 { d.Submissions, _ = db.ListSubmissions(fid) }
+	case "reminders":
+		d.Reminders, _ = db.ListReminders()
+	case "analytics":
+		d.AgentMetrics = db.AgentMetrics()
 	case "canned":
 		d.Canned, _ = db.ListCanned()
 		d.Users, _ = db.ListUsers()
@@ -729,6 +773,18 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Tags", T("nav_contacts"), "Contact Tags", "la-tags"
 	case "canned":
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Canned Responses", T("nav_tools"), "Canned Responses", "la-comment-dots"
+	case "store":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Store", "Products", "Product Catalog", "la-store"
+	case "orders":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Orders", "Store", "Orders", "la-shopping-bag"
+	case "forms":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Forms", "Tools", "Interactive Forms", "la-wpforms"
+	case "submissions":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Submissions", "Forms", "Form Data", "la-database"
+	case "reminders":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Reminders", "Tools", "Payment Reminders", "la-bell"
+	case "analytics":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Analytics", "Reports", "Conversation Analytics", "la-chart-pie"
 	case "tracker":
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Link Tracker", T("nav_tools"), "Link Clicks", "la-link"
 	case "abtests":
@@ -1515,6 +1571,10 @@ func handleLinkTrack(w http.ResponseWriter, r *http.Request) {
 	db.QueryRow(`SELECT url FROM link_clicks WHERE token=?`, token).Scan(&url)
 	if url == "" { url = "/" }
 	http.Redirect(w, r, url, http.StatusFound)
+}
+
+func handleAnalytics(w http.ResponseWriter, r *http.Request) {
+	render(w, r, "analytics")
 }
 
 func handleInboxCanned(w http.ResponseWriter, r *http.Request) {

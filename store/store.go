@@ -163,6 +163,7 @@ func (d *DB) migrate() error {
 	d.migrateMeta()
 	d.migrateDrip()
 	d.migratePayment()
+	d.migrateStore()
 	return nil
 }
 
