@@ -36,6 +36,7 @@ type Package struct {
 	KeyLimit       int
 	WebhookLimit   int
 	ActionLimit    int
+	MetaLimit      int
 	Services       string
 	Hidden         int
 	Footermark     int
@@ -344,13 +345,13 @@ func (d *DB) ListRoles() ([]Role, error) {
 }
 
 // Packages
-func (d *DB) AddPackage(name, price string, send, receive, dev, ussd, waSend, waReceive, waAcc, contact, scheduled, keyL, webhookL, actionL int, services string, hidden, footermark int) (int64, error) {
-	return d.exec(`INSERT INTO packages (name,price,send_limit,receive_limit,device_limit,ussd_limit,wa_send_limit,wa_receive_limit,wa_account_limit,contact_limit,scheduled_limit,key_limit,webhook_limit,action_limit,services,hidden,footermark) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-		name, price, send, receive, dev, ussd, waSend, waReceive, waAcc, contact, scheduled, keyL, webhookL, actionL, services, hidden, footermark)
+func (d *DB) AddPackage(name, price string, send, receive, dev, ussd, waSend, waReceive, waAcc, contact, scheduled, keyL, webhookL, actionL, metaL int, services string, hidden, footermark int) (int64, error) {
+	return d.exec(`INSERT INTO packages (name,price,send_limit,receive_limit,device_limit,ussd_limit,wa_send_limit,wa_receive_limit,wa_account_limit,contact_limit,scheduled_limit,key_limit,webhook_limit,action_limit,meta_limit,services,hidden,footermark) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		name, price, send, receive, dev, ussd, waSend, waReceive, waAcc, contact, scheduled, keyL, webhookL, actionL, metaL, services, hidden, footermark)
 }
 func (d *DB) DeletePackage(id int64) error { return d.del("packages", id) }
 func (d *DB) ListPackages() ([]Package, error) {
-	rows, err := d.sql.Query(`SELECT id,name,price,send_limit,receive_limit,device_limit,ussd_limit,wa_send_limit,wa_receive_limit,wa_account_limit,contact_limit,scheduled_limit,key_limit,webhook_limit,action_limit,IFNULL(services,''),hidden,footermark,created_at FROM packages ORDER BY id DESC`)
+	rows, err := d.sql.Query(`SELECT id,name,price,send_limit,receive_limit,device_limit,ussd_limit,wa_send_limit,wa_receive_limit,wa_account_limit,contact_limit,scheduled_limit,key_limit,webhook_limit,action_limit,IFNULL(meta_limit,0),IFNULL(services,''),hidden,footermark,created_at FROM packages ORDER BY id DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -358,7 +359,7 @@ func (d *DB) ListPackages() ([]Package, error) {
 	var out []Package
 	for rows.Next() {
 		var x Package
-		rows.Scan(&x.ID, &x.Name, &x.Price, &x.SendLimit, &x.ReceiveLimit, &x.DeviceLimit, &x.UssdLimit, &x.WaSendLimit, &x.WaReceiveLimit, &x.WaAccountLimit, &x.ContactLimit, &x.ScheduledLimit, &x.KeyLimit, &x.WebhookLimit, &x.ActionLimit, &x.Services, &x.Hidden, &x.Footermark, &x.Created)
+		rows.Scan(&x.ID, &x.Name, &x.Price, &x.SendLimit, &x.ReceiveLimit, &x.DeviceLimit, &x.UssdLimit, &x.WaSendLimit, &x.WaReceiveLimit, &x.WaAccountLimit, &x.ContactLimit, &x.ScheduledLimit, &x.KeyLimit, &x.WebhookLimit, &x.ActionLimit, &x.MetaLimit, &x.Services, &x.Hidden, &x.Footermark, &x.Created)
 		out = append(out, x)
 	}
 	return out, nil

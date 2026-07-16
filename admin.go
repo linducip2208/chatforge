@@ -117,7 +117,8 @@ func registerAdminRoutes(mux *http.ServeMux) {
 		sv := joinVals(r, "services")
 		hd, _ := strconv.Atoi(r.FormValue("hidden"))
 		fm, _ := strconv.Atoi(r.FormValue("footermark"))
-		db.AddPackage(r.FormValue("name"), r.FormValue("price"), s, rc, dv, us, ws, wr, wa, co, sc, kl, wl, al, sv, hd, fm)
+		ml, _ := strconv.Atoi(r.FormValue("meta_limit"))
+		db.AddPackage(r.FormValue("name"), r.FormValue("price"), s, rc, dv, us, ws, wr, wa, co, sc, kl, wl, al, ml, sv, hd, fm)
 	}, "/admin/packages"))
 	mux.HandleFunc("/admin/packages/delete", acd(func(id int64) { db.DeletePackage(id) }, "/admin/packages"))
 	mux.HandleFunc("/admin/vouchers", ap("admin_vouchers"))
@@ -169,9 +170,15 @@ func registerAdminRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/admin/plugins/delete", acd(func(id int64) { db.DeletePlugin(id) }, "/admin/plugins"))
 
 	mux.HandleFunc("/admin/meta", ap("admin_meta"))
-	mux.HandleFunc("/admin/meta/add", acp(func(r *http.Request) {
-		db.AddMetaAccount(r.FormValue("name"), r.FormValue("phone_number_id"), r.FormValue("access_token"), r.FormValue("app_id"), r.FormValue("app_secret"), r.FormValue("verify_token"))
-	}, "/admin/meta"))
+	mux.HandleFunc("/admin/meta/add", a(func(w http.ResponseWriter, r *http.Request) {
+		uid, _ := strconv.ParseInt(r.Header.Get("X-User-ID"), 10, 64)
+		if db.CountMetaByUser(uid) >= db.GetUserMetaLimit(uid) {
+			http.Redirect(w, r, "/admin/meta?msg=Meta+limit+reached", http.StatusSeeOther)
+			return
+		}
+		db.AddMetaAccount(r.FormValue("name"), r.FormValue("phone_number_id"), r.FormValue("access_token"), r.FormValue("app_id"), r.FormValue("app_secret"), r.FormValue("verify_token"), uid, 0)
+		http.Redirect(w, r, "/admin/meta", http.StatusSeeOther)
+	}))
 	mux.HandleFunc("/admin/meta/delete", acd(func(id int64) { db.DeleteMetaAccount(id) }, "/admin/meta"))
 
 	mux.HandleFunc("/admin/metatemplates", ap("admin_metatemplates"))

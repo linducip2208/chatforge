@@ -1135,12 +1135,13 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
         <div class="form-group col-3"><label>API Key</label><input name="key_limit" type="number" class="form-control" value="5"></div></div>
         <div class="form-row">
         <div class="form-group col-4"><label>Webhook</label><input name="webhook_limit" type="number" class="form-control" value="5"></div>
-        <div class="form-group col-4"><label>Action</label><input name="action_limit" type="number" class="form-control" value="5"></div></div>
+        <div class="form-group col-4"><label>Action</label><input name="action_limit" type="number" class="form-control" value="5"></div>
+        <div class="form-group col-4"><label>Meta</label><input name="meta_limit" type="number" class="form-control" value="0"></div></div>
         <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
       </form></div></div></div>
     <div class="col-12 col-lg-7"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "adm_packages"}}</h4></div>
       <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>{{T "pkg_price"}}</th><th>Limits</th><th>{{T "col_action"}}</th></tr></thead><tbody>
-        {{range .Packages}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.Price}}</td><td><small>S:{{.SendLimit}} D:{{.DeviceLimit}}</small></td><td><form method="post" action="/admin/packages/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center">-</td></tr>{{end}}
+        {{range .Packages}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.Price}}</td><td><small>S:{{.SendLimit}} D:{{.DeviceLimit}} M:{{.MetaLimit}}</small></td><td><form method="post" action="/admin/packages/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center">-</td></tr>{{end}}
       </tbody></table></div></div></div>
   </div>
 {{end}}

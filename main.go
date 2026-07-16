@@ -14,9 +14,11 @@ import (
 	"strings"
 	"time"
 
+	"chatgo/aiservice"
 	"chatgo/i18n"
 	"chatgo/meta"
 	"chatgo/msgtemplate"
+	"chatgo/secret"
 	"chatgo/store"
 	"chatgo/wa"
 
@@ -1296,6 +1298,26 @@ func handleMetaWebhook(w http.ResponseWriter, r *http.Request) {
 				db.MarkRead(m.From)
 				engine.Notify(m.From)
 				db.Log("meta", "received", fmt.Sprintf("%s -> %s: %s", m.From, acc.Name, text))
+
+				// Auto-reply for Meta
+				mc := meta.New(acc.PhoneNumberID, acc.AccessToken, acc.VerifyToken)
+				if ar, found := db.FindReplyFullForAccount(text, ""); found && ar.IsActive {
+					reply := msgtemplate.Render(ar.Reply, msgtemplate.Vars{Phone: m.From, Name: "", Message: text})
+					if ar.UseAI && ar.AiKeyID > 0 {
+						if aik, err := db.GetAiKey(ar.AiKeyID); err == nil {
+							decKey, _ := secret.Decrypt(aik.APIKey)
+							if decKey == "" { decKey = aik.APIKey }
+							if aiReply, aiErr := aiservice.Reply(decKey, aik.Provider, aik.Model, aik.BaseURL, aik.SystemPrompt, text, nil, nil); aiErr == nil && aiReply != "" {
+								reply = aiReply
+							}
+						}
+					}
+					if reply != "" {
+						mc.SendText(m.From, reply)
+						db.LogSent(m.From, reply, "autoreply", "meta")
+						db.Log("meta", "autoreply", fmt.Sprintf("-> %s: %s", m.From, reply))
+					}
+				}
 			}
 			break
 		}
