@@ -741,7 +741,13 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 </div>
 
 <div class="card mt-3">
-<div class="card-header"><h4 class="card-header-title"><i class="la la-shield me-1"></i> Rate Limiter (Anti-Ban)</h4></div>
+<div class="card-header"><h4 class="card-header-title"><i class="la la-clock me-1"></i> Auto-Close Idle Chats</h4></div>
+<div class="card-body">
+<div class="row">
+<div class="col-md-6"><div class="form-group"><label>Close After (hours, 0=disabled)</label><input type="number" name="auto_close_hours" class="form-control" value="{{.AutoCloseHours}}"></div></div>
+<div class="col-md-6"><div class="form-group"><label>Follow-up Message</label><input name="auto_close_message" class="form-control" placeholder="Chat ini ditutup otomatis." value="{{.AutoCloseMessage}}"></div></div>
+</div>
+</div></div>
 <div class="card-body">
 <div class="row">
 <div class="col-md-4"><div class="form-group"><label>Max Per Day (0=unlimited)</label><input type="number" name="rate_max_daily" class="form-control" value="{{.RateMaxDaily}}"></div></div>
@@ -1964,6 +1970,9 @@ else{if(b)b.remove()}
 </div>
 </div>
 <div class="card-footer bg-white border-top" style="padding:8px 16px">
+<div class="d-flex gap-1 mb-1">
+  <form method="post" action="/inbox/note" class="d-flex gap-1 flex-grow-1"><input type="hidden" name="phone" value="{{.Phone}}"><input name="note" class="form-control form-control-sm" placeholder="Tambah catatan internal..." style="font-size:12px"><button class="btn btn-sm btn-outline-secondary" style="font-size:11px"><i class="la la-sticky-note"></i></button></form>
+</div>
 <form id="chatForm" onsubmit="return sendChat(event)">
 <div class="chat-input-group">
 <textarea id="chatInput" name="message" class="form-control" placeholder="Ketik pesan..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat(event)}"></textarea>

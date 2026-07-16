@@ -329,6 +329,8 @@ type pageData struct {
 	RateMaxDaily      string
 	RateRandomMin     string
 	RateRandomMax     string
+	AutoCloseHours    string
+	AutoCloseMessage  string
 	ForceOwnKey      bool
 	Registrations    bool
 	AiTokenQuota     int64
@@ -567,6 +569,8 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 	d.RateMaxDaily = db.GetSetting("rate_max_daily", "0")
 	d.RateRandomMin = db.GetSetting("rate_random_min", "0")
 	d.RateRandomMax = db.GetSetting("rate_random_max", "0")
+	d.AutoCloseHours = db.GetSetting("auto_close_hours", "0")
+	d.AutoCloseMessage = db.GetSetting("auto_close_message", "Chat ini ditutup otomatis. Silakan hubungi kami kembali jika perlu bantuan.")
 	d.ForceOwnKey = db.GetSetting("force_own_key", "0") == "1"
 	d.Registrations = db.GetSetting("registrations", "1") == "1"
 	d.AiTokenQuota = int64(db.GetUserAiQuota(uid))
@@ -1372,6 +1376,8 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 	_ = db.SetSetting("rate_max_daily", r.FormValue("rate_max_daily"))
 	_ = db.SetSetting("rate_random_min", r.FormValue("rate_random_min"))
 	_ = db.SetSetting("rate_random_max", r.FormValue("rate_random_max"))
+	_ = db.SetSetting("auto_close_hours", r.FormValue("auto_close_hours"))
+	_ = db.SetSetting("auto_close_message", r.FormValue("auto_close_message"))
 	setBool("registrations", "registrations")
 	_ = db.SetSetting("app_name", r.FormValue("app_name"))
 	_ = db.SetSetting("app_email", r.FormValue("app_email"))
