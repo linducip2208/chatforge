@@ -162,7 +162,7 @@ func main() {
 	if v := os.Getenv("CHATGO_ADDR"); v != "" {
 		addr = v
 	}
-	fmt.Printf("\n  chatgo running at http://%s\n\n", addr)
+	fmt.Printf("\n  %s running at http://%s\n\n", getEnv("APP_NAME", "chatgo"), addr)
 	log.Fatal(http.ListenAndServe(addr, mux))
 }
 
@@ -272,6 +272,11 @@ type pageData struct {
 	InboxConversations []store.InboxConversation
 	ChatMessages  []store.ChatMessage
 	UnreadCount   int
+	IsGroup       bool
+	ChatName      string
+	AppName       string
+	AppLogo       string
+	AppEmail      string
 	// pagination
 	SentPage       int
 	SentPerPage    int
@@ -329,6 +334,11 @@ func getUserID(r *http.Request) int64 {
 	return id
 }
 
+func getEnv(key, def string) string {
+	if v := os.Getenv(key); v != "" { return v }
+	return def
+}
+
 func render(w http.ResponseWriter, r *http.Request, page string) {
 	lang := currentLang(r)
 	T := i18n.Translator(lang)
@@ -354,6 +364,9 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		Languages: langs,
 		SentPerPage: 20, ReceivedPerPage: 20,
 		SentPage: 1, ReceivedPage: 1,
+		AppName: getEnv("APP_NAME", "ChatGo"),
+		AppLogo: getEnv("APP_LOGO", "/assets/theme/default-logo-light.png"),
+		AppEmail: getEnv("APP_EMAIL", "admin@chatgo.test"),
 	}
 	// pre-rendered translated strings with HTML/format
 	d.WaConnectedDesc = template.HTML(fmt.Sprintf(T("wa_connected_desc"), template.HTMLEscapeString(phone)))
@@ -445,6 +458,14 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Phone = r.URL.Query().Get("phone")
 		d.ChatMessages, _ = db.ChatHistory(d.Phone, 100)
 		d.Templates, _ = db.ListTemplates()
+		if msgs, _ := db.ChatHistory(d.Phone, 1); len(msgs) > 0 {
+			d.IsGroup = msgs[0].IsGroup
+			if d.IsGroup {
+				if nm := db.GetGroupName(d.Phone); nm != "" {
+					d.ChatName = nm
+				}
+			}
+		}
 	case "received":
 		d.ReceivedPage = pageFromQuery(r)
 		d.Received, _ = db.ListReceivedPaginated(d.ReceivedPage, d.ReceivedPerPage)
@@ -550,9 +571,9 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 	case "received":
 		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_received"), T("nav_whatsapp"), T("nav_received"), "la-comment"
 	case "inbox":
-		d.Title, d.Pretitle, d.Heading, d.Icon = "Inbox", "WhatsApp", "Percakapan", "la-comments"
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Live Chat", "Messaging", "Percakapan", "la-comments"
 	case "inbox_chat":
-		d.Title, d.Pretitle, d.Heading, d.Icon = "Chat", "WhatsApp", "Percakapan", "la-comment"
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Live Chat", "Messaging", "Percakapan", "la-comment"
 	case "settings":
 		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_settings"), T("nav_tools"), T("nav_settings"), "la-cog"
 	case "autoreply":
@@ -629,6 +650,11 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 	tpl := template.Must(template.New("").Funcs(template.FuncMap{
 		"T":        T,
 		"contains": strings.Contains,
+		"slice": func(s string, start, end int) string {
+			if s == "" || start >= len(s) { return "" }
+			if end > len(s) { end = len(s) }
+			return s[start:end]
+		},
 	}).Parse(templates))
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -844,8 +870,8 @@ func handleInboxMessages(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "[")
 	for i, m := range msgs {
 		if i > 0 { fmt.Fprint(w, ",") }
-		fmt.Fprintf(w, `{"type":%q,"id":%d,"phone":%q,"name":%q,"message":%q,"created":%q}`,
-			m.Type, m.ID, m.Phone, m.Name, m.Message, m.Created)
+		fmt.Fprintf(w, `{"type":%q,"id":%d,"phone":%q,"name":%q,"message":%q,"created":%q,"sender_name":%q,"is_group":%v}`,
+			m.Type, m.ID, m.Phone, m.Name, m.Message, m.Created, m.SenderName, m.IsGroup)
 	}
 	fmt.Fprint(w, "]")
 }

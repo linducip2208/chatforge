@@ -384,15 +384,34 @@ func (e *Engine) onMessage(s *session, evt *events.Message) {
 		senderPhone = evt.Info.SenderAlt.User
 	}
 	name := evt.Info.PushName
-	e.db.LogReceived(senderPhone, name, text, evt.Info.IsGroup)
-	select {
-	case e.notifyCh <- senderPhone:
-	default:
-	}
 
-	t := "private"
-	if evt.Info.IsGroup { t = "group" }
-	e.dispatchWebhooks("received", senderPhone, name, text, t)
+	if evt.Info.IsGroup {
+		groupJID := evt.Info.Chat.User
+		groupName := e.db.GetGroupName(groupJID)
+		if groupName == "" {
+			gjid, err := waTypes.ParseJID(groupJID)
+			if err == nil {
+				if ginfo, gerr := s.client.GetGroupInfo(context.Background(), gjid); gerr == nil {
+					groupName = ginfo.GroupName.Name
+					e.db.SaveGroupName(groupJID, groupName)
+				}
+			}
+		}
+		e.db.LogReceived(groupJID, groupName, text, true, senderPhone, name)
+		select {
+		case e.notifyCh <- groupJID:
+		default:
+		}
+		e.dispatchWebhooks("received", senderPhone, name, text, "group")
+		e.log.Infof("group msg: %s → %s: %s", name, groupName, text)
+	} else {
+		e.db.LogReceived(senderPhone, name, text, false, "", "")
+		select {
+		case e.notifyCh <- senderPhone:
+		default:
+		}
+		e.dispatchWebhooks("received", senderPhone, name, text, "private")
+	}
 
 	to := evt.Info.Chat
 	if !evt.Info.IsGroup && to.Server == waTypes.HiddenUserServer && !evt.Info.SenderAlt.IsEmpty() {
@@ -561,17 +580,26 @@ func (e *Engine) SendFrom(accountPhone, phone, message string) error {
 	if s == nil {
 		return fmt.Errorf("not connected")
 	}
-	digits := onlyDigits(phone)
-	if digits == "" {
-		return fmt.Errorf("invalid phone")
+	var jid waTypes.JID
+	if strings.HasSuffix(phone, "@g.us") || strings.HasSuffix(phone, "@s.whatsapp.net") {
+		var err error
+		jid, err = waTypes.ParseJID(phone)
+		if err != nil {
+			return fmt.Errorf("invalid jid: %w", err)
+		}
+	} else {
+		digits := onlyDigits(phone)
+		if digits == "" {
+			return fmt.Errorf("invalid phone")
+		}
+		jid = waTypes.NewJID(digits, waTypes.DefaultUserServer)
 	}
-	jid := waTypes.NewJID(digits, waTypes.DefaultUserServer)
 	if err := e.sendVia(s, jid, message); err != nil {
-		e.db.LogSent(digits, message, "failed")
+		e.db.LogSent(phone, message, "failed")
 		return err
 	}
-	e.db.LogSent(digits, message, "sent")
-	e.dispatchWebhooks("sent", digits, "", message, "private")
+	e.db.LogSent(phone, message, "sent")
+	e.dispatchWebhooks("sent", phone, "", message, "private")
 	return nil
 }
 

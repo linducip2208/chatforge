@@ -6,7 +6,7 @@ const templates = `
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>{{.Title}} &middot; ChatGo</title>
+<title>{{.Title}} &middot; {{.AppName}}</title>
 <link rel="icon" href="/assets/theme/default-favicon.png">
 <link rel="stylesheet" href="/assets/_assets/css/libs/line-awesome.min.css">
 <link rel="stylesheet" href="/assets/_assets/css/libs/flag-icon.min.css">
@@ -178,12 +178,13 @@ document.querySelectorAll(".msg-full").forEach(function(el){
       <span class="navbar-toggler-icon"></span>
     </button>
     <a class="navbar-brand" href="/">
-      <img src="/assets/theme/default-logo-light.png" class="navbar-brand-img mx-auto" alt="ChatGo" onerror="this.outerHTML='<span style=&quot;color:#fff;font-weight:800;font-size:20px&quot;>chat<span style=&quot;color:#2c7be5&quot;>go</span></span>'">
+      <img src="{{.AppLogo}}" class="navbar-brand-img mx-auto" alt="{{.AppName}}" onerror="this.outerHTML='<span style=&quot;color:#fff;font-weight:800;font-size:20px&quot;>{{.AppName}}</span>'">
     </a>
     <div class="collapse navbar-collapse" id="sidebarCollapse">
       <h6 class="navbar-heading">{{T "nav_overview"}}</h6>
       <ul class="navbar-nav">
         <li class="nav-item"><a class="nav-link {{if eq .Active "home"}}active{{end}}" href="/"><i class="la la-chart-bar la-lg"></i> {{T "nav_dashboard"}}</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "inbox"}}active{{end}}" href="/inbox"><i class="la la-comments la-lg"></i> Live Chat{{if gt .UnreadCount 0}} <span class="badge badge-pill badge-danger ml-1 inbox-badge">{{.UnreadCount}}</span>{{end}}</a></li>
       </ul>
       <hr class="navbar-divider my-3">
       <h6 class="navbar-heading">{{T "nav_whatsapp"}}</h6>
@@ -192,7 +193,6 @@ document.querySelectorAll(".msg-full").forEach(function(el){
         <li class="nav-item"><a class="nav-link {{if eq .Active "send"}}active{{end}}" href="/send"><i class="la la-paper-plane la-lg"></i> {{T "nav_send"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "broadcast"}}active{{end}}" href="/broadcast"><i class="la la-bullhorn la-lg"></i> {{T "nav_broadcast"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "scheduled"}}active{{end}}" href="/scheduled"><i class="la la-clock la-lg"></i> {{T "nav_scheduled"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "inbox"}}active{{end}}" href="/inbox"><i class="la la-comments la-lg"></i> Inbox{{if gt .UnreadCount 0}} <span class="badge badge-pill badge-danger ml-1 inbox-badge">{{.UnreadCount}}</span>{{end}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "sent"}}active{{end}}" href="/sent"><i class="la la-telegram la-lg"></i> {{T "nav_sent"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "received"}}active{{end}}" href="/received"><i class="la la-comment la-lg"></i> {{T "nav_received"}}</a></li>
       </ul>
@@ -670,14 +670,14 @@ document.querySelectorAll(".msg-full").forEach(function(el){
 <h3>Masuk</h3>
 <p class="sub">Belum punya akun? <a href="/register">Daftar gratis</a></p>
 <form method="post" action="/login/post">
-  <div class="form-group mb-3"><label class="small fw-bold text-muted">Email</label><input type="email" name="email" class="form-control" placeholder="admin@chatgo.test" required></div>
+  <div class="form-group mb-3"><label class="small fw-bold text-muted">Email</label><input type="email" name="email" class="form-control" placeholder="{{.AppEmail}}" required></div>
   <div class="form-group mb-3"><label class="small fw-bold text-muted">Password</label><input type="password" name="password" class="form-control" placeholder="••••••••" required></div>
   <button class="btn" type="submit">Masuk</button>
 </form>
 <div class="auth-divider"><span>atau</span></div>
 <div class="demo-box">
   <div class="demo-title">🧪 Demo Login</div>
-  <div class="demo-row"><strong>Admin:</strong> admin@chatgo.test / password</div>
+  <div class="demo-row"><strong>Admin:</strong> {{.AppEmail}} / password</div>
   <div class="demo-row"><strong>User:</strong> saas_005357@test.com / password</div>
 </div>
 {{end}}
@@ -996,75 +996,160 @@ document.querySelectorAll(".msg-full").forEach(function(el){
 .inbox-search{position:relative}
 .inbox-search i{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#95aac9}
 .inbox-search input{padding-left:36px}
+.avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px;flex-shrink:0}
+.avatar.group{background:linear-gradient(135deg,#10B981,#059669);font-size:14px}
+.avatar.person{background:linear-gradient(135deg,#4F46E5,#6366F1)}
+.main-tabs{display:flex;border-bottom:2px solid #e0e0e0;margin-bottom:0}
+.main-tabs .tab-item{padding:10px 24px;font-size:14px;font-weight:600;cursor:pointer;color:#6e788c;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s}
+.main-tabs .tab-item:hover{color:#152e4d}
+.main-tabs .tab-item.active{color:#2c7be5;border-bottom-color:#2c7be5}
+.sub-tabs{display:flex;gap:2px;padding:10px 16px}
+.sub-tabs .sub-btn{padding:4px 14px;border:1px solid #e0e0e0;background:#fff;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s}
+.sub-tabs .sub-btn:hover{background:#f5f5f5}
+.sub-tabs .sub-btn.active{background:#2c7be5;color:#fff;border-color:#2c7be5}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+.wa-status-card{border:1px solid #e0e0e0;border-radius:10px;padding:16px 20px;margin:12px 16px}
+.wa-status-card .acc-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0f0f0}
+.wa-status-card .acc-row:last-child{border-bottom:0}
+.acc-status{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500}
+.acc-status .dot{width:9px;height:9px;border-radius:50%}
+.acc-status .dot.green{background:#00d97e}
+.acc-status .dot.yellow{background:#f6c343}
+.acc-status .dot.red{background:#e63757}
+.acc-phone{font-family:monospace;font-size:13px;color:#6e788c}
 </style>
+
 <div class="card">
-<div class="card-header d-flex justify-content-between align-items-center">
-<h4 class="card-header-title mb-0">Percakapan{{if gt .UnreadCount 0}} <span class="badge badge-danger">{{.UnreadCount}} baru</span>{{end}}</h4>
-<div class="inbox-search" style="width:240px"><i class="la la-search"></i><input type="text" id="inboxSearch" class="form-control form-control-sm" placeholder="Cari percakapan..."></div>
+<div class="card-header pb-0">
+<div class="d-flex justify-content-between align-items-center">
+<h4 class="card-header-title mb-0">Live Chat{{if gt .UnreadCount 0}} <span class="badge badge-danger">{{.UnreadCount}} baru</span>{{end}}</h4>
+<div class="inbox-search" style="width:220px"><i class="la la-search"></i><input type="text" id="inboxSearch" class="form-control form-control-sm" placeholder="Cari..."></div>
+</div>
+<div class="main-tabs mt-2">
+<div class="tab-item active" onclick="switchTab('chat-panel',this)">Chat</div>
+<div class="tab-item" onclick="switchTab('status-panel',this)">Status</div>
+</div>
+</div>
+
+<div class="tab-panel active" id="chat-panel">
+<div class="sub-tabs">
+<button class="sub-btn active" onclick="filterChat('all',this)">Semua</button>
+<button class="sub-btn" onclick="filterChat('private',this)">Private</button>
+<button class="sub-btn" onclick="filterChat('group',this)">Group</button>
 </div>
 <div class="list-group list-group-flush" id="inboxList">
 {{range .InboxConversations}}
-<a href="/inbox/chat?phone={{.Phone}}" class="list-group-item list-group-item-action inbox-conv{{if gt .Unread 0}} unread{{end}}">
+<a href="/inbox/chat?phone={{.Phone}}" class="list-group-item list-group-item-action inbox-conv{{if gt .Unread 0}} unread{{end}}" data-group="{{if .IsGroup}}group{{else}}private{{end}}">
+<div class="d-flex align-items-center gap-3">
+<div class="avatar {{if .IsGroup}}group{{else}}person{{end}}">{{if .IsGroup}}G{{else}}{{slice .Name 0 1}}{{if not .Name}}+{{end}}{{end}}</div>
+<div class="flex-grow-1 min-w-0">
 <div class="d-flex justify-content-between align-items-start">
 <div class="d-flex align-items-center gap-2">
 <strong>{{if .Name}}{{.Name}}{{else}}+{{.Phone}}{{end}}</strong>
+{{if .IsGroup}}<span class="badge badge-soft-success" style="font-size:10px">Group</span>{{end}}
 {{if gt .Unread 0}}<span class="badge badge-pill badge-danger" style="font-size:10px">{{.Unread}}</span>{{end}}
-{{if .IsGroup}}<span class="badge badge-soft-secondary" style="font-size:10px">Grup</span>{{end}}
 </div>
 <small class="text-muted">{{.LastTime}}</small>
 </div>
 <div class="last-msg text-muted small mt-1">{{.LastMsg}}</div>
+</div>
+</div>
 </a>
 {{else}}
 <div class="list-group-item text-center text-muted py-4">Belum ada percakapan</div>
 {{end}}
 </div>
 </div>
+
+<div class="tab-panel" id="status-panel">
+<div class="wa-status-card">
+<h6 class="mb-3">Status Koneksi WA</h6>
+{{if .Accounts}}
+{{range .Accounts}}
+<div class="acc-row">
+<div class="acc-status">
+{{if eq .Status "connected"}}<span class="dot green"></span><span>Connected</span>
+{{else if eq .Status "qr"}}<span class="dot yellow"></span><span>Menunggu QR</span>
+{{else}}<span class="dot red"></span><span>Disconnected</span>{{end}}
+</div>
+<div style="flex:1;margin-left:12px">
+<span class="acc-phone">+{{.Phone}}</span>
+{{if eq .Status "qr"}}<a href="/wa?scan={{.ID}}" class="btn btn-sm btn-warning ms-2">Scan QR</a>{{end}}
+{{if eq .Status "disconnected"}}<a href="/wa" class="btn btn-sm btn-outline-primary ms-2">Hubungkan</a>{{end}}
+</div>
+<small class="text-muted">{{.Created}}</small>
+</div>
+{{end}}
+{{else}}
+<div class="text-center text-muted py-3">Belum ada akun WA. <a href="/wa">Tambah Akun</a></div>
+{{end}}
+</div>
+</div>
+</div>
+
 <script>
-document.getElementById('inboxSearch').addEventListener('input', function(){
-var q = this.value.toLowerCase();
+function switchTab(id,el){
+document.querySelectorAll('.main-tabs .tab-item').forEach(function(x){x.classList.remove('active')});
+el.classList.add('active');
+document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active')});
+document.getElementById(id).classList.add('active');
+}
+function filterChat(f,el){
+document.querySelectorAll('.sub-tabs .sub-btn').forEach(function(b){b.classList.remove('active')});
+el.classList.add('active');
+document.querySelectorAll('#inboxList .inbox-conv').forEach(function(e){
+if(f==='all'){e.style.display=''}else{e.style.display=e.dataset.group===f?'':'none'}
+});
+}
+document.getElementById('inboxSearch').addEventListener('input',function(){
+var q=this.value.toLowerCase();
 document.querySelectorAll('#inboxList .inbox-conv').forEach(function(el){
-el.style.display = el.textContent.toLowerCase().includes(q) ? '' : 'none';
+if(el.style.display==='none')return;
+el.style.display=el.textContent.toLowerCase().includes(q)?'':'none';
 });
 });
 setInterval(function(){
 fetch('/inbox/unread-count').then(function(r){return r.json()}).then(function(d){
-var b = document.querySelector('.inbox-badge');
-if(d.unread > 0){
-if(b) b.textContent = d.unread;
-else {
-var n = document.querySelector('.nav-link[href="/inbox"]');
-if(n) n.innerHTML += ' <span class="badge badge-pill badge-danger ml-1 inbox-badge">'+d.unread+'</span>';
-}
-} else { if(b) b.remove(); }
+var b=document.querySelector('.inbox-badge');
+if(d.unread>0){if(b)b.textContent=d.unread;else{var n=document.querySelector('.nav-link[href="/inbox"]');if(n)n.innerHTML+=' <span class="badge badge-pill badge-danger ml-1 inbox-badge">'+d.unread+'</span>'}}
+else{if(b)b.remove()}
 });
-}, 5000);
+},5000);
 </script>
 {{end}}
 {{if eq .Page "inbox_chat"}}
 <style>
-.chat-area{max-height:55vh;overflow-y:auto;padding:16px;display:flex;flex-direction:column-reverse;scroll-behavior:smooth}
-.chat-bubble{max-width:75%;padding:10px 14px;border-radius:12px;word-wrap:break-word;animation:fadeInUp .2s ease}
-.chat-bubble.received{background:#f1f3f5;align-self:flex-start;border-bottom-left-radius:4px}
-.chat-bubble.sent{background:linear-gradient(135deg,#4F46E5,#6366F1);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
-.chat-meta{font-size:11px;opacity:.7;margin-bottom:2px}
+.chat-area{height:55vh;overflow-y:auto;padding:16px;background:#efeae2;background-image:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="%23efeae2"/><circle cx="100" cy="100" r="60" fill="%23e5ddd5" opacity="0.5"/></svg>')}
+.chat-bubble{max-width:75%;padding:8px 12px;border-radius:8px;word-wrap:break-word;box-shadow:0 1px 1px rgba(0,0,0,.08);font-size:14px;line-height:1.4;position:relative}
+.chat-bubble.received{background:#fff;align-self:flex-start;border-top-left-radius:0}
+.chat-bubble.sent{background:#d9fdd3;align-self:flex-end;border-top-right-radius:0}
+.chat-meta{font-size:10.5px;color:#667781;margin-bottom:1px}
+.chat-sender{font-size:12px;font-weight:600;color:#10B981;margin-bottom:1px}
+.chat-time{font-size:10px;color:#99aab5;float:right;margin-left:8px;margin-top:2px}
 .chat-input-group{position:relative}
-.chat-input-group textarea{resize:none;border-radius:12px;padding-right:50px;min-height:44px;max-height:120px}
-.chat-input-group button{position:absolute;right:6px;bottom:6px;border-radius:50%;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center}
-@keyframes fadeInUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.chat-input-group textarea{resize:none;border-radius:8px;padding:10px 48px 10px 14px;min-height:44px;max-height:120px;border:1px solid #e0e0e0;font-size:14px}
+.chat-input-group textarea:focus{outline:none;border-color:#10B981;box-shadow:0 0 0 3px rgba(16,185,129,.1)}
+.chat-input-group button{position:absolute;right:6px;bottom:6px;border-radius:50%;width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;background:#10B981;border:none;color:#fff;cursor:pointer}
+.chat-input-group button:hover{background:#059669}
+.chat-input-group button:disabled{background:#ccc;cursor:default}
 </style>
-<div class="card">
-<div class="card-header d-flex justify-content-between align-items-center">
-<h4 class="card-header-title mb-0"><a href="/inbox" class="text-decoration-none">&larr;</a> Chat dengan {{if .Name}}+{{.Phone}} ({{.Name}}){{else}}+{{.Phone}}{{end}}</h4>
-<div><select id="chatAccountPhone" class="form-select form-select-sm" style="width:auto;display:inline"> {{range .ConnectedAccounts}}<option value="+{{.Phone}}">+{{.Phone}}</option>{{end}}</select></div>
+<div class="card border-0 shadow-sm">
+<div class="card-header d-flex justify-content-between align-items-center bg-white border-bottom" style="padding:10px 16px">
+<h6 class="mb-0 d-flex align-items-center gap-2">
+<a href="/inbox" class="text-decoration-none text-muted">&larr;</a>
+<div class="avatar {{if .IsGroup}}group{{else}}person{{end}}" style="width:36px;height:36px;font-size:13px">{{if .ChatName}}{{slice .ChatName 0 1}}{{else}}+{{end}}</div>
+<div><strong>{{if .ChatName}}{{.ChatName}}{{else}}+{{.Phone}}{{end}}</strong>{{if .IsGroup}}<small class="text-success ms-1">Grup</small>{{end}}</div>
+</h6>
+<div><select id="chatAccountPhone" class="form-select form-select-sm" style="width:auto;display:inline"> {{range .ConnectedAccounts}}{{if eq .Status "connected"}}<option value="+{{.Phone}}">+{{.Phone}}</option>{{end}}{{end}}</select></div>
 </div>
 <div class="card-body p-0">
 <div class="chat-area" id="chatMessages">
 {{range .ChatMessages}}
-<div class="d-flex w-100 mb-2" style="{{if eq .Type "sent"}}justify-content:flex-end{{else}}justify-content:flex-start{{end}}">
+<div class="d-flex w-100 mb-1" style="{{if eq .Type "sent"}}justify-content:flex-end{{else}}justify-content:flex-start{{end}}">
 <div class="chat-bubble {{.Type}}">
-<div class="chat-meta">{{if eq .Type "received"}}{{if .Name}}{{.Name}} &middot; {{end}}{{end}}{{.Created}}</div>
-<div>{{.Message}}</div>
+{{if and (eq .Type "received") .SenderName}}<div class="chat-sender">{{.SenderName}}</div>{{end}}
+<div>{{.Message}}<span class="chat-time">{{.Created}}</span></div>
 </div>
 </div>
 {{else}}
@@ -1072,64 +1157,66 @@ if(n) n.innerHTML += ' <span class="badge badge-pill badge-danger ml-1 inbox-bad
 {{end}}
 </div>
 </div>
-<div class="card-footer bg-white">
+<div class="card-footer bg-white border-top" style="padding:8px 16px">
 <form id="chatForm" onsubmit="return sendChat(event)">
 <div class="chat-input-group">
-<textarea id="chatInput" name="message" class="form-control" placeholder="Ketik balasan..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat(event)}"></textarea>
+<textarea id="chatInput" name="message" class="form-control" placeholder="Ketik pesan..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat(event)}"></textarea>
 <input type="hidden" name="phone" value="{{.Phone}}">
-<button type="submit" class="btn btn-primary"><i class="la la-paper-plane"></i></button>
+<button type="submit" id="sendBtn"><i class="la la-paper-plane"></i></button>
 </div>
 </form>
-<div class="d-flex gap-2 mt-2 flex-wrap">
-{{range .Templates}}<button class="btn btn-sm btn-outline-secondary template-btn" data-content="{{.Content}}" title="{{.Name}}">{{.Name}}</button>{{end}}
+<div class="d-flex gap-1 mt-2 flex-wrap">
+{{range .Templates}}<button class="btn btn-sm btn-outline-secondary template-btn" data-content="{{.Content}}" title="{{.Name}}" style="font-size:11px;padding:2px 8px">{{.Name}}</button>{{end}}
 </div>
 </div>
 </div>
 <script>
-var chatPhone = "{{.Phone}}";
-var chatBox = document.getElementById('chatMessages');
-function scrollToBottom(){chatBox.scrollTop = chatBox.scrollHeight;}
+var chatPhone="{{.Phone}}";
+var chatBox=document.getElementById('chatMessages');
+function scrollToBottom(){chatBox.scrollTop=chatBox.scrollHeight}
 
 function sendChat(e){
 e.preventDefault();
-var msg = document.getElementById('chatInput').value.trim();
-if(!msg) return false;
-var acp = document.getElementById('chatAccountPhone');
-var f = new FormData();
-f.append('phone', chatPhone);
-f.append('message', msg);
-if(acp) f.append('account_phone', acp.value);
-document.getElementById('chatInput').value = '';
-fetch('/inbox/send', {method:'POST', body:f}).then(function(r){return r.json()}).then(function(d){
-if(d.ok) loadMessages();
+var msg=document.getElementById('chatInput').value.trim();
+if(!msg)return false;
+var acp=document.getElementById('chatAccountPhone');
+var f=new FormData();
+f.append('phone',chatPhone);
+f.append('message',msg);
+if(acp)f.append('account_phone',acp.value);
+document.getElementById('chatInput').value='';
+document.getElementById('sendBtn').disabled=true;
+fetch('/inbox/send',{method:'POST',body:f}).then(function(r){return r.json()}).then(function(d){
+document.getElementById('sendBtn').disabled=false;
+if(d.ok)loadMessages();
 });
 return false;
 }
 
 function loadMessages(){
 fetch('/inbox/messages?phone='+encodeURIComponent(chatPhone)).then(function(r){return r.json()}).then(function(msgs){
-if(!msgs||!msgs.length) return;
-var html = '';
+if(!msgs||!msgs.length){chatBox.innerHTML='<div class="text-center text-muted py-4">Belum ada pesan</div>';return}
+var html='';
 for(var i=0;i<msgs.length;i++){
-var m = msgs[i];
-var side = m.type==='sent'?'flex-end':'flex-start';
-html += '<div class="d-flex w-100 mb-2" style="justify-content:'+side+'"><div class="chat-bubble '+m.type+'"><div class="chat-meta">';
-if(m.type==='received'&&m.name) html += m.name+' · ';
-html += m.created+'</div><div>'+m.message+'</div></div></div>';
+var m=msgs[i];
+var side=m.type==='sent'?'flex-end':'flex-start';
+html+='<div class="d-flex w-100 mb-1" style="justify-content:'+side+'"><div class="chat-bubble '+m.type+'">';
+if(m.type==='received'&&m.sender_name)html+='<div class="chat-sender">'+m.sender_name+'</div>';
+html+='<div>'+m.message+'<span class="chat-time">'+m.created+'</span></div></div></div>';
 }
-chatBox.innerHTML = html;
+chatBox.innerHTML=html;
 scrollToBottom();
 });
 }
 
 scrollToBottom();
 
-var evtSource = new EventSource('/inbox/events');
-evtSource.onmessage = function(e){
-var d = JSON.parse(e.data);
-if(d.phone === chatPhone) loadMessages();
+var evtSource=new EventSource('/inbox/events');
+evtSource.onmessage=function(e){
+var d=JSON.parse(e.data);
+if(d.phone===chatPhone)loadMessages();
 fetch('/inbox/unread-count').then(function(r){return r.json()}).then(function(d){
-var b = document.querySelector('.inbox-badge');
+var b=document.querySelector('.inbox-badge');
 if(d.unread>0){if(b)b.textContent=d.unread;else{var n=document.querySelector('.nav-link[href="/inbox"]');if(n)n.innerHTML+=' <span class="badge badge-pill badge-danger ml-1 inbox-badge">'+d.unread+'</span>'}}
 else{if(b)b.remove()}
 });
@@ -1137,7 +1224,7 @@ else{if(b)b.remove()}
 
 document.querySelectorAll('.template-btn').forEach(function(btn){
 btn.addEventListener('click',function(){
-document.getElementById('chatInput').value = this.dataset.content;
+document.getElementById('chatInput').value=this.dataset.content;
 document.getElementById('chatInput').focus();
 });
 });
@@ -1149,7 +1236,7 @@ document.getElementById('chatInput').focus();
     <p class="text-muted">{{T "docs_intro"}}</p>
     <div class="card mt-3"><div class="card-header"><h4>📋 {{T "docs_demo"}}</h4></div>
       <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>Role</th><th>Email</th><th>Keterangan</th></tr></thead>
-        <tbody><tr><td>Admin</td><td>admin@chatgo.test</td><td>Akses penuh semua menu</td></tr></tbody></table></div>
+        <tbody><tr><td>Admin</td><td>{{.AppEmail}}</td><td>Akses penuh semua menu</td></tr></tbody></table></div>
     </div>
     <h4 class="mt-4">📖 {{T "docs_tutorial"}}</h4>
     <div class="row mt-3">{{range $i, $step := .DocsSteps}}
@@ -1170,7 +1257,7 @@ document.getElementById('chatInput').focus();
         <li>{{T "ar_faq_tab"}} di textarea Auto Reply (format: <code>{{T "kb_question_dot"}}|{{T "kb_answer_dot"}}</code> per baris) akan digabung dengan Knowledge Base</li>
       </ol>
       <h5>BYOK (Bring Your Own Key)</h5>
-      <p class="small text-muted">Kamu input API key sendiri. ChatGo tidak menyediakan key bawaan. Key di-encrypt sebelum disimpan.</p>
+      <p class="small text-muted">Kamu input API key sendiri. {{.AppName}} tidak menyediakan key bawaan. Key di-encrypt sebelum disimpan.</p>
       <h5>Variabel Spintax</h5>
       <p class="small text-muted">Semua balasan support: <code>{name}</code> <code>{phone}</code> <code>{message}</code> <code>{time}</code> <code>{date}</code>. Spintax: <code>{Halo|Hai|Hi}</code> — random setiap kirim.</p>
     </div></div>
