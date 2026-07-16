@@ -702,14 +702,19 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 	}).Parse(templates))
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if page == "landing" {
+	switch page {
+	case "landing":
 		if err := tpl.ExecuteTemplate(w, "landing", d); err != nil {
 			http.Error(w, err.Error(), 500)
 		}
-		return
-	}
-	if err := tpl.ExecuteTemplate(w, "home", d); err != nil {
-		http.Error(w, err.Error(), 500)
+	case "login", "register":
+		if err := tpl.ExecuteTemplate(w, "authpage", d); err != nil {
+			http.Error(w, err.Error(), 500)
+		}
+	default:
+		if err := tpl.ExecuteTemplate(w, "home", d); err != nil {
+			http.Error(w, err.Error(), 500)
+		}
 	}
 }
 
@@ -717,6 +722,11 @@ func handleHome(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
+	}
+	if c, err := r.Cookie("chatgo_sess"); err == nil {
+		if uid, ok := db.GetSession(c.Value); ok {
+			r.Header.Set("X-User-ID", strconv.FormatInt(uid, 10))
+		}
 	}
 	uid := getUserID(r)
 	if uid == 0 {

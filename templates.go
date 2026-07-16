@@ -107,6 +107,16 @@ const templates = `
         {{else}}
           <span class="badge badge-soft-danger"><span class="status-dot" style="background:#e63757"></span> {{T "status_disconnected"}}</span>
         {{end}}
+        <div class="dropdown ms-3">
+          <a href="#" class="dropdown-toggle text-muted" role="button" data-bs-toggle="dropdown" style="text-decoration:none">
+            <i class="la la-user-circle la-lg"></i>
+          </a>
+          <div class="dropdown-menu dropdown-menu-end">
+            <a class="dropdown-item" href="/settings"><i class="la la-cog me-2"></i> {{T "nav_settings"}}</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item text-danger" href="/logout"><i class="la la-sign-out me-2"></i> Logout</a>
+          </div>
+        </div>
       </div>
     </div>
   </nav>
@@ -323,13 +333,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;c
 <a href="/register" class="btn-primary">Coba Gratis</a>
 <a href="/docs" class="btn-outline">Lihat Dokumentasi</a>
 </div>
+<div style="max-width:400px;margin:32px auto 0;background:#fff;border-radius:14px;padding:24px;box-shadow:0 4px 24px rgba(0,0,0,.08)">
+<form method="post" action="/login/post">
+<div style="margin-bottom:12px"><input type="email" name="email" class="form-control" placeholder="Email" value="{{.AppEmail}}" style="border-radius:8px;padding:10px 14px;border:1px solid #ddd;width:100%;font-size:14px"></div>
+<div style="margin-bottom:12px"><input type="password" name="password" class="form-control" placeholder="Password" value="password" style="border-radius:8px;padding:10px 14px;border:1px solid #ddd;width:100%;font-size:14px"></div>
+<button type="submit" style="width:100%;padding:10px;background:#4F46E5;color:#fff;border:none;border-radius:8px;font-weight:600;font-size:14px;cursor:pointer">Masuk</button>
+</form>
+<div style="text-align:center;margin-top:12px;font-size:12px;color:#999">Demo: <code style="background:#f0f0f0;padding:2px 6px;border-radius:4px">{{.AppEmail}}</code> / <code style="background:#f0f0f0;padding:2px 6px;border-radius:4px">password</code></div>
+</div>
 </section>
 
 <section class="features">
 <h2>Fitur Lengkap</h2>
 <p class="subtitle">Semua yang kamu butuhkan untuk WhatsApp marketing</p>
 <div class="feature-grid">
-<div class="feature-card"><i class="la la-comments"></i><h4>Live Chat</h4><p>Inbox real-time dengan SSE, reply langsung, group chat, private/group filter.</p></div>
+<div class="feature-card"><i class="la la-comments"></i><h4>{{T "inbox_title"}}</h4><p>Inbox real-time dengan SSE, reply langsung, group chat, private/group filter.</p></div>
 <div class="feature-card"><i class="la la-robot"></i><h4>AI Auto Reply</h4><p>Balas otomatis pakai AI (OpenAI/Gemini/Claude/DeepSeek) + knowledge base.</p></div>
 <div class="feature-card"><i class="la la-bullhorn"></i><h4>Broadcast</h4><p>Kirim pesan massal ke grup kontak, round-robin multi-akun WA.</p></div>
 <div class="feature-card"><i class="la la-whatsapp"></i><h4>Multi Akun</h4><p>Kelola banyak nomor WhatsApp sekaligus, scan QR pairing.</p></div>
@@ -363,63 +381,162 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;c
 </body>
 </html>{{end}}
 
+{{define "authpage"}}<!DOCTYPE html>
+<html lang="{{.LangCode}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}} &middot; {{.AppName}}</title>
+<link rel="stylesheet" href="/assets/_assets/css/libs/line-awesome.min.css">
+<link rel="stylesheet" href="/assets/_assets/css/libs/flag-icon.min.css">
+<link rel="stylesheet" href="/assets/dashboard/css/libs/bootstrap.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+.auth-wrap{flex:1;display:flex}
+.auth-left{flex:1;background:linear-gradient(160deg,#0f1f33,#152e4d 40%,#1a3a5c);display:flex;flex-direction:column;justify-content:center;padding:60px 48px;position:relative;overflow:hidden;min-width:360px}
+.auth-left::before{content:'';position:absolute;top:-100px;right:-100px;width:400px;height:400px;border-radius:50%;background:rgba(79,70,229,.08)}
+.auth-left::after{content:'';position:absolute;bottom:-80px;left:-80px;width:300px;height:300px;border-radius:50%;background:rgba(79,70,229,.05)}
+.auth-left h1{font-size:2.2rem;font-weight:800;color:#fff;line-height:1.2;margin-bottom:12px;position:relative;z-index:1}
+.auth-left p{color:rgba(255,255,255,.6);font-size:1rem;position:relative;z-index:1;max-width:400px}
+.auth-left .features{position:relative;z-index:1;margin-top:40px;display:flex;flex-direction:column;gap:16px}
+.auth-left .feat{display:flex;align-items:center;gap:12px;color:rgba(255,255,255,.7)}
+.auth-left .feat i{color:#4F46E5;font-size:1.3rem}
+.auth-right{flex:1;display:flex;align-items:center;justify-content:center;padding:40px;background:#fff;min-width:360px}
+.auth-card{width:100%;max-width:400px}
+.auth-card h2{font-size:1.8rem;font-weight:700;margin-bottom:4px}
+.auth-card .sub{color:#888;margin-bottom:24px;font-size:14px}
+.auth-card .sub a{color:#4F46E5;font-weight:600;text-decoration:none}
+.auth-card .form-group{margin-bottom:14px}
+.auth-card label{font-size:12px;font-weight:600;text-transform:uppercase;color:#888;letter-spacing:.5px;margin-bottom:4px}
+.auth-card input{border-radius:10px;padding:11px 14px;border:1.5px solid #e0e0e0;width:100%;font-size:14px;transition:border .15s}
+.auth-card input:focus{outline:none;border-color:#4F46E5;box-shadow:0 0 0 3px rgba(79,70,229,.1)}
+.auth-card .btn-submit{width:100%;padding:12px;background:#4F46E5;color:#fff;border:none;border-radius:10px;font-weight:600;font-size:15px;cursor:pointer;box-shadow:0 4px 14px rgba(79,70,229,.3);transition:all .15s}
+.auth-card .btn-submit:hover{background:#4338CA;transform:translateY(-1px)}
+.auth-divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:#aaa;font-size:13px}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:#e0e0e0}
+.demo-box{background:#f4f6ff;border:1px solid #d0d7f0;border-radius:10px;padding:16px;font-family:monospace;font-size:13px}
+.demo-box .demo-title{font-weight:700;color:#4F46E5;margin-bottom:8px;font-size:14px}
+.demo-row{padding:3px 0;color:#555}
+.demo-row strong{color:#333}
+.alert-danger{background:rgba(230,55,87,.1);color:#e63757;padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:13px}
+@media(max-width:768px){.auth-left{display:none}.auth-right{min-width:100%}}
+</style>
+</head>
+<body>
+<div class="auth-wrap">
+<div class="auth-left">
+<h1>{{.AppName}}</h1>
+<p>WhatsApp Marketing Platform — broadcast, auto-reply AI, live chat real-time, multi-akun.</p>
+<div class="features">
+<div class="feat"><i class="la la-comments"></i> Live Chat real-time dengan SSE</div>
+<div class="feat"><i class="la la-robot"></i> AI Auto Reply (OpenAI/Gemini/Claude)</div>
+<div class="feat"><i class="la la-bullhorn"></i> Broadcast ke ribuan kontak</div>
+</div>
+</div>
+<div class="auth-right">
+{{template "content" .}}
+</div>
+</div>
+</body>
+</html>{{end}}
+
+{{define "login"}}
+{{$d := .}}
+<div class="auth-card">
+<div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+{{range .Languages}}<a href="/lang/{{.Code}}" class="text-decoration-none mx-1"><span class="flag-icon flag-icon-{{.Flag}}" style="width:22px;height:16px;border-radius:2px" title="{{.Name}}"></span></a>{{end}}
+</div>
+<h2>{{T "auth_login"}}</h2>
+<p class="sub">{{T "auth_no_account"}} <a href="/register">{{T "auth_signup"}}</a></p>
+{{if .Flash}}<div class="alert-danger">{{.Flash}}</div>{{end}}
+<form method="post" action="/login/post">
+<div class="form-group"><label>{{T "auth_email"}}</label><input type="email" name="email" placeholder="{{.AppEmail}}" value="{{.AppEmail}}" required></div>
+<div class="form-group"><label>{{T "auth_password"}}</label><input type="password" name="password" placeholder="••••••••" value="password" required></div>
+<button type="submit" class="btn-submit">{{T "auth_signin"}}</button>
+</form>
+<div class="auth-divider"><span>{{T "auth_or"}}</span></div>
+<div class="demo-box">
+<div class="demo-title">{{T "auth_demo"}}</div>
+<div class="demo-row"><strong>Admin:</strong> {{.AppEmail}} / password</div>
+</div>
+</div>
+{{end}}
+
+{{define "register"}}
+<div class="auth-card">
+<div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+{{range .Languages}}<a href="/lang/{{.Code}}" class="text-decoration-none mx-1"><span class="flag-icon flag-icon-{{.Flag}}" style="width:22px;height:16px;border-radius:2px" title="{{.Name}}"></span></a>{{end}}
+</div>
+<h2>{{T "auth_register"}}</h2>
+<p class="sub">{{T "auth_has_account"}} <a href="/login">{{T "auth_signin"}}</a></p>
+{{if .Flash}}<div class="alert-danger">{{.Flash}}</div>{{end}}
+<form method="post" action="/register/post">
+<div class="form-group"><label>{{T "auth_name"}}</label><input name="name" placeholder="Nama Anda" required></div>
+<div class="form-group"><label>{{T "auth_email"}}</label><input type="email" name="email" placeholder="email@domain.com" required></div>
+<div class="form-group"><label>{{T "auth_password"}}</label><input type="password" name="password" placeholder="••••••••" required></div>
+<button type="submit" class="btn-submit">{{T "auth_register"}}</button>
+</form>
+</div>
+{{end}}
+
 {{define "home"}}{{template "layout" .}}{{end}}
 {{define "content"}}
 {{if eq .Page "home"}}
 <div class="row">
 <div class="col-12 col-sm-6 col-xl-3">
 <div class="card"><div class="card-body"><div class="row align-items-center">
-<div class="col"><h6 class="text-uppercase text-muted mb-2 small">Total Sent</h6><span class="h2 mb-0">{{.CountSent}}</span></div>
+<div class="col"><h6 class="text-uppercase text-muted mb-2 small">{{T "dash_total_sent"}}</h6><span class="h2 mb-0">{{.CountSent}}</span></div>
 <div class="col-auto"><span class="h2 la la-telegram la-lg text-primary mb-0"></span></div>
 </div></div></div>
 </div>
 <div class="col-12 col-sm-6 col-xl-3">
 <div class="card"><div class="card-body"><div class="row align-items-center">
-<div class="col"><h6 class="text-uppercase text-muted mb-2 small">Total Received</h6><span class="h2 mb-0">{{.CountReceived}}</span></div>
+<div class="col"><h6 class="text-uppercase text-muted mb-2 small">{{T "dash_total_recv"}}</h6><span class="h2 mb-0">{{.CountReceived}}</span></div>
 <div class="col-auto"><span class="h2 la la-comment la-lg text-success mb-0"></span></div>
 </div></div></div>
 </div>
 <div class="col-12 col-sm-6 col-xl-3">
 <div class="card"><div class="card-body"><div class="row align-items-center">
-<div class="col"><h6 class="text-uppercase text-muted mb-2 small">Active WA</h6><span class="h2 mb-0">{{.ActiveAccounts}}</span></div>
+<div class="col"><h6 class="text-uppercase text-muted mb-2 small">{{T "dash_active_wa"}}</h6><span class="h2 mb-0">{{.ActiveAccounts}}</span></div>
 <div class="col-auto"><span class="h2 la la-whatsapp la-lg text-success mb-0"></span></div>
 </div></div></div>
 </div>
 <div class="col-12 col-sm-6 col-xl-3">
 <div class="card"><div class="card-body"><div class="row align-items-center">
-<div class="col"><h6 class="text-uppercase text-muted mb-2 small">Unread</h6><span class="h2 mb-0">{{.UnreadCount}}</span></div>
+<div class="col"><h6 class="text-uppercase text-muted mb-2 small">{{T "dash_unread"}}</h6><span class="h2 mb-0">{{.UnreadCount}}</span></div>
 <div class="col-auto"><span class="h2 la la-envelope la-lg text-warning mb-0"></span></div>
 </div></div></div>
 </div>
 </div>
 <div class="row">
 <div class="col-12 col-lg-8">
-<div class="card"><div class="card-header"><h4 class="card-header-title">Message Activity</h4><small class="text-muted">7 hari terakhir</small></div>
+<div class="card"><div class="card-header"><h4 class="card-header-title">{{T "dash_chart_title"}}</h4><small class="text-muted">{{T "dash_chart_sub"}}</small></div>
 <div class="card-body"><canvas id="msgChart" height="100"></canvas></div></div>
 </div>
 <div class="col-12 col-lg-4">
-<div class="card mb-3"><div class="card-header"><h4 class="card-header-title">Status WA</h4></div>
+<div class="card mb-3"><div class="card-header"><h4 class="card-header-title">{{T "dash_wa_status"}}</h4></div>
 <div class="card-body">
 {{if .ConnectedAccounts}}
 {{range .ConnectedAccounts}}<div class="d-flex align-items-center justify-content-between mb-2"><span><span class="status-dot" style="background:#00d97e"></span> +{{.Phone}}</span><a href="/send?to=+{{.Phone}}" class="badge bg-primary bg-opacity-10 text-primary text-decoration-none small py-1 px-2">Kirim</a></div>{{end}}
-{{else}}<span class="text-muted small">Tidak ada WA terkoneksi. <a href="/wa">Hubungkan</a></span>{{end}}
+{{else}}<span class="text-muted small">Tidak ada WA terkoneksi. <a href="/wa">{{T "dash_connect"}}</a></span>{{end}}
 </div></div>
-<div class="card"><div class="card-header"><h4 class="card-header-title">Campaigns</h4></div>
+<div class="card"><div class="card-header"><h4 class="card-header-title"">{{T "dash_campaigns"}}</h4></div>
 <div class="card-body">
-<div class="d-flex justify-content-between mb-1"><span>Running</span><span class="badge badge-soft-warning">{{.RunningCampaigns}}</span></div>
-<a href="/broadcast" class="btn btn-sm btn-white w-100">Kelola Broadcast</a>
+<div class="d-flex justify-content-between mb-1"><span>{{T "dash_running"}}</span><span class="badge badge-soft-warning">{{.RunningCampaigns}}</span></div>
+<a href="/broadcast" class="btn btn-sm btn-white w-100">{{T "dash_manage_bc"}}</a>
 </div></div>
 </div>
 </div>
 <div class="row mt-3">
 <div class="col-12 col-lg-6">
-<div class="card"><div class="card-header"><h4 class="card-header-title">Recent Received</h4><a href="/received" class="btn btn-sm btn-white">All</a></div>
+<div class="card"><div class="card-header"><h4 class="card-header-title">{{T "dash_recent_in"}}</h4><a href="/received" class="btn btn-sm btn-white">All</a></div>
 <div class="table-responsive"><table class="table table-sm table-nowrap card-table mb-0"><thead><tr><th>From</th><th>Message</th><th>Time</th></tr></thead><tbody>
 {{range .Received}}<tr><td><strong>{{if .Name}}{{.Name}}{{else}}+{{.Phone}}{{end}}</strong></td><td class="text-muted small" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{.Message}}</td><td class="text-muted small">{{.Created}}</td></tr>{{else}}<tr><td colspan="3" class="text-muted text-center">-</td></tr>{{end}}
 </tbody></table></div></div>
 </div>
 <div class="col-12 col-lg-6">
-<div class="card"><div class="card-header"><h4 class="card-header-title">Recent Sent</h4><a href="/sent" class="btn btn-sm btn-white">All</a></div>
+<div class="card"><div class="card-header"><h4 class="card-header-title">{{T "dash_recent_out"}}</h4><a href="/sent" class="btn btn-sm btn-white">All</a></div>
 <div class="table-responsive"><table class="table table-sm table-nowrap card-table mb-0"><thead><tr><th>To</th><th>Message</th><th>Status</th></tr></thead><tbody>
 {{range .Sent}}<tr><td><strong>+{{.Phone}}</strong></td><td class="text-muted small" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{.Message}}</td><td><span class="badge badge-soft-success">{{.Status}}</span></td></tr>{{else}}<tr><td colspan="3" class="text-muted text-center">-</td></tr>{{end}}
 </tbody></table></div></div>
@@ -452,7 +569,7 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
               {{else if eq .Status "qr"}}<span class="badge badge-soft-warning"><i class="la la-qrcode me-1"></i>Scan QR</span>
               {{else}}<span class="badge badge-soft-danger"><i class="la la-times-circle me-1"></i>Disconnected</span>{{end}}
             </div>
-            <form method="post" action="/wa/logout" onsubmit="return confirm('Logout nomor ini?')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger lift"><i class="la la-sign-out"></i></button></form>
+            <form method="post" action="/wa/logout" onsubmit="return confirm('{{T "wa_logout_confirm"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger lift"><i class="la la-sign-out"></i></button></form>
           </div>
           {{else}}
           <div class="text-center py-4"><span class="h1 la la-whatsapp text-muted"></span><p class="text-muted mt-3">{{T "wa_no_accounts"}}</p></div>
@@ -534,22 +651,22 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 .st-panel.active{display:block}
 </style>
 <div class="setting-tabs">
-<button class="st active" onclick="var p=document.querySelectorAll('.st-panel');for(var i=0;i<p.length;i++)p[i].classList.remove('active');document.getElementById('st-branding').classList.add('active');var b=this.parentElement.querySelectorAll('.st');for(var i=0;i<b.length;i++)b[i].classList.remove('active');this.classList.add('active')"><i class="la la-paint-brush me-1"></i>Branding</button>
-<button class="st" onclick="var p=document.querySelectorAll('.st-panel');for(var i=0;i<p.length;i++)p[i].classList.remove('active');document.getElementById('st-messaging').classList.add('active');var b=this.parentElement.querySelectorAll('.st');for(var i=0;i<b.length;i++)b[i].classList.remove('active');this.classList.add('active')"><i class="la la-comment me-1"></i>Messaging</button>
-<button class="st" onclick="var p=document.querySelectorAll('.st-panel');for(var i=0;i<p.length;i++)p[i].classList.remove('active');document.getElementById('st-system').classList.add('active');var b=this.parentElement.querySelectorAll('.st');for(var i=0;i<b.length;i++)b[i].classList.remove('active');this.classList.add('active')"><i class="la la-cog me-1"></i>System</button>
+<button class="st active" onclick="var p=document.querySelectorAll('.st-panel');for(var i=0;i<p.length;i++)p[i].classList.remove('active');document.getElementById('st-branding').classList.add('active');var b=this.parentElement.querySelectorAll('.st');for(var i=0;i<b.length;i++)b[i].classList.remove('active');this.classList.add('active')"><i class="la la-paint-brush me-1"></i>{{T "set_tab_branding"}}</button>
+<button class="st" onclick="var p=document.querySelectorAll('.st-panel');for(var i=0;i<p.length;i++)p[i].classList.remove('active');document.getElementById('st-messaging').classList.add('active');var b=this.parentElement.querySelectorAll('.st');for(var i=0;i<b.length;i++)b[i].classList.remove('active');this.classList.add('active')"><i class="la la-comment me-1"></i>{{T "set_tab_messaging"}}</button>
+<button class="st" onclick="var p=document.querySelectorAll('.st-panel');for(var i=0;i<p.length;i++)p[i].classList.remove('active');document.getElementById('st-system').classList.add('active');var b=this.parentElement.querySelectorAll('.st');for(var i=0;i<b.length;i++)b[i].classList.remove('active');this.classList.add('active')"><i class="la la-cog me-1"></i>{{T "set_tab_system"}}</button>
 </div>
 
 <form method="post" action="/settings" enctype="multipart/form-data">
 <div class="st-panel active" id="st-branding">
 <div class="card"><div class="card-header"><h4 class="card-header-title">Branding</h4></div>
 <div class="card-body">
-<div class="form-group"><label>App Name</label><input name="app_name" class="form-control" value="{{.AppName}}"></div>
-<div class="form-group"><label>Logo Upload</label>
+<div class="form-group"><label>{{T "set_app_name"}}</label><input name="app_name" class="form-control" value="{{.AppName}}"></div>
+<div class="form-group"><label>{{T "set_logo_upload"}}</label>
 <div class="d-flex gap-2 align-items-center"><input type="file" name="logo_file" class="form-control" accept="image/*" style="flex:1"><img src="{{.AppLogo}}" onerror="this.style.display='none'" style="height:38px;border-radius:6px;border:1px solid #eee"></div>
-<small class="form-text text-muted">Upload PNG. Path saat ini: <code>{{.AppLogo}}</code></small>
+<small class="form-text text-muted">{{T "set_logo_hint"}}: <code>{{.AppLogo}}</code></small>
 </div>
-<div class="form-group"><label>Admin Email</label><input name="app_email" class="form-control" value="{{.AppEmail}}"></div>
-<div class="form-group"><label>Domain</label><input class="form-control" value="{{.AppURL}}" disabled><small class="form-text text-muted">Edit APP_URL di .env</small></div>
+<div class="form-group"><label>{{T "set_admin_email"}}</label><input name="app_email" class="form-control" value="{{.AppEmail}}"></div>
+<div class="form-group"><label>{{T "set_domain"}}</label><input class="form-control" value="{{.AppURL}}" disabled><small class="form-text text-muted">{{T "set_domain_hint"}}</small></div>
 </div></div>
 </div>
 
@@ -583,11 +700,11 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 </div>
 
 <div class="st-panel" id="st-system">
-<div class="card"><div class="card-header"><h4 class="card-header-title">System Settings</h4></div>
+<div class="card"><div class="card-header"><h4 class="card-header-title">{{T "set_system_title"}}</h4></div>
 <div class="card-body">
-<div class="form-group"><label>Registrations</label>
-<select name="registrations" class="form-control"><option value="1" {{if .Registrations}}selected{{end}}>Enabled</option><option value="0" {{if not .Registrations}}selected{{end}}>Disabled</option></select></div>
-<div class="form-group"><label>Listen Address</label><input class="form-control" value="0.0.0.0:8080" disabled><small class="form-text text-muted">Edit <code>CHATGO_ADDR</code> di <code>.env</code></small></div>
+<div class="form-group"><label>{{T "set_registrations"}}</label>
+<select name="registrations" class="form-control"><option value="1" {{if .Registrations}}selected{{end}}>{{T "set_enabled"}}</option><option value="0" {{if not .Registrations}}selected{{end}}>{{T "set_disabled"}}</option></select></div>
+<div class="form-group"><label>{{T "set_listen_addr"}}</label><input class="form-control" value="0.0.0.0:8080" disabled><small class="form-text text-muted">Edit <code>CHATGO_ADDR</code> di <code>.env</code></small></div>
 <div class="form-group"><label>MySQL Connection</label><input class="form-control" value="***" disabled><small class="form-text text-muted">Edit <code>CHATGO_MYSQL</code> di <code>.env</code></small></div>
 </div></div>
 </div>
@@ -915,7 +1032,7 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 </div>
 <div class="col-6 col-xl-3">
 <div class="card"><div class="card-body"><div class="row align-items-center">
-<div class="col"><h6 class="text-uppercase text-muted mb-2 small">Active WA</h6><span class="h2 mb-0">{{.ActiveAccounts}}</span></div>
+<div class="col"><h6 class="text-uppercase text-muted mb-2 small">{{T "dash_active_wa"}}</h6><span class="h2 mb-0">{{.ActiveAccounts}}</span></div>
 <div class="col-auto"><span class="h2 la la-whatsapp la-lg text-success mb-0"></span></div>
 </div></div></div>
 </div>
@@ -927,7 +1044,7 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 </div>
 <div class="col-6 col-xl-3">
 <div class="card"><div class="card-body"><div class="row align-items-center">
-<div class="col"><h6 class="text-uppercase text-muted mb-2 small">Total Sent</h6><span class="h2 mb-0">{{.CountSent}}</span></div>
+<div class="col"><h6 class="text-uppercase text-muted mb-2 small">{{T "dash_total_sent"}}</h6><span class="h2 mb-0">{{.CountSent}}</span></div>
 <div class="col-auto"><span class="h2 la la-telegram la-lg text-info mb-0"></span></div>
 </div></div></div>
 </div>
