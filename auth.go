@@ -94,7 +94,7 @@ func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		r.Header.Set("X-User-ID", strconv.FormatInt(uid, 10))
 		if strings.HasPrefix(path, "/admin") {
 			u, err := db.GetUserByID(uid)
-			if err != nil || u.Role != "admin" {
+			if err != nil || strings.ToLower(u.Role) != "admin" {
 				http.Error(w, "Forbidden", 403)
 				return
 			}
