@@ -254,6 +254,8 @@ document.querySelectorAll(".msg-full").forEach(function(el){
         <li class="nav-item"><a class="nav-link {{if eq .Active "analytics"}}active{{end}}" href="/analytics"><i class="la la-chart-pie la-lg"></i> Analytics</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "blacklist"}}active{{end}}" href="/blacklist"><i class="la la-ban la-lg"></i> Blacklist</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "csat"}}active{{end}}" href="/csat"><i class="la la-star la-lg"></i> CSAT</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "recurring"}}active{{end}}" href="/recurring"><i class="la la-redo-alt la-lg"></i> Recurring</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "uploads"}}active{{end}}" href="/uploads"><i class="la la-folder-open la-lg"></i> Files</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "apikeys"}}active{{end}}" href="/apikeys"><i class="la la-key la-lg"></i> {{T "nav_apikeys"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "webhooks"}}active{{end}}" href="/webhooks"><i class="la la-code-branch la-lg"></i> {{T "nav_webhooks"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "logger"}}active{{end}}" href="/logger"><i class="la la-clipboard-list la-lg"></i> {{T "nav_logger"}}</a></li>
@@ -1130,6 +1132,64 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
   <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-chart-pie me-1"></i> Agent Performance (30 Hari)</h4></div>
     <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>Agent</th><th>Chats</th><th>Replies</th><th>Avg Response (s)</th></tr></thead><tbody>
       {{range .AgentMetrics}}<tr><td>{{.AgentName}}</td><td>{{.Chats}}</td><td>{{.Replied}}</td><td>{{printf "%.0f" .AvgTime}}</td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center py-4">No data yet.</td></tr>{{end}}
+    </tbody></table></div>
+  </div>
+{{end}}
+
+{{if eq .Page "depts"}}
+  <div class="row">
+    <div class="col-12 col-lg-4">
+      <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> Add Department</h4></div>
+        <div class="card-body"><form method="post" action="/depts/add">
+          <div class="form-group"><label>Name</label><input name="name" class="form-control" placeholder="Sales" required></div>
+          <div class="form-group"><label>Agents</label><select name="agents" class="form-control" multiple>{{range .Users}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select></div>
+          <button class="btn btn-primary"><i class="la la-plus"></i> Add</button>
+        </form></div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-8">
+      <div class="card"><div class="card-header"><h4 class="card-header-title">Departments</h4></div>
+        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Name</th><th>Agents</th><th></th></tr></thead><tbody>
+          {{range .Depts}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.Agents}}</td><td><form method="post" action="/depts/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">Del</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
+        </tbody></table></div>
+      </div>
+    </div>
+  </div>
+{{end}}
+
+{{if eq .Page "recurring"}}
+  <div class="row">
+    <div class="col-12 col-lg-4">
+      <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> New Recurring</h4></div>
+        <div class="card-body"><form method="post" action="/recurring/add">
+          <div class="form-group"><label>Name</label><input name="name" class="form-control" required></div>
+          <div class="form-group"><label>Groups</label><select name="groups" class="form-control" multiple>{{range .Groups}}<option value="{{.ID}}">{{.Name}} ({{.Count}})</option>{{end}}</select></div>
+          <div class="form-group"><label>Message</label><textarea name="message" class="form-control" rows="3" required></textarea></div>
+          <div class="row">
+            <div class="col-6"><label>Day</label><select name="day_of_week" class="form-control"><option value="0">Daily</option><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="7">Sunday</option></select></div>
+            <div class="col-6"><label>Hour (0-23)</label><input type="number" name="hour" class="form-control" value="9" min="0" max="23"></div>
+          </div>
+          <button class="btn btn-primary mt-2"><i class="la la-plus"></i> Create</button>
+        </form></div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-8">
+      <div class="card"><div class="card-header"><h4 class="card-header-title">Recurring Campaigns</h4></div>
+        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Name</th><th>Groups</th><th>Schedule</th><th>Status</th><th></th></tr></thead><tbody>
+          {{range .Recurrings}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.Groups}}</td><td>{{if eq .DayOfWeek 0}}Daily{{else}}Day {{.DayOfWeek}}{{end}} @ {{.Hour}}:00</td><td>{{.Status}}</td><td>
+            <form method="post" action="/recurring/toggle" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-white">{{if eq .Status "active"}}Pause{{else}}Activate{{end}}</button></form>
+            <form method="post" action="/recurring/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">Del</button></form>
+          </td></tr>{{else}}<tr><td colspan="6" class="text-muted text-center">-</td></tr>{{end}}
+        </tbody></table></div>
+      </div>
+    </div>
+  </div>
+{{end}}
+
+{{if eq .Page "uploads"}}
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-folder-open me-1"></i> Uploaded Files</h4></div>
+    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>File</th><th>URL</th></tr></thead><tbody>
+      {{range $i, $f := .Files}}<tr><td>{{add $i 1}}</td><td>{{$f}}</td><td><code>/public/uploads/{{$f}}</code></td></tr>{{else}}<tr><td colspan="3" class="text-muted text-center py-4">No files uploaded yet.</td></tr>{{end}}
     </tbody></table></div>
   </div>
 {{end}}

@@ -200,6 +200,25 @@ func main() {
 		http.Redirect(w, r, "/contacts/groups", http.StatusSeeOther)
 	}))
 	mux.HandleFunc("/validate", authMiddleware(handleValidate))
+	mux.HandleFunc("/depts", authMiddleware(p("depts")))
+	mux.HandleFunc("/depts/add", authMiddleware(crudPost(func(r *http.Request) { db.AddDept(r.FormValue("name"), joinVals(r, "agents")) }, "/depts")))
+	mux.HandleFunc("/depts/delete", authMiddleware(crudDel(func(id int64) { db.DeleteDept(id) }, "/depts")))
+	mux.HandleFunc("/inbox/note", authMiddleware(handleInboxNote))
+	mux.HandleFunc("/inbox/transfer", authMiddleware(handleInboxTransfer))
+	mux.HandleFunc("/recurring", authMiddleware(p("recurring")))
+	mux.HandleFunc("/recurring/add", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		dow, _ := strconv.Atoi(r.FormValue("day_of_week")); hr, _ := strconv.Atoi(r.FormValue("hour"))
+		db.AddRecurring(r.FormValue("name"), joinVals(r, "groups"), r.FormValue("message"), dow, hr)
+		http.Redirect(w, r, "/recurring", http.StatusSeeOther)
+	}))
+	mux.HandleFunc("/recurring/delete", authMiddleware(crudDel(func(id int64) { db.DeleteRecurring(id) }, "/recurring")))
+	mux.HandleFunc("/recurring/toggle", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64); db.ToggleRecurring(id)
+		http.Redirect(w, r, "/recurring", http.StatusSeeOther)
+	}))
+	mux.HandleFunc("/uploads", authMiddleware(p("uploads")))
+	mux.HandleFunc("/widget.js", handleWidgetJS)
+	mux.HandleFunc("/widget/chat", handleWidgetChat)
 	mux.HandleFunc("/inbox/canned", authMiddleware(handleInboxCanned))
 		mux.HandleFunc("/scheduled", authMiddleware(handleScheduled))
 	mux.HandleFunc("/scheduled/delete", authMiddleware(crudDel(func(id int64) { db.DeleteScheduled(id) }, "/scheduled")))
@@ -349,6 +368,9 @@ type pageData struct {
 	Blacklist      []store.BlacklistEntry
 	CSATAvg        float64
 	CSATCount      int
+	Depts          []store.Department
+	Recurrings     []store.RecurringCampaign
+	Files          []string
 	Scheduleds     []store.Scheduled
 	Logs       []store.LogEntry
 	// admin/ai/devices
@@ -613,6 +635,14 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 	case "csat":
 		d.CSATAvg = db.CSATAverage(30)
 		d.CSATCount = db.CSATCount()
+	case "depts":
+		d.Depts, _ = db.ListDepts()
+		d.Users, _ = db.ListUsers()
+	case "recurring":
+		d.Recurrings, _ = db.ListRecurring()
+		d.Groups, _ = db.ListGroups()
+	case "uploads":
+		d.Files = db.ListUploads("public/uploads")
 	case "canned":
 		d.Canned, _ = db.ListCanned()
 		d.Users, _ = db.ListUsers()
@@ -811,6 +841,12 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Blacklist", "Safety", "Blocked Numbers", "la-ban"
 	case "csat":
 		d.Title, d.Pretitle, d.Heading, d.Icon = "CSAT", "Reports", "Customer Satisfaction", "la-star"
+	case "depts":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Departments", "Admin", "Departments", "la-building"
+	case "recurring":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Recurring", "Broadcast", "Auto-Repeat", "la-redo-alt"
+	case "uploads":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Files", "Tools", "File Manager", "la-folder-open"
 	case "tracker":
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Link Tracker", T("nav_tools"), "Link Clicks", "la-link"
 	case "abtests":
@@ -1627,6 +1663,43 @@ func handleValidate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	http.Redirect(w, r, fmt.Sprintf("/broadcast?msg=Valid:+%d,+Invalid:+%d", valid, invalid), http.StatusSeeOther)
+}
+
+func handleInboxNote(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		uid := getUserID(r)
+		db.AddNote(r.FormValue("phone"), uid, r.FormValue("note"))
+	}
+	http.Redirect(w, r, "/inbox", http.StatusSeeOther)
+}
+
+func handleInboxTransfer(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		phone := r.FormValue("phone")
+		agentID, _ := strconv.ParseInt(r.FormValue("agent_id"), 10, 64)
+		dept := r.FormValue("dept")
+		if agentID > 0 { db.AssignAgent(phone, agentID) }
+		if dept != "" { db.AssignToDept(phone, dept) }
+	}
+	http.Redirect(w, r, "/inbox", http.StatusSeeOther)
+}
+
+func handleWidgetJS(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/javascript")
+	fmt.Fprintf(w, `(function(){var d=document;d.write('<div id="cwa" style="position:fixed;bottom:20px;right:20px;z-index:9999;font-family:sans-serif"><button id="cwab" onclick="var p=document.getElementById(\'cwac\');p.style.display=p.style.display==\'none\'?\'block\':\'none\'" style="width:56px;height:56px;border-radius:50%%;background:#25D366;border:none;color:#fff;font-size:28px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.15)">💬</button><div id="cwac" style="display:none;width:350px;height:450px;background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,.15);margin-bottom:12px;overflow:hidden"><div style="background:#075E54;color:#fff;padding:16px;font-weight:700">Chat with us</div><div id="cwamsg" style="height:330px;overflow-y:auto;padding:12px;font-size:14px"></div><form id="cwaf" onsubmit="var m=document.getElementById(\'cwai\').value;if(!m)return false;var x=new XMLHttpRequest();x.open(\'POST\',\'/widget/chat\');x.setRequestHeader(\'Content-Type\',\'application/x-www-form-urlencoded\');x.send(\'message=\'+encodeURIComponent(m)+\'&phone=\'+encodeURIComponent(\'web_\'+Date.now()));document.getElementById(\'cwai\').value=\'\';document.getElementById(\'cwamsg\').innerHTML+=\'<div style=text-align:right;margin:4px 0><span style=background:#DCF8C6;padding:8px 12px;border-radius:8px;display:inline-block;max-width:80%%>\'+m+\'</span></div>\';return false" style="display:flex;border-top:1px solid #eee"><input id="cwai" placeholder="Message..." style="flex:1;border:none;padding:12px;font-size:14px;outline:none"><button style="background:#075E54;color:#fff;border:none;padding:12px 16px;cursor:pointer">Send</button></form></div></div>')})()`)
+}
+
+func handleWidgetChat(w http.ResponseWriter, r *http.Request) {
+	msg := r.FormValue("message")
+	phone := r.FormValue("phone")
+	if msg != "" && phone != "" {
+		db.LogReceived(phone, "Web Visitor", msg, false, "", "", "widget")
+		engine.Notify(phone)
+		if s := engine.FirstSession(); s != nil {
+			engine.SendFrom(s.Phone, phone, "Terima kasih! Tim kami akan segera membalas.")
+		}
+	}
+	w.WriteHeader(200)
 }
 
 func handleInboxCanned(w http.ResponseWriter, r *http.Request) {

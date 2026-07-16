@@ -24,6 +24,7 @@ func (e *Engine) StartLoops() {
 	go e.heartbeatLoop()
 	go e.dripLoop()
 	go e.reminderLoop()
+	go e.recurringLoop()
 }
 
 // campaignLoop drains running campaigns, sending to each contact in the target groups.
@@ -400,4 +401,41 @@ func replaceTrackURLs(e *Engine, msg string, campaignID int64, phone string) str
 		msg = strings.Replace(msg, url, appURL+"/track/"+token, 1)
 	}
 	return msg
+}
+
+func (e *Engine) recurringLoop() {
+	for {
+		time.Sleep(30 * time.Minute)
+		camps, err := e.db.DueRecurring()
+		if err != nil { continue }
+		e.mu.RLock()
+		var s *session
+		for _, ss := range e.sessions {
+			if ss.status == "connected" { s = ss; break }
+		}
+		e.mu.RUnlock()
+		if s == nil { continue }
+		for _, c := range camps {
+			seen := map[string]bool{}
+			for _, gid := range strings.Split(c.Groups, ",") {
+				gid = strings.TrimSpace(gid)
+				if gid == "" { continue }
+				list, _ := e.db.ContactsByGroup(gid)
+				for _, ct := range list {
+					if !seen[ct.Phone] && ct.Phone != "" { seen[ct.Phone] = true }
+				}
+			}
+			for phone := range seen {
+				msg := msgtemplate.Render(c.Message, msgtemplate.Vars{Phone: phone, Message: ""})
+				digits := onlyDigits(phone)
+				if digits != "" {
+					jid := waTypes.NewJID(digits, waTypes.DefaultUserServer)
+					e.sendVia(s, jid, msg)
+					time.Sleep(3 * time.Second)
+				}
+			}
+			e.db.MarkRecurringRun(c.ID)
+			e.db.Log("recurring", "run", fmt.Sprintf("%s sent to %d contacts", c.Name, len(seen)))
+		}
+	}
 }
