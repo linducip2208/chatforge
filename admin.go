@@ -82,6 +82,21 @@ func registerAdminRoutes(mux *http.ServeMux) {
 		}
 	}, "/admin/users"))
 	mux.HandleFunc("/admin/users/delete", acd(func(id int64) { db.DeleteUser(id) }, "/admin/users"))
+	mux.HandleFunc("/admin/users/edit", a(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Redirect(w, r, "/admin/users", http.StatusSeeOther)
+			return
+		}
+		id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+		if id > 0 {
+			db.UpdateUser(id, r.FormValue("name"), r.FormValue("email"), r.FormValue("role"))
+			if pw := r.FormValue("password"); pw != "" {
+				hash, _ := hashPassword(pw)
+				db.SetUserPassword(id, hash)
+			}
+		}
+		http.Redirect(w, r, "/admin/users", http.StatusSeeOther)
+	}))
 	mux.HandleFunc("/admin/roles", ap("admin_roles"))
 	mux.HandleFunc("/admin/roles/add", acp(func(r *http.Request) { db.AddRole(r.FormValue("name"), joinVals(r, "permissions")) }, "/admin/roles"))
 	mux.HandleFunc("/admin/roles/delete", acd(func(id int64) { db.DeleteRole(id) }, "/admin/roles"))

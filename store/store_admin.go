@@ -286,6 +286,10 @@ func (d *DB) SetUserPassword(id int64, hash string) error {
 	_, err := d.sql.Exec(`UPDATE users SET password=? WHERE id=?`, hash, id)
 	return err
 }
+func (d *DB) UpdateUser(id int64, name, email, role string) error {
+	_, err := d.sql.Exec(`UPDATE users SET name=?, email=?, role=? WHERE id=?`, name, email, role, id)
+	return err
+}
 func (d *DB) ListUsers() ([]User, error) {
 	rows, err := d.sql.Query(`SELECT id,name,email,role,country,created_at FROM users ORDER BY id DESC`)
 	if err != nil {

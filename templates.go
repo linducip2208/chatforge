@@ -1065,31 +1065,43 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
 {{end}}
 
 {{if eq .Page "admin_users"}}
-  <div class="row">
-    <div class="col-12 col-lg-5">
-      <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "usr_add"}}</h4></div><div class="card-body">
-      <form method="post" action="/admin/users/add">
-        <div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" required></div>
-        <div class="form-group"><label>Email</label><input name="email" type="email" class="form-control" required></div>
-        <div class="form-group"><label>Password</label><input name="password" type="password" class="form-control"></div>
-        <div class="form-row"><div class="form-group col-6"><label>{{T "usr_role"}}</label><select name="role" class="form-control">{{range .Roles}}<option value="{{.Name}}">{{.Name}}</option>{{end}}</select></div>
-        <div class="form-group col-6"><label>{{T "usr_country"}}</label><select name="country" class="form-control"><option value="ID">Indonesia</option><option value="US">United States</option></select></div></div>
-        <div class="form-row"><div class="form-group col-6"><label>{{T "usr_lang"}}</label><select name="language" class="form-control">{{range .LanguagesAdm}}<option value="{{.ISO}}">{{.Name}}</option>{{end}}</select></div>
-        <div class="form-group col-6"><label>{{T "usr_theme"}}</label><select name="theme_color" class="form-control"><option value="light">Light</option><option value="dark">Dark</option></select></div></div>
-        <div class="form-row"><div class="form-group col-4"><label>{{T "usr_clock"}}</label><select name="clock_format" class="form-control"><option value="g:i A">12h</option><option value="H:i">24h</option></select></div>
-        <div class="form-group col-4"><label>{{T "usr_date"}}</label><select name="date_format" class="form-control"><option value="n/j/Y">MM/DD/YYYY</option><option value="j/n/Y">DD/MM/YYYY</option></select></div>
-        <div class="form-group col-4"><label>{{T "usr_sep"}}</label><select name="date_separator" class="form-control"><option value="/">/</option><option value="-">-</option></select></div></div>
-        <div class="form-row"><div class="form-group col-6"><label>{{T "usr_timezone"}}</label><input name="timezone" class="form-control" value="asia/jakarta"></div>
-        <div class="form-group col-6"><label>{{T "usr_credits"}}</label><input name="credits" type="number" class="form-control" value="0"></div></div>
-        <div class="form-row"><div class="form-group col-4"><label>{{T "usr_alertsound"}}</label><select name="alertsound" class="form-control"><option value="1">On</option><option value="2">Off</option></select></div>
-        <div class="form-group col-4"><label>{{T "usr_partner"}}</label><select name="partner" class="form-control"><option value="1">Yes</option><option value="2">No</option></select></div></div>
-        <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
-      </form></div></div></div>
-    <div class="col-12 col-lg-7"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "adm_users"}}</h4></div>
-      <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>Email</th><th>{{T "usr_role"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
-        {{range .Users}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.Email}}</td><td><span class="badge badge-soft-secondary">{{.Role}}</span></td><td><form method="post" action="/admin/users/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center">-</td></tr>{{end}}
-      </tbody></table></div></div></div>
-  </div>
+<div class="row">
+<div class="col-12"><div class="card"><div class="card-header d-flex justify-content-between"><h4 class="card-header-title">{{T "adm_users"}}</h4><button class="btn btn-primary btn-sm lift" onclick="document.getElementById('addUserForm').style.display=document.getElementById('addUserForm').style.display==='none'?'block':'none'"><i class="la la-plus me-1"></i> {{T "usr_add"}}</button></div>
+<div id="addUserForm" style="display:none;border-bottom:1px solid #eee;padding:16px"><form method="post" action="/admin/users/add">
+<div class="row">
+<div class="col-md-6"><div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" required></div></div>
+<div class="col-md-6"><div class="form-group"><label>Email</label><input name="email" type="email" class="form-control" required></div></div>
+<div class="col-md-6"><div class="form-group"><label>Password</label><input name="password" type="password" class="form-control"></div></div>
+<div class="col-md-6"><div class="form-group"><label>{{T "usr_role"}}</label><select name="role" class="form-control">{{range .Roles}}<option value="{{.Name}}">{{.Name}}</option>{{end}}</select></div></div>
+<div class="col-12"><button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button></div>
+</div></form></div>
+<div class="table-responsive"><table class="table table-sm card-table mb-0"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>Email</th><th>{{T "usr_role"}}</th><th>Registered</th><th>{{T "col_action"}}</th></tr></thead><tbody>
+{{range .Users}}<tr>
+<td>{{.ID}}</td>
+<td>{{.Name}}</td>
+<td>{{.Email}}</td>
+<td><span class="badge {{if eq .Role "admin"}}badge-soft-primary{{else}}badge-soft-secondary{{end}}">{{.Role}}</span></td>
+<td class="text-muted small">{{.Created}}</td>
+<td class="text-nowrap">
+<a class="btn btn-sm btn-white" href="/admin/users?edit={{.ID}}"><i class="la la-edit"></i></a>
+<form method="post" action="/admin/users/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger"><i class="la la-trash"></i></button></form>
+</td>
+</tr>{{else}}<tr><td colspan="7" class="text-muted text-center py-4">-</td></tr>{{end}}
+</tbody></table></div></div></div>
+{{if .EditID}}
+<div class="col-12 mt-3"><div class="card border-warning"><div class="card-header bg-warning bg-opacity-10"><h4 class="card-header-title"><i class="la la-edit me-1"></i> Edit User #{{.EditID}}</h4></div>
+<div class="card-body"><form method="post" action="/admin/users/edit">
+<input type="hidden" name="id" value="{{.EditID}}">
+<div class="row">
+<div class="col-md-6"><div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" value="{{.EditName}}" required></div></div>
+<div class="col-md-6"><div class="form-group"><label>Email</label><input name="email" type="email" class="form-control" value="{{.EditPhone}}"></div></div>
+<div class="col-md-6"><div class="form-group"><label>Password (biarkan kosong)</label><input name="password" type="password" class="form-control" placeholder="••••••"></div></div>
+<div class="col-md-6"><div class="form-group"><label>{{T "usr_role"}}</label><select name="role" class="form-control">{{range .Roles}}<option value="{{.Name}}" {{if eq .Name $.EditRole}}selected{{end}}>{{.Name}}</option>{{end}}</select></div></div>
+</div>
+<button class="btn btn-warning lift"><i class="la la-save me-1"></i> Update</button> <a href="/admin/users" class="btn btn-white ms-2">{{T "btn_cancel"}}</a>
+</form></div></div></div>
+{{end}}
+</div>
 {{end}}
 
 {{if eq .Page "admin_roles"}}

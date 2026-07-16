@@ -209,6 +209,7 @@ type pageData struct {
 	EditAiKeyID     int64
 	EditAccountID   string
 	EditTrainingID  int64
+	EditRole        string
 	WelcomeEnabled  bool
 	WelcomeMessage  string
 	FallbackEnabled bool
@@ -578,6 +579,10 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 				d.EditName = w.Name; d.EditContent = w.URL
 				d.EditPhone = w.Port; d.EditKeyword = w.Secret
 				d.EditGroups = w.Packages
+			}
+		case "admin_users":
+			if u, err := db.GetUserByID(eid); err == nil {
+				d.EditName = u.Name; d.EditPhone = u.Email; d.EditRole = u.Role
 			}
 		}
 	}
