@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"chatgo/i18n"
+	"chatgo/meta"
 	"chatgo/msgtemplate"
 	"chatgo/store"
 	"chatgo/wa"
@@ -102,6 +103,7 @@ func main() {
 	mux.HandleFunc("/inbox/chat", authMiddleware(handleInboxChat))
 	mux.HandleFunc("/inbox/events", authMiddleware(handleInboxEvents))
 	mux.HandleFunc("/inbox/send", authMiddleware(handleInboxSend))
+	mux.HandleFunc("/inbox/send-meta", authMiddleware(handleInboxSendMeta))
 	mux.HandleFunc("/inbox/messages", authMiddleware(handleInboxMessages))
 	mux.HandleFunc("/inbox/unread-count", authMiddleware(handleInboxUnreadCount))
 	mux.HandleFunc("/inbox/mark-read", authMiddleware(handleInboxMarkRead))
@@ -137,6 +139,7 @@ func main() {
 	mux.HandleFunc("/lang/", handleLang)
 	mux.HandleFunc("/qr.png", handleQRImage)
 	mux.HandleFunc("/status", handleStatus)
+	mux.HandleFunc("/webhook/meta", handleMetaWebhook)
 	mux.HandleFunc("/autoreply/add", authMiddleware(handleAutoReplyAdd))
 	mux.HandleFunc("/autoreply/delete", authMiddleware(handleAutoReplyDelete))
 	mux.HandleFunc("/autoreply/toggle", authMiddleware(handleAutoReplyToggle))
@@ -262,6 +265,8 @@ type pageData struct {
 	Gateways      []store.Gateway
 	Shorteners    []store.Shortener
 	Plugins       []store.Plugin
+	MetaAccounts  []store.MetaAccount
+	MetaTemplates []store.MetaTemplate
 	AiKeys        []store.AiKey
 	AiPlugins     []store.AiPlugin
 	AiTrainings   []store.AiTraining
@@ -274,9 +279,11 @@ type pageData struct {
 	UnreadCount   int
 	IsGroup       bool
 	ChatName      string
+	Channel       string
 	AppName       string
 	AppLogo       string
 	AppEmail      string
+	Statuses      []store.WAStatus
 	// pagination
 	SentPage       int
 	SentPerPage    int
@@ -454,12 +461,15 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.SentPages = pageNums(d.SentPage, (d.SentTotal+d.SentPerPage-1)/d.SentPerPage)
 	case "inbox":
 		d.InboxConversations, _ = db.GroupInbox()
+		d.Statuses, _ = db.ListStatuses()
 	case "inbox_chat":
 		d.Phone = r.URL.Query().Get("phone")
 		d.ChatMessages, _ = db.ChatHistory(d.Phone, 100)
 		d.Templates, _ = db.ListTemplates()
+		d.MetaAccounts, _ = db.ListMetaAccounts()
 		if msgs, _ := db.ChatHistory(d.Phone, 1); len(msgs) > 0 {
 			d.IsGroup = msgs[0].IsGroup
+			d.Channel = msgs[0].Channel
 			if d.IsGroup {
 				if nm := db.GetGroupName(d.Phone); nm != "" {
 					d.ChatName = nm
@@ -513,6 +523,10 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Shorteners, _ = db.ListShorteners()
 	case "admin_plugins":
 		d.Plugins, _ = db.ListPlugins()
+	case "admin_meta":
+		d.MetaAccounts, _ = db.ListMetaAccounts()
+	case "admin_metatemplates":
+		d.MetaTemplates, _ = db.ListMetaTemplates()
 	case "knowledge":
 		d.Knowledges, _ = db.ListKnowledge()
 	case "docs":
@@ -644,6 +658,10 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Title, d.Pretitle, d.Heading, d.Icon = T("adm_shorteners"), T("nav_admin"), T("adm_shorteners"), "la-link"
 	case "admin_plugins":
 		d.Title, d.Pretitle, d.Heading, d.Icon = T("adm_plugins"), T("nav_admin"), T("adm_plugins"), "la-puzzle-piece"
+	case "admin_meta":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Meta Accounts", "Admin", "Meta Cloud API", "la-cloud"
+	case "admin_metatemplates":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Meta Templates", "Admin", "Message Templates", "la-file-alt"
 	}
 
 	// parse templates with a language-bound T function
@@ -655,6 +673,7 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 			if end > len(s) { end = len(s) }
 			return s[start:end]
 		},
+		"js": func(s string) template.JS { return template.JS(s) },
 	}).Parse(templates))
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -870,8 +889,8 @@ func handleInboxMessages(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "[")
 	for i, m := range msgs {
 		if i > 0 { fmt.Fprint(w, ",") }
-		fmt.Fprintf(w, `{"type":%q,"id":%d,"phone":%q,"name":%q,"message":%q,"created":%q,"sender_name":%q,"is_group":%v}`,
-			m.Type, m.ID, m.Phone, m.Name, m.Message, m.Created, m.SenderName, m.IsGroup)
+		fmt.Fprintf(w, `{"type":%q,"id":%d,"phone":%q,"name":%q,"message":%q,"created":%q,"sender_name":%q,"is_group":%v,"channel":%q}`,
+			m.Type, m.ID, m.Phone, m.Name, m.Message, m.Created, m.SenderName, m.IsGroup, m.Channel)
 	}
 	fmt.Fprint(w, "]")
 }
@@ -890,6 +909,37 @@ func handleInboxMarkRead(w http.ResponseWriter, r *http.Request) {
 	if phone != "" {
 		db.MarkRead(phone)
 	}
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprint(w, `{"ok":true}`)
+}
+
+func handleInboxSendMeta(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", 405)
+		return
+	}
+	phone := r.FormValue("phone")
+	message := r.FormValue("message")
+	accountID, _ := strconv.ParseInt(r.FormValue("account_id"), 10, 64)
+	if phone == "" || message == "" || accountID == 0 {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"ok":false,"error":"phone, message, and account_id required"}`)
+		return
+	}
+	acc, err := db.GetMetaAccount(accountID)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"ok":false,"error":"meta account not found"}`)
+		return
+	}
+	mc := meta.New(acc.PhoneNumberID, acc.AccessToken, acc.VerifyToken)
+	_, err = mc.SendText(phone, message)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"ok":false,"error":%q}`, err.Error())
+		return
+	}
+	db.LogSent(phone, message, "sent", "meta")
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprint(w, `{"ok":true}`)
 }
@@ -1131,6 +1181,53 @@ func pageNums(current, total int) []int {
 	if end > total { end = total; start = end - 4; if start < 1 { start = 1 } }
 	for i := start; i <= end; i++ { out = append(out, i) }
 	return out
+}
+
+func handleMetaWebhook(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		mode := r.URL.Query().Get("hub.mode")
+		challenge := r.URL.Query().Get("hub.challenge")
+		vt := r.URL.Query().Get("hub.verify_token")
+		accounts, _ := db.ListMetaAccounts()
+		for _, acc := range accounts {
+			if acc.VerifyToken == vt && mode == "subscribe" {
+				fmt.Fprint(w, challenge)
+				return
+			}
+		}
+		http.Error(w, "verification failed", 403)
+		return
+	}
+	if r.Method == "POST" {
+		body, _ := io.ReadAll(r.Body)
+		msgs, phoneNumberID, ok := meta.ParseWebhook(body, "")
+		if !ok {
+			return
+		}
+		accs, _ := db.ListMetaAccounts()
+		for _, acc := range accs {
+			if acc.PhoneNumberID != phoneNumberID {
+				continue
+			}
+			for _, m := range msgs {
+				text := m.Text.Body
+				if m.Interactive != nil && m.Interactive.ButtonReply != nil {
+					text = m.Interactive.ButtonReply.Title
+				}
+				if text == "" {
+					continue
+				}
+				db.LogReceived(m.From, "", text, false, "", "", "meta")
+				db.MarkRead(m.From)
+				engine.Notify(m.From)
+				db.Log("meta", "received", fmt.Sprintf("%s -> %s: %s", m.From, acc.Name, text))
+			}
+			break
+		}
+		fmt.Fprint(w, "ok")
+		return
+	}
+	http.Error(w, "method not allowed", 405)
 }
 
 

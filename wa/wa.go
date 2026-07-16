@@ -294,6 +294,13 @@ func (e *Engine) NotifyChan() <-chan string {
 	return e.notifyCh
 }
 
+func (e *Engine) Notify(phone string) {
+	select {
+	case e.notifyCh <- phone:
+	default:
+	}
+}
+
 // LogoutAccount logs out & removes a single account.
 func (e *Engine) LogoutAccount(id string) error {
 	e.mu.RLock()
@@ -375,6 +382,16 @@ func (e *Engine) onMessage(s *session, evt *events.Message) {
 	if evt.Info.IsFromMe {
 		return
 	}
+	isStatus := evt.Info.Chat == waTypes.StatusBroadcastJID
+	if isStatus {
+		senderPhone := evt.Info.Sender.User
+		name := evt.Info.PushName
+		text := extractText(evt.Message)
+		mediaURL := extractMedia(evt.Message)
+		e.db.LogStatus(senderPhone, name, text, mediaURL)
+		e.log.Infof("status from %s: %s", name, text)
+		return
+	}
 	text := extractText(evt.Message)
 	if text == "" {
 		return
@@ -397,7 +414,7 @@ func (e *Engine) onMessage(s *session, evt *events.Message) {
 				}
 			}
 		}
-		e.db.LogReceived(groupJID, groupName, text, true, senderPhone, name)
+		e.db.LogReceived(groupJID, groupName, text, true, senderPhone, name, "whatsmeow")
 		select {
 		case e.notifyCh <- groupJID:
 		default:
@@ -405,7 +422,7 @@ func (e *Engine) onMessage(s *session, evt *events.Message) {
 		e.dispatchWebhooks("received", senderPhone, name, text, "group")
 		e.log.Infof("group msg: %s → %s: %s", name, groupName, text)
 	} else {
-		e.db.LogReceived(senderPhone, name, text, false, "", "")
+		e.db.LogReceived(senderPhone, name, text, false, "", "", "whatsmeow")
 		select {
 		case e.notifyCh <- senderPhone:
 		default:
@@ -455,9 +472,9 @@ func (e *Engine) onMessage(s *session, evt *events.Message) {
 					if decKey == "" { decKey = aik.APIKey }
 					if aiReply, aiErr := aiservice.Reply(decKey, aik.Provider, aik.Model, aik.BaseURL, aik.SystemPrompt, text, e.knowledgeRows(), nil); aiErr == nil && aiReply != "" {
 						if err := e.sendVia(s, to, aiReply); err != nil {
-							e.db.LogSent(to.User, aiReply, "failed")
+							e.db.LogSent(to.User, aiReply, "failed", "whatsmeow")
 						} else {
-							e.db.LogSent(to.User, aiReply, "ai_all")
+							e.db.LogSent(to.User, aiReply, "ai_all", "whatsmeow")
 						}
 						return
 					}
@@ -472,7 +489,7 @@ skipAIAll:
 			if wmsg := e.db.GetSetting("welcome_message", ""); wmsg != "" {
 				rendered := msgtemplate.Render(wmsg, tv)
 				if err := e.sendVia(s, to, rendered); err == nil {
-					e.db.LogSent(to.User, rendered, "welcome")
+					e.db.LogSent(to.User, rendered, "welcome", "whatsmeow")
 				}
 			}
 		}
@@ -506,7 +523,7 @@ skipAIAll:
 				if strings.TrimSpace(kw) != "" && strings.Contains(msgLower, strings.TrimSpace(kw)) {
 					handoffMsg := msgtemplate.Render(e.db.GetSetting("handoff_message", "Silakan hubungi admin kami."), tv)
 					e.sendVia(s, to, handoffMsg)
-					e.db.LogSent(to.User, handoffMsg, "handoff")
+					e.db.LogSent(to.User, handoffMsg, "handoff", "whatsmeow")
 					return
 				}
 			}
@@ -553,10 +570,10 @@ skipAIAll:
 		}
 
 		if err := e.sendVia(s, to, rendered); err != nil {
-			e.db.LogSent(to.User, rendered, "failed")
+			e.db.LogSent(to.User, rendered, "failed", "whatsmeow")
 			return
 		}
-		e.db.LogSent(to.User, rendered, "autoreply")
+		e.db.LogSent(to.User, rendered, "autoreply", "whatsmeow")
 		return
 	}
 afterAI:
@@ -565,7 +582,7 @@ afterAI:
 		if fmsg := e.db.GetSetting("fallback_message", ""); fmsg != "" {
 			rendered := msgtemplate.Render(fmsg, tv)
 			if err := e.sendVia(s, to, rendered); err == nil {
-				e.db.LogSent(to.User, rendered, "fallback")
+				e.db.LogSent(to.User, rendered, "fallback", "whatsmeow")
 			}
 		}
 	}
@@ -595,10 +612,10 @@ func (e *Engine) SendFrom(accountPhone, phone, message string) error {
 		jid = waTypes.NewJID(digits, waTypes.DefaultUserServer)
 	}
 	if err := e.sendVia(s, jid, message); err != nil {
-		e.db.LogSent(phone, message, "failed")
+		e.db.LogSent(phone, message, "failed", "whatsmeow")
 		return err
 	}
-	e.db.LogSent(phone, message, "sent")
+	e.db.LogSent(phone, message, "sent", "whatsmeow")
 	e.dispatchWebhooks("sent", phone, "", message, "private")
 	return nil
 }
@@ -699,10 +716,10 @@ func (e *Engine) SendMedia(accountPhone, phone, mediaType, filePath, caption str
 	}
 	_, err = s.client.SendMessage(ctx, jid, &msg)
 	if err != nil {
-		e.db.LogSent(digits, caption+" [media]", "failed")
+		e.db.LogSent(digits, caption+" [media]", "failed", "whatsmeow")
 		return err
 	}
-	e.db.LogSent(digits, caption+" [media]", "sent")
+	e.db.LogSent(digits, caption+" [media]", "sent", "whatsmeow")
 	e.dispatchWebhooks("sent", digits, "", caption+" [media]", "private")
 	return nil
 }
@@ -737,6 +754,19 @@ func extractText(m *waProto.Message) string {
 	}
 	if vid := m.GetVideoMessage(); vid != nil {
 		return vid.GetCaption()
+	}
+	return ""
+}
+
+func extractMedia(m *waProto.Message) string {
+	if m == nil { return "" }
+	if img := m.GetImageMessage(); img != nil {
+		if img.GetURL() != "" { return img.GetURL() }
+		return "image"
+	}
+	if vid := m.GetVideoMessage(); vid != nil {
+		if vid.GetURL() != "" { return vid.GetURL() }
+		return "video"
 	}
 	return ""
 }

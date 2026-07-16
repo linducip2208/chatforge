@@ -153,6 +153,18 @@ func registerAdminRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/admin/plugins/add", acp(func(r *http.Request) { db.AddPlugin(r.FormValue("name"), r.FormValue("dir")) }, "/admin/plugins"))
 	mux.HandleFunc("/admin/plugins/delete", acd(func(id int64) { db.DeletePlugin(id) }, "/admin/plugins"))
 
+	mux.HandleFunc("/admin/meta", ap("admin_meta"))
+	mux.HandleFunc("/admin/meta/add", acp(func(r *http.Request) {
+		db.AddMetaAccount(r.FormValue("name"), r.FormValue("phone_number_id"), r.FormValue("access_token"), r.FormValue("app_id"), r.FormValue("app_secret"), r.FormValue("verify_token"))
+	}, "/admin/meta"))
+	mux.HandleFunc("/admin/meta/delete", acd(func(id int64) { db.DeleteMetaAccount(id) }, "/admin/meta"))
+
+	mux.HandleFunc("/admin/metatemplates", ap("admin_metatemplates"))
+	mux.HandleFunc("/admin/metatemplates/add", acp(func(r *http.Request) {
+		db.AddMetaTemplate(r.FormValue("name"), r.FormValue("language"), r.FormValue("category"), r.FormValue("components"), "active")
+	}, "/admin/metatemplates"))
+	mux.HandleFunc("/admin/metatemplates/delete", acd(func(id int64) { db.DeleteMetaTemplate(id) }, "/admin/metatemplates"))
+
 	// Docs
 	mux.HandleFunc("/docs", ap("docs"))
 }

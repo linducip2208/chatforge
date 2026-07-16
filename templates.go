@@ -241,6 +241,8 @@ document.querySelectorAll(".msg-full").forEach(function(el){
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_gateways"}}active{{end}}" href="/admin/gateways"><i class="la la-code la-lg"></i> {{T "adm_gateways"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_shorteners"}}active{{end}}" href="/admin/shorteners"><i class="la la-link la-lg"></i> {{T "adm_shorteners"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_plugins"}}active{{end}}" href="/admin/plugins"><i class="la la-puzzle-piece la-lg"></i> {{T "adm_plugins"}}</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_meta"}}active{{end}}" href="/admin/meta"><i class="la la-cloud la-lg"></i> Meta API</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_metatemplates"}}active{{end}}" href="/admin/metatemplates"><i class="la la-file-alt la-lg"></i> Templates</a></li>
       </ul>
       {{end}}
       <hr class="navbar-divider my-3">
@@ -987,6 +989,48 @@ document.querySelectorAll(".msg-full").forEach(function(el){
   </div>
 {{end}}
 
+{{if eq .Page "admin_meta"}}
+  <div class="row">
+    <div class="col-12 col-lg-4"><div class="card"><div class="card-header"><h4 class="card-header-title">Tambah Meta Account</h4></div><div class="card-body">
+      <form method="post" action="/admin/meta/add">
+        <div class="form-group"><label>Nama</label><input name="name" class="form-control" placeholder="My Business" required></div>
+        <div class="form-group"><label>Phone Number ID</label><input name="phone_number_id" class="form-control" placeholder="123456789..." required></div>
+        <div class="form-group"><label>Access Token</label><input name="access_token" class="form-control" placeholder="EAA..." required></div>
+        <div class="form-group"><label>App ID</label><input name="app_id" class="form-control" placeholder="123456..."></div>
+        <div class="form-group"><label>App Secret</label><input name="app_secret" class="form-control" placeholder="abc123..."></div>
+        <div class="form-group"><label>Verify Token</label><input name="verify_token" class="form-control" placeholder="chatgo_webhook_123"></div>
+        <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> Tambah</button>
+      </form></div></div></div>
+    <div class="col-12 col-lg-8"><div class="card"><div class="card-header"><h4 class="card-header-title">Meta Accounts</h4></div>
+      <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Nama</th><th>Phone ID</th><th>Action</th></tr></thead><tbody>
+        {{range .MetaAccounts}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.PhoneNumberID}}</td><td><form method="post" action="/admin/meta/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">Delete</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
+      </tbody></table></div></div></div>
+  </div>
+  <div class="card mt-3"><div class="card-header"><h4 class="card-header-title">Webhook URL</h4></div>
+  <div class="card-body">
+    <p class="small text-muted">Copy URL ini ke Facebook Developer Console > WhatsApp > Configuration > Webhook:</p>
+    <code id="webhookUrl" style="word-break:break-all">http://YOUR_DOMAIN:8080/webhook/meta</code>
+    <p class="small text-muted mt-2">Verify Token: sesuai yang diisi di form atas.</p>
+  </div></div>
+{{end}}
+
+{{if eq .Page "admin_metatemplates"}}
+  <div class="row">
+    <div class="col-12 col-lg-4"><div class="card"><div class="card-header"><h4 class="card-header-title">Tambah Template</h4></div><div class="card-body">
+      <form method="post" action="/admin/metatemplates/add">
+        <div class="form-group"><label>Nama Template</label><input name="name" class="form-control" placeholder="hello_world" required></div>
+        <div class="form-group"><label>Language</label><select name="language" class="form-control"><option value="id">Indonesia</option><option value="en">English</option><option value="en_US">English (US)</option></select></div>
+        <div class="form-group"><label>Category</label><select name="category" class="form-control"><option value="marketing">Marketing</option><option value="utility">Utility</option><option value="authentication">Authentication</option></select></div>
+        <div class="form-group"><label>Components (JSON)</label><textarea name="components" class="form-control" rows="4" placeholder='[{"type":"body","text":"Halo {{1}}, pesanan {{2}} sudah diproses"}]'></textarea></div>
+        <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> Tambah</button>
+      </form></div></div></div>
+    <div class="col-12 col-lg-8"><div class="card"><div class="card-header"><h4 class="card-header-title">Templates</h4></div>
+      <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Nama</th><th>Lang</th><th>Category</th><th>Action</th></tr></thead><tbody>
+        {{range .MetaTemplates}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.Language}}</td><td>{{.Category}}</td><td><form method="post" action="/admin/metatemplates/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">Delete</button></form></td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center">-</td></tr>{{end}}
+      </tbody></table></div></div></div>
+  </div>
+{{end}}
+
 {{if eq .Page "inbox"}}
 <style>
 .inbox-conv{cursor:pointer;transition:background .15s;border-left:3px solid transparent}
@@ -1000,7 +1044,7 @@ document.querySelectorAll(".msg-full").forEach(function(el){
 .avatar.group{background:linear-gradient(135deg,#10B981,#059669);font-size:14px}
 .avatar.person{background:linear-gradient(135deg,#4F46E5,#6366F1)}
 .main-tabs{display:flex;border-bottom:2px solid #e0e0e0;margin-bottom:0}
-.main-tabs .tab-item{padding:10px 24px;font-size:14px;font-weight:600;cursor:pointer;color:#6e788c;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s}
+.main-tabs .tab-item{padding:10px 24px;font-size:14px;font-weight:600;cursor:pointer;color:#6e788c;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;background:none}
 .main-tabs .tab-item:hover{color:#152e4d}
 .main-tabs .tab-item.active{color:#2c7be5;border-bottom-color:#2c7be5}
 .sub-tabs{display:flex;gap:2px;padding:10px 16px}
@@ -1027,16 +1071,16 @@ document.querySelectorAll(".msg-full").forEach(function(el){
 <div class="inbox-search" style="width:220px"><i class="la la-search"></i><input type="text" id="inboxSearch" class="form-control form-control-sm" placeholder="Cari..."></div>
 </div>
 <div class="main-tabs mt-2">
-<div class="tab-item active" onclick="switchTab('chat-panel',this)">Chat</div>
-<div class="tab-item" onclick="switchTab('status-panel',this)">Status</div>
+<button class="tab-item active" onclick={{js "var p=document.getElementById('chat-panel'),s=document.getElementById('status-panel');p.style.display='block';s.style.display='none';var btns=this.parentElement.querySelectorAll('button');for(var i=0;i<btns.length;i++)btns[i].classList.remove('active');this.classList.add('active');return false"}}>Chat</button>
+<button class="tab-item" onclick={{js "var p=document.getElementById('chat-panel'),s=document.getElementById('status-panel');p.style.display='none';s.style.display='block';var btns=this.parentElement.querySelectorAll('button');for(var i=0;i<btns.length;i++)btns[i].classList.remove('active');this.classList.add('active');return false"}}>Status</button>
 </div>
 </div>
 
 <div class="tab-panel active" id="chat-panel">
 <div class="sub-tabs">
-<button class="sub-btn active" onclick="filterChat('all',this)">Semua</button>
-<button class="sub-btn" onclick="filterChat('private',this)">Private</button>
-<button class="sub-btn" onclick="filterChat('group',this)">Group</button>
+<button class="sub-btn active" onclick={{js "var d=document.querySelectorAll('#inboxList .inbox-conv');for(var i=0;i<d.length;i++)d[i].style.display='';var s=this.parentElement.querySelectorAll('button');for(var i=0;i<s.length;i++)s[i].classList.remove('active');this.classList.add('active')"}}>Semua</button>
+<button class="sub-btn" onclick={{js "var d=document.querySelectorAll('#inboxList .inbox-conv');for(var i=0;i<d.length;i++){var g=d[i].getAttribute('data-group');d[i].style.display=g==='private'?'':'none'};var s=this.parentElement.querySelectorAll('button');for(var i=0;i<s.length;i++)s[i].classList.remove('active');this.classList.add('active')"}}>Private</button>
+<button class="sub-btn" onclick={{js "var d=document.querySelectorAll('#inboxList .inbox-conv');for(var i=0;i<d.length;i++){var g=d[i].getAttribute('data-group');d[i].style.display=g==='group'?'':'none'};var s=this.parentElement.querySelectorAll('button');for(var i=0;i<s.length;i++)s[i].classList.remove('active');this.classList.add('active')"}}>Group</button>
 </div>
 <div class="list-group list-group-flush" id="inboxList">
 {{range .InboxConversations}}
@@ -1048,6 +1092,7 @@ document.querySelectorAll(".msg-full").forEach(function(el){
 <div class="d-flex align-items-center gap-2">
 <strong>{{if .Name}}{{.Name}}{{else}}+{{.Phone}}{{end}}</strong>
 {{if .IsGroup}}<span class="badge badge-soft-success" style="font-size:10px">Group</span>{{end}}
+{{if eq .Channel "meta"}}<span class="badge badge-soft-primary" style="font-size:10px">Meta</span>{{end}}
 {{if gt .Unread 0}}<span class="badge badge-pill badge-danger" style="font-size:10px">{{.Unread}}</span>{{end}}
 </div>
 <small class="text-muted">{{.LastTime}}</small>
@@ -1063,46 +1108,33 @@ document.querySelectorAll(".msg-full").forEach(function(el){
 </div>
 
 <div class="tab-panel" id="status-panel">
-<div class="wa-status-card">
-<h6 class="mb-3">Status Koneksi WA</h6>
-{{if .Accounts}}
-{{range .Accounts}}
-<div class="acc-row">
-<div class="acc-status">
-{{if eq .Status "connected"}}<span class="dot green"></span><span>Connected</span>
-{{else if eq .Status "qr"}}<span class="dot yellow"></span><span>Menunggu QR</span>
-{{else}}<span class="dot red"></span><span>Disconnected</span>{{end}}
+<div class="p-3">
+<h6 class="mb-3">Status</h6>
+<div class="row g-3">
+{{range .Statuses}}
+<div class="col-6 col-md-4 col-lg-3">
+<div class="card border" style="border-radius:12px;overflow:hidden">
+<div class="d-flex align-items-center gap-2 p-3">
+<div class="avatar person" style="width:40px;height:40px;font-size:14px">{{slice .Name 0 1}}{{if not .Name}}+{{end}}</div>
+<div class="min-w-0">
+<div class="fw-bold small">{{if .Name}}{{.Name}}{{else}}+{{.Phone}}{{end}}</div>
+<div class="text-muted" style="font-size:11px">{{.Created}}</div>
 </div>
-<div style="flex:1;margin-left:12px">
-<span class="acc-phone">+{{.Phone}}</span>
-{{if eq .Status "qr"}}<a href="/wa?scan={{.ID}}" class="btn btn-sm btn-warning ms-2">Scan QR</a>{{end}}
-{{if eq .Status "disconnected"}}<a href="/wa" class="btn btn-sm btn-outline-primary ms-2">Hubungkan</a>{{end}}
 </div>
-<small class="text-muted">{{.Created}}</small>
+{{if .MediaURL}}<div style="height:120px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:12px">Media</div>{{end}}
+{{if .Caption}}<div class="p-2 small">{{.Caption}}</div>{{end}}
 </div>
-{{end}}
+</div>
 {{else}}
-<div class="text-center text-muted py-3">Belum ada akun WA. <a href="/wa">Tambah Akun</a></div>
+<div class="col-12 text-center text-muted py-4">Belum ada status. Status muncul saat kontak posting story.</div>
 {{end}}
+</div>
 </div>
 </div>
 </div>
 
 <script>
-function switchTab(id,el){
-document.querySelectorAll('.main-tabs .tab-item').forEach(function(x){x.classList.remove('active')});
-el.classList.add('active');
-document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active')});
-document.getElementById(id).classList.add('active');
-}
-function filterChat(f,el){
-document.querySelectorAll('.sub-tabs .sub-btn').forEach(function(b){b.classList.remove('active')});
-el.classList.add('active');
-document.querySelectorAll('#inboxList .inbox-conv').forEach(function(e){
-if(f==='all'){e.style.display=''}else{e.style.display=e.dataset.group===f?'':'none'}
-});
-}
-document.getElementById('inboxSearch').addEventListener('input',function(){
+var srch=document.getElementById('inboxSearch');if(srch)srch.addEventListener('input',function(){
 var q=this.value.toLowerCase();
 document.querySelectorAll('#inboxList .inbox-conv').forEach(function(el){
 if(el.style.display==='none')return;
@@ -1139,9 +1171,16 @@ else{if(b)b.remove()}
 <h6 class="mb-0 d-flex align-items-center gap-2">
 <a href="/inbox" class="text-decoration-none text-muted">&larr;</a>
 <div class="avatar {{if .IsGroup}}group{{else}}person{{end}}" style="width:36px;height:36px;font-size:13px">{{if .ChatName}}{{slice .ChatName 0 1}}{{else}}+{{end}}</div>
-<div><strong>{{if .ChatName}}{{.ChatName}}{{else}}+{{.Phone}}{{end}}</strong>{{if .IsGroup}}<small class="text-success ms-1">Grup</small>{{end}}</div>
+<div><strong>{{if .ChatName}}{{.ChatName}}{{else}}+{{.Phone}}{{end}}</strong>{{if .IsGroup}}<small class="text-success ms-1">Group</small>{{end}}{{if .Channel}}<small class="badge badge-soft-primary ms-1">{{.Channel}}</small>{{end}}</div>
 </h6>
-<div><select id="chatAccountPhone" class="form-select form-select-sm" style="width:auto;display:inline"> {{range .ConnectedAccounts}}{{if eq .Status "connected"}}<option value="+{{.Phone}}">+{{.Phone}}</option>{{end}}{{end}}</select></div>
+<div class="d-flex gap-2 align-items-center">
+<select id="chatChannel" class="form-select form-select-sm" style="width:auto;font-size:12px" onchange="onChannelChange()">
+<option value="whatsmeow">WA</option>
+{{if .MetaAccounts}}<option value="meta">Meta</option>{{end}}
+</select>
+<select id="chatAccountPhone" class="form-select form-select-sm" style="width:auto;display:inline"> {{range .ConnectedAccounts}}{{if eq .Status "connected"}}<option value="+{{.Phone}}">+{{.Phone}}</option>{{end}}{{end}}</select>
+<select id="chatMetaAccount" class="form-select form-select-sm" style="width:auto;display:none"> {{range .MetaAccounts}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select>
+</div>
 </div>
 <div class="card-body p-0">
 <div class="chat-area" id="chatMessages">
@@ -1174,19 +1213,32 @@ else{if(b)b.remove()}
 var chatPhone="{{.Phone}}";
 var chatBox=document.getElementById('chatMessages');
 function scrollToBottom(){chatBox.scrollTop=chatBox.scrollHeight}
+function onChannelChange(){
+var ch=document.getElementById('chatChannel').value;
+document.getElementById('chatAccountPhone').style.display=ch==='whatsmeow'?'':'none';
+document.getElementById('chatMetaAccount').style.display=ch==='meta'?'':'none';
+}
 
 function sendChat(e){
 e.preventDefault();
 var msg=document.getElementById('chatInput').value.trim();
 if(!msg)return false;
-var acp=document.getElementById('chatAccountPhone');
+var ch=document.getElementById('chatChannel').value;
 var f=new FormData();
 f.append('phone',chatPhone);
 f.append('message',msg);
+var url='/inbox/send';
+if(ch==='meta'){
+var mid=document.getElementById('chatMetaAccount').value;
+f.append('account_id',mid);
+url='/inbox/send-meta';
+}else{
+var acp=document.getElementById('chatAccountPhone');
 if(acp)f.append('account_phone',acp.value);
+}
 document.getElementById('chatInput').value='';
 document.getElementById('sendBtn').disabled=true;
-fetch('/inbox/send',{method:'POST',body:f}).then(function(r){return r.json()}).then(function(d){
+fetch(url,{method:'POST',body:f}).then(function(r){return r.json()}).then(function(d){
 document.getElementById('sendBtn').disabled=false;
 if(d.ok)loadMessages();
 });

@@ -37,3 +37,41 @@ func (d *DB) UptimeMinutes(phone string) int {
 	if total == nil { return 0 }
 	return *total
 }
+
+type WAStatus struct {
+	ID       int64
+	Phone    string
+	Name     string
+	Caption  string
+	MediaURL string
+	Created  string
+}
+
+func (d *DB) migrateStatuses() error {
+	_, err := d.sql.Exec(`CREATE TABLE IF NOT EXISTS wa_statuses (
+		id BIGINT AUTO_INCREMENT PRIMARY KEY,
+		phone VARCHAR(64) NOT NULL,
+		name VARCHAR(255) NOT NULL DEFAULT '',
+		caption TEXT NOT NULL,
+		media_url VARCHAR(512) NOT NULL DEFAULT '',
+		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`)
+	return err
+}
+
+func (d *DB) LogStatus(phone, name, caption, mediaURL string) {
+	d.sql.Exec(`INSERT INTO wa_statuses (phone, name, caption, media_url) VALUES (?, ?, ?, ?)`, phone, name, caption, mediaURL)
+}
+
+func (d *DB) ListStatuses() ([]WAStatus, error) {
+	rows, err := d.sql.Query(`SELECT phone, MAX(name) as name, MAX(caption) as caption, MAX(media_url) as media_url, MAX(created_at) as created_at FROM wa_statuses WHERE created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR) GROUP BY phone ORDER BY MAX(created_at) DESC LIMIT 50`)
+	if err != nil { return nil, err }
+	defer rows.Close()
+	var out []WAStatus
+	for rows.Next() {
+		var s WAStatus
+		rows.Scan(&s.Phone, &s.Name, &s.Caption, &s.MediaURL, &s.Created)
+		out = append(out, s)
+	}
+	return out, nil
+}
