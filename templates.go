@@ -15,7 +15,8 @@ const templates = `
 <link rel="stylesheet" href="/assets/dashboard/css/style.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-  .navbar-vertical{overflow-y:auto;max-height:100vh}
+  .navbar-vertical{overflow-y:auto;position:fixed;top:0;left:0;bottom:0;z-index:100}
+  .main-content{margin-left:250px}
   .navbar-vibrant{background:#0B1220}
   .navbar-vertical .navbar-heading{color:#5a6780;font-size:0.68rem;font-weight:700;letter-spacing:0.08em;padding:12px 24px 6px;text-transform:uppercase}
   .navbar-vertical .nav-link{color:#8895b7;font-size:0.85rem;padding:8px 24px;margin:1px 8px;border-radius:8px;transition:all .15s}
@@ -183,18 +184,6 @@ document.querySelectorAll(".msg-full").forEach(function(el){
     });
   }
 });
-</script>
-<script>
-(function(){
-var active=document.querySelector('.navbar-vertical .nav-link.active');
-if(active){
-  var sidebar=document.querySelector('.navbar-vertical');
-  var st=sidebar.scrollTop, sh=sidebar.offsetHeight;
-  var at=active.offsetTop, ah=active.offsetHeight;
-  var center=at-(sh/2)+(ah/2);
-  if(center>0)sidebar.scrollTo({top:center,behavior:'smooth'});
-}
-})();
 </script>
 </body>
 </html>{{end}}
