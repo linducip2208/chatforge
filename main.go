@@ -100,6 +100,12 @@ func main() {
 	mux.HandleFunc("/received", p("received"))
 	mux.HandleFunc("/inbox", p("inbox"))
 	mux.HandleFunc("/inbox/chat", authMiddleware(handleInboxChat))
+	mux.HandleFunc("/inbox/events", authMiddleware(handleInboxEvents))
+	mux.HandleFunc("/inbox/send", authMiddleware(handleInboxSend))
+	mux.HandleFunc("/inbox/messages", authMiddleware(handleInboxMessages))
+	mux.HandleFunc("/inbox/unread-count", authMiddleware(handleInboxUnreadCount))
+	mux.HandleFunc("/inbox/mark-read", authMiddleware(handleInboxMarkRead))
+	mux.HandleFunc("/inbox/search", authMiddleware(handleInboxSearch))
 	mux.HandleFunc("/autoreply", p("autoreply"))
 	mux.HandleFunc("/settings", authMiddleware(handleSettings))
 	mux.HandleFunc("/contacts", p("contacts"))
@@ -263,6 +269,9 @@ type pageData struct {
 	Ussds         []store.Ussd
 	Knowledges    []store.KnowledgeEntry
 	DocsSteps     []DocsStep
+	InboxConversations []store.InboxConversation
+	ChatMessages  []store.ChatMessage
+	UnreadCount   int
 	// pagination
 	SentPage       int
 	SentPerPage    int
@@ -399,6 +408,7 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 	d.ForceOwnKey = db.GetSetting("force_own_key", "0") == "1"
 	d.AiTokenQuota = int64(db.GetUserAiQuota(uid))
 	d.AiTokenUsed = db.GetAiTokenUsage(uid)
+	d.UnreadCount = db.UnreadCount()
 
 	// load entity lists per page (only what's needed)
 	switch page {
@@ -429,10 +439,12 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Sent, _ = db.ListSentPaginated(d.SentPage, d.SentPerPage)
 		d.SentTotal = db.CountSent()
 		d.SentPages = pageNums(d.SentPage, (d.SentTotal+d.SentPerPage-1)/d.SentPerPage)
-	case "inbox","inbox_chat":
-		d.Sent, _ = db.ListSentPaginated(1, 50)
-		d.Received, _ = db.ListReceivedPaginated(1, 50)
+	case "inbox":
+		d.InboxConversations, _ = db.GroupInbox()
+	case "inbox_chat":
 		d.Phone = r.URL.Query().Get("phone")
+		d.ChatMessages, _ = db.ChatHistory(d.Phone, 100)
+		d.Templates, _ = db.ListTemplates()
 	case "received":
 		d.ReceivedPage = pageFromQuery(r)
 		d.Received, _ = db.ListReceivedPaginated(d.ReceivedPage, d.ReceivedPerPage)
@@ -474,13 +486,6 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 	case "admin_waservers":
 		d.WaServers, _ = db.ListWaServers()
 		d.Packages, _ = db.ListPackages()
-		if eid, _ := strconv.ParseInt(r.URL.Query().Get("edit"), 10, 64); eid > 0 {
-			if w, err := db.GetWaServer(eid); err == nil {
-				d.EditID = eid; d.EditName = w.Name; d.EditContent = w.URL
-				d.EditPhone = w.Port; d.EditKeyword = w.Secret
-				d.EditGroups = w.Packages
-			}
-		}
 	case "admin_gateways":
 		d.Gateways, _ = db.ListGateways()
 	case "admin_shorteners":
@@ -509,6 +514,12 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 			if a, err := db.GetAutoReply(eid); err == nil {
 				d.EditKeyword = a.Keyword; d.EditMatch = a.Match; d.EditReply = a.Reply; d.EditAccountID = a.AccountID
 				d.EditUseAI = a.UseAI; d.EditAiKeyID = a.AiKeyID; d.EditTrainingID = a.TrainingID
+			}
+		case "admin_waservers":
+			if w, err := db.GetWaServer(eid); err == nil {
+				d.EditName = w.Name; d.EditContent = w.URL
+				d.EditPhone = w.Port; d.EditKeyword = w.Secret
+				d.EditGroups = w.Packages
 			}
 		}
 	}
@@ -760,7 +771,114 @@ func handleSendMedia(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/send?msg=Media+sent+OK", http.StatusSeeOther)
 }
 func handleInboxChat(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		phone := r.FormValue("phone")
+		message := r.FormValue("message")
+		accountPhone := strings.TrimPrefix(r.FormValue("account_phone"), "+")
+		if phone != "" && message != "" {
+			if err := engine.SendFrom(accountPhone, phone, msgtemplate.Render(message, msgtemplate.Vars{Phone: phone})); err != nil {
+				http.Redirect(w, r, "/inbox/chat?phone="+phone+"&msg="+template.URLQueryEscaper(err.Error()), http.StatusSeeOther)
+				return
+			}
+		}
+		http.Redirect(w, r, "/inbox/chat?phone="+phone+"&msg=OK", http.StatusSeeOther)
+		return
+	}
 	render(w, r, "inbox_chat")
+}
+
+func handleInboxEvents(w http.ResponseWriter, r *http.Request) {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "streaming not supported", 500)
+		return
+	}
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	ch := engine.NotifyChan()
+	ctx := r.Context()
+	for {
+		select {
+		case phone := <-ch:
+			fmt.Fprintf(w, "data: {\"phone\":%q}\n\n", phone)
+			flusher.Flush()
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func handleInboxSend(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", 405)
+		return
+	}
+	phone := r.FormValue("phone")
+	message := r.FormValue("message")
+	accountPhone := strings.TrimPrefix(r.FormValue("account_phone"), "+")
+	if phone == "" || message == "" {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"ok":false,"error":"phone and message required"}`)
+		return
+	}
+	if err := engine.SendFrom(accountPhone, phone, msgtemplate.Render(message, msgtemplate.Vars{Phone: phone})); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"ok":false,"error":%q}`, err.Error())
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprint(w, `{"ok":true}`)
+}
+
+func handleInboxMessages(w http.ResponseWriter, r *http.Request) {
+	phone := r.URL.Query().Get("phone")
+	if phone == "" {
+		http.Error(w, "phone required", 400)
+		return
+	}
+	msgs, _ := db.ChatHistory(phone, 100)
+	db.MarkRead(phone)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprint(w, "[")
+	for i, m := range msgs {
+		if i > 0 { fmt.Fprint(w, ",") }
+		fmt.Fprintf(w, `{"type":%q,"id":%d,"phone":%q,"name":%q,"message":%q,"created":%q}`,
+			m.Type, m.ID, m.Phone, m.Name, m.Message, m.Created)
+	}
+	fmt.Fprint(w, "]")
+}
+
+func handleInboxUnreadCount(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, `{"unread":%d}`, db.UnreadCount())
+}
+
+func handleInboxMarkRead(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", 405)
+		return
+	}
+	phone := r.FormValue("phone")
+	if phone != "" {
+		db.MarkRead(phone)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprint(w, `{"ok":true}`)
+}
+
+func handleInboxSearch(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query().Get("q")
+	results, _ := db.SearchInbox(q)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprint(w, "[")
+	for i, c := range results {
+		if i > 0 { fmt.Fprint(w, ",") }
+		fmt.Fprintf(w, `{"phone":%q,"name":%q,"last_msg":%q,"last_time":%q,"unread":%d,"is_group":%v}`,
+			c.Phone, c.Name, c.LastMsg, c.LastTime, c.Unread, c.IsGroup)
+	}
+	fmt.Fprint(w, "]")
 }
 func handleAutoReplyAdd(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {

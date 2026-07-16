@@ -51,6 +51,8 @@ type Engine struct {
 	mu       sync.RWMutex
 	sessions map[string]*session // key = session id
 	newSeq   int
+
+	notifyCh chan string
 }
 
 // New opens the whatsmeow session store.
@@ -70,6 +72,7 @@ func New(sessionPath string, appDB *store.DB) (*Engine, error) {
 		db:        appDB,
 		log:       logger,
 		sessions:  map[string]*session{},
+		notifyCh:  make(chan string, 256),
 	}, nil
 }
 
@@ -287,6 +290,10 @@ func (e *Engine) Status() (string, string) {
 	return "disconnected", ""
 }
 
+func (e *Engine) NotifyChan() <-chan string {
+	return e.notifyCh
+}
+
 // LogoutAccount logs out & removes a single account.
 func (e *Engine) LogoutAccount(id string) error {
 	e.mu.RLock()
@@ -378,6 +385,10 @@ func (e *Engine) onMessage(s *session, evt *events.Message) {
 	}
 	name := evt.Info.PushName
 	e.db.LogReceived(senderPhone, name, text, evt.Info.IsGroup)
+	select {
+	case e.notifyCh <- senderPhone:
+	default:
+	}
 
 	t := "private"
 	if evt.Info.IsGroup { t = "group" }

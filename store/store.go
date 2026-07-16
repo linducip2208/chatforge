@@ -42,7 +42,27 @@ type ReceivedMessage struct {
 	Name    string
 	Message string
 	IsGroup bool
+	IsRead  bool
 	Created string
+}
+
+type InboxConversation struct {
+	Phone   string
+	Name    string
+	LastMsg string
+	LastTime string
+	Unread  int
+	IsGroup bool
+}
+
+type ChatMessage struct {
+	Type    string
+	ID      int64
+	Phone   string
+	Name    string
+	Message string
+	Created string
+	IsRead  bool
 }
 
 func Open(dsn string) (*DB, error) {
@@ -108,6 +128,13 @@ func (d *DB) migrate() error {
 	if err := d.migrateExtra(); err != nil {
 		return err
 	}
+	if _, err := d.sql.Exec(`ALTER TABLE received ADD COLUMN is_read TINYINT NOT NULL DEFAULT 0`); err != nil {
+		if !strings.Contains(err.Error(), "Duplicate") && !strings.Contains(err.Error(), "1060") {
+			return fmt.Errorf("add is_read: %w", err)
+		}
+	}
+	d.sql.Exec(`ALTER TABLE received ADD INDEX idx_received_phone (phone)`)
+	d.sql.Exec(`ALTER TABLE received ADD INDEX idx_received_is_read (is_read)`)
 	return nil
 }
 
@@ -237,14 +264,70 @@ func (d *DB) LogReceived(phone, name, message string, isGroup bool) {
 func (d *DB) ListReceived(limit int) ([]ReceivedMessage, error) { return d.ListReceivedPaginated(1, limit) }
 func (d *DB) ListReceivedPaginated(page, perPage int) ([]ReceivedMessage, error) {
 	offset := (page-1)*perPage
-	rows, err := d.sql.Query(`SELECT id,phone,name,message,is_group,created_at FROM received ORDER BY id DESC LIMIT ? OFFSET ?`, perPage, offset)
+	rows, err := d.sql.Query(`SELECT id,phone,name,message,is_group,is_read,created_at FROM received ORDER BY id DESC LIMIT ? OFFSET ?`, perPage, offset)
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []ReceivedMessage
-	for rows.Next() { var m ReceivedMessage; var g int; rows.Scan(&m.ID,&m.Phone,&m.Name,&m.Message,&g,&m.Created); m.IsGroup = g==1; out = append(out, m) }
+	for rows.Next() { var m ReceivedMessage; var g, r int; rows.Scan(&m.ID,&m.Phone,&m.Name,&m.Message,&g,&r,&m.Created); m.IsGroup = g==1; m.IsRead = r==1; out = append(out, m) }
 	return out, nil
 }
 func (d *DB) CountReceived() int { var n int; d.sql.QueryRow(`SELECT COUNT(*) FROM received`).Scan(&n); return n }
+
+func (d *DB) GroupInbox() ([]InboxConversation, error) {
+	rows, err := d.sql.Query(`SELECT phone, MAX(name) as name, MAX(is_group) as is_group, COUNT(CASE WHEN is_read=0 THEN 1 END) as unread FROM received GROUP BY phone ORDER BY MAX(id) DESC LIMIT 100`)
+	if err != nil { return nil, err }
+	defer rows.Close()
+	var out []InboxConversation
+	for rows.Next() {
+		var c InboxConversation; var g int
+		if err := rows.Scan(&c.Phone, &c.Name, &g, &c.Unread); err != nil { return nil, err }
+		c.IsGroup = g == 1
+		d.sql.QueryRow(`SELECT message, created_at FROM received WHERE phone=? ORDER BY id DESC LIMIT 1`, c.Phone).Scan(&c.LastMsg, &c.LastTime)
+		out = append(out, c)
+	}
+	return out, nil
+}
+
+func (d *DB) ChatHistory(phone string, limit int) ([]ChatMessage, error) {
+	rows, err := d.sql.Query(`SELECT 'received' as type, id, phone, name, message, created_at, is_read FROM received WHERE phone=? UNION ALL SELECT 'sent' as type, id, phone, '' as name, message, created_at, 1 as is_read FROM sent WHERE phone=? ORDER BY created_at DESC LIMIT ?`, phone, phone, limit)
+	if err != nil { return nil, err }
+	defer rows.Close()
+	var out []ChatMessage
+	for rows.Next() {
+		var m ChatMessage; var r int
+		if err := rows.Scan(&m.Type, &m.ID, &m.Phone, &m.Name, &m.Message, &m.Created, &r); err != nil { return nil, err }
+		m.IsRead = r == 1
+		out = append(out, m)
+	}
+	return out, nil
+}
+
+func (d *DB) MarkRead(phone string) error {
+	_, err := d.sql.Exec(`UPDATE received SET is_read=1 WHERE phone=? AND is_read=0`, phone)
+	return err
+}
+
+func (d *DB) UnreadCount() int {
+	var n int
+	d.sql.QueryRow(`SELECT COUNT(*) FROM received WHERE is_read=0`).Scan(&n)
+	return n
+}
+
+func (d *DB) SearchInbox(query string) ([]InboxConversation, error) {
+	q := "%" + query + "%"
+	rows, err := d.sql.Query(`SELECT phone, MAX(name) as name, MAX(is_group) as is_group, COUNT(CASE WHEN is_read=0 THEN 1 END) as unread FROM received WHERE phone LIKE ? OR name LIKE ? OR message LIKE ? GROUP BY phone ORDER BY MAX(id) DESC LIMIT 50`, q, q, q)
+	if err != nil { return nil, err }
+	defer rows.Close()
+	var out []InboxConversation
+	for rows.Next() {
+		var c InboxConversation; var g int
+		if err := rows.Scan(&c.Phone, &c.Name, &g, &c.Unread); err != nil { return nil, err }
+		c.IsGroup = g == 1
+		d.sql.QueryRow(`SELECT message, created_at FROM received WHERE phone=? ORDER BY id DESC LIMIT 1`, c.Phone).Scan(&c.LastMsg, &c.LastTime)
+		out = append(out, c)
+	}
+	return out, nil
+}
 
 // Settings
 func (d *DB) GetSetting(name, def string) string {

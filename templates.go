@@ -192,7 +192,7 @@ document.querySelectorAll(".msg-full").forEach(function(el){
         <li class="nav-item"><a class="nav-link {{if eq .Active "send"}}active{{end}}" href="/send"><i class="la la-paper-plane la-lg"></i> {{T "nav_send"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "broadcast"}}active{{end}}" href="/broadcast"><i class="la la-bullhorn la-lg"></i> {{T "nav_broadcast"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "scheduled"}}active{{end}}" href="/scheduled"><i class="la la-clock la-lg"></i> {{T "nav_scheduled"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "inbox"}}active{{end}}" href="/inbox"><i class="la la-comments la-lg"></i> Inbox</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "inbox"}}active{{end}}" href="/inbox"><i class="la la-comments la-lg"></i> Inbox{{if gt .UnreadCount 0}} <span class="badge badge-pill badge-danger ml-1 inbox-badge">{{.UnreadCount}}</span>{{end}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "sent"}}active{{end}}" href="/sent"><i class="la la-telegram la-lg"></i> {{T "nav_sent"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "received"}}active{{end}}" href="/received"><i class="la la-comment la-lg"></i> {{T "nav_received"}}</a></li>
       </ul>
@@ -988,17 +988,160 @@ document.querySelectorAll(".msg-full").forEach(function(el){
 {{end}}
 
 {{if eq .Page "inbox"}}
-<div class="card"><div class="card-header"><h4 class="card-header-title">Percakapan Terbaru</h4></div>
-<div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>Nomor</th><th>{{T "ar_nama"}}</th><th>Pesan Terakhir</th><th>Waktu</th></tr></thead><tbody>
-{{range .Received}}<tr><td><a href="/inbox/chat?phone={{.Phone}}">{{.Phone}}</a></td><td>{{.Name}}</td><td class="msg-full">{{.Message}}</td><td class="text-muted">{{.Created}}</td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">Belum ada percakapan</td></tr>{{end}}
-</tbody></table></div></div>
+<style>
+.inbox-conv{cursor:pointer;transition:background .15s;border-left:3px solid transparent}
+.inbox-conv:hover{background:#f8f9fc;border-left-color:#2c7be5}
+.inbox-conv.unread{font-weight:600;background:#eef2ff}
+.inbox-conv .last-msg{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}
+.inbox-search{position:relative}
+.inbox-search i{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#95aac9}
+.inbox-search input{padding-left:36px}
+</style>
+<div class="card">
+<div class="card-header d-flex justify-content-between align-items-center">
+<h4 class="card-header-title mb-0">Percakapan{{if gt .UnreadCount 0}} <span class="badge badge-danger">{{.UnreadCount}} baru</span>{{end}}</h4>
+<div class="inbox-search" style="width:240px"><i class="la la-search"></i><input type="text" id="inboxSearch" class="form-control form-control-sm" placeholder="Cari percakapan..."></div>
+</div>
+<div class="list-group list-group-flush" id="inboxList">
+{{range .InboxConversations}}
+<a href="/inbox/chat?phone={{.Phone}}" class="list-group-item list-group-item-action inbox-conv{{if gt .Unread 0}} unread{{end}}">
+<div class="d-flex justify-content-between align-items-start">
+<div class="d-flex align-items-center gap-2">
+<strong>{{if .Name}}{{.Name}}{{else}}+{{.Phone}}{{end}}</strong>
+{{if gt .Unread 0}}<span class="badge badge-pill badge-danger" style="font-size:10px">{{.Unread}}</span>{{end}}
+{{if .IsGroup}}<span class="badge badge-soft-secondary" style="font-size:10px">Grup</span>{{end}}
+</div>
+<small class="text-muted">{{.LastTime}}</small>
+</div>
+<div class="last-msg text-muted small mt-1">{{.LastMsg}}</div>
+</a>
+{{else}}
+<div class="list-group-item text-center text-muted py-4">Belum ada percakapan</div>
+{{end}}
+</div>
+</div>
+<script>
+document.getElementById('inboxSearch').addEventListener('input', function(){
+var q = this.value.toLowerCase();
+document.querySelectorAll('#inboxList .inbox-conv').forEach(function(el){
+el.style.display = el.textContent.toLowerCase().includes(q) ? '' : 'none';
+});
+});
+setInterval(function(){
+fetch('/inbox/unread-count').then(function(r){return r.json()}).then(function(d){
+var b = document.querySelector('.inbox-badge');
+if(d.unread > 0){
+if(b) b.textContent = d.unread;
+else {
+var n = document.querySelector('.nav-link[href="/inbox"]');
+if(n) n.innerHTML += ' <span class="badge badge-pill badge-danger ml-1 inbox-badge">'+d.unread+'</span>';
+}
+} else { if(b) b.remove(); }
+});
+}, 5000);
+</script>
 {{end}}
 {{if eq .Page "inbox_chat"}}
-<div class="card"><div class="card-header"><h4 class="card-header-title"><a href="/inbox" class="text-decoration-none">&larr; Kembali</a> &nbsp; Chat dengan {{.Phone}}</h4></div>
-<div style="max-height:500px;overflow-y:auto;padding:16px">
-{{range .Received}}{{if eq .Phone $.Phone}}<div class="d-flex mb-3"><div class="bg-light rounded p-2" style="max-width:75%"><small class="text-muted">{{.Name}} &middot; {{.Created}}</small><br>{{.Message}}</div></div>{{end}}{{end}}
-{{range .Sent}}{{if eq .Phone $.Phone}}<div class="d-flex mb-3 justify-content-end"><div class="bg-primary bg-opacity-10 rounded p-2" style="max-width:75%"><small class="text-muted">{{.Created}}</small><br>{{.Message}}</div></div>{{end}}{{end}}
-</div></div>
+<style>
+.chat-area{max-height:55vh;overflow-y:auto;padding:16px;display:flex;flex-direction:column-reverse;scroll-behavior:smooth}
+.chat-bubble{max-width:75%;padding:10px 14px;border-radius:12px;word-wrap:break-word;animation:fadeInUp .2s ease}
+.chat-bubble.received{background:#f1f3f5;align-self:flex-start;border-bottom-left-radius:4px}
+.chat-bubble.sent{background:linear-gradient(135deg,#4F46E5,#6366F1);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.chat-meta{font-size:11px;opacity:.7;margin-bottom:2px}
+.chat-input-group{position:relative}
+.chat-input-group textarea{resize:none;border-radius:12px;padding-right:50px;min-height:44px;max-height:120px}
+.chat-input-group button{position:absolute;right:6px;bottom:6px;border-radius:50%;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+</style>
+<div class="card">
+<div class="card-header d-flex justify-content-between align-items-center">
+<h4 class="card-header-title mb-0"><a href="/inbox" class="text-decoration-none">&larr;</a> Chat dengan {{if .Name}}+{{.Phone}} ({{.Name}}){{else}}+{{.Phone}}{{end}}</h4>
+<div><select id="chatAccountPhone" class="form-select form-select-sm" style="width:auto;display:inline"> {{range .ConnectedAccounts}}<option value="+{{.Phone}}">+{{.Phone}}</option>{{end}}</select></div>
+</div>
+<div class="card-body p-0">
+<div class="chat-area" id="chatMessages">
+{{range .ChatMessages}}
+<div class="d-flex w-100 mb-2" style="{{if eq .Type "sent"}}justify-content:flex-end{{else}}justify-content:flex-start{{end}}">
+<div class="chat-bubble {{.Type}}">
+<div class="chat-meta">{{if eq .Type "received"}}{{if .Name}}{{.Name}} &middot; {{end}}{{end}}{{.Created}}</div>
+<div>{{.Message}}</div>
+</div>
+</div>
+{{else}}
+<div class="text-center text-muted py-4">Belum ada pesan. Kirim pesan pertama!</div>
+{{end}}
+</div>
+</div>
+<div class="card-footer bg-white">
+<form id="chatForm" onsubmit="return sendChat(event)">
+<div class="chat-input-group">
+<textarea id="chatInput" name="message" class="form-control" placeholder="Ketik balasan..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat(event)}"></textarea>
+<input type="hidden" name="phone" value="{{.Phone}}">
+<button type="submit" class="btn btn-primary"><i class="la la-paper-plane"></i></button>
+</div>
+</form>
+<div class="d-flex gap-2 mt-2 flex-wrap">
+{{range .Templates}}<button class="btn btn-sm btn-outline-secondary template-btn" data-content="{{.Content}}" title="{{.Name}}">{{.Name}}</button>{{end}}
+</div>
+</div>
+</div>
+<script>
+var chatPhone = "{{.Phone}}";
+var chatBox = document.getElementById('chatMessages');
+function scrollToBottom(){chatBox.scrollTop = chatBox.scrollHeight;}
+
+function sendChat(e){
+e.preventDefault();
+var msg = document.getElementById('chatInput').value.trim();
+if(!msg) return false;
+var acp = document.getElementById('chatAccountPhone');
+var f = new FormData();
+f.append('phone', chatPhone);
+f.append('message', msg);
+if(acp) f.append('account_phone', acp.value);
+document.getElementById('chatInput').value = '';
+fetch('/inbox/send', {method:'POST', body:f}).then(function(r){return r.json()}).then(function(d){
+if(d.ok) loadMessages();
+});
+return false;
+}
+
+function loadMessages(){
+fetch('/inbox/messages?phone='+encodeURIComponent(chatPhone)).then(function(r){return r.json()}).then(function(msgs){
+if(!msgs||!msgs.length) return;
+var html = '';
+for(var i=0;i<msgs.length;i++){
+var m = msgs[i];
+var side = m.type==='sent'?'flex-end':'flex-start';
+html += '<div class="d-flex w-100 mb-2" style="justify-content:'+side+'"><div class="chat-bubble '+m.type+'"><div class="chat-meta">';
+if(m.type==='received'&&m.name) html += m.name+' · ';
+html += m.created+'</div><div>'+m.message+'</div></div></div>';
+}
+chatBox.innerHTML = html;
+scrollToBottom();
+});
+}
+
+scrollToBottom();
+
+var evtSource = new EventSource('/inbox/events');
+evtSource.onmessage = function(e){
+var d = JSON.parse(e.data);
+if(d.phone === chatPhone) loadMessages();
+fetch('/inbox/unread-count').then(function(r){return r.json()}).then(function(d){
+var b = document.querySelector('.inbox-badge');
+if(d.unread>0){if(b)b.textContent=d.unread;else{var n=document.querySelector('.nav-link[href="/inbox"]');if(n)n.innerHTML+=' <span class="badge badge-pill badge-danger ml-1 inbox-badge">'+d.unread+'</span>'}}
+else{if(b)b.remove()}
+});
+};
+
+document.querySelectorAll('.template-btn').forEach(function(btn){
+btn.addEventListener('click',function(){
+document.getElementById('chatInput').value = this.dataset.content;
+document.getElementById('chatInput').focus();
+});
+});
+</script>
 {{end}}
 {{if eq .Page "docs"}}
   <div class="card"><div class="card-body">
