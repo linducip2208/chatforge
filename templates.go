@@ -209,7 +209,7 @@ if(a){var t=a.offsetTop-s.offsetHeight/2;if(t>0)s.scrollTop=t}
     <div class="collapse navbar-collapse" id="sidebarCollapse">
       <h6 class="navbar-heading">{{T "nav_overview"}}</h6>
       <ul class="navbar-nav">
-        <li class="nav-item"><a class="nav-link {{if eq .Active "home"}}active{{end}}" href="/"><i class="la la-chart-bar la-lg"></i> {{T "nav_dashboard"}} <span class="badge badge-soft-primary" style="font-size:8px">META</span></a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "home"}}active{{end}}" href="/"><i class="la la-chart-bar la-lg"></i> {{T "nav_dashboard"}}<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;font-weight:600;padding:2px 5px;border-radius:3px">META</span></a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "inbox"}}active{{end}}" href="/inbox"><i class="la la-comments la-lg"></i> Live Chat{{if gt .UnreadCount 0}} <span class="badge badge-pill badge-danger ml-1 inbox-badge">{{.UnreadCount}}</span>{{end}}</a></li>
       </ul>
       <hr class="navbar-divider my-3">
@@ -218,7 +218,7 @@ if(a){var t=a.offsetTop-s.offsetHeight/2;if(t>0)s.scrollTop=t}
       <ul class="navbar-nav">
         <li class="nav-item"><a class="nav-link {{if eq .Active "wa"}}active{{end}}" href="/wa"><i class="la la-whatsapp la-lg"></i> {{T "nav_account_qr"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "send"}}active{{end}}" href="/send"><i class="la la-paper-plane la-lg"></i> {{T "nav_send"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "broadcast"}}active{{end}}" href="/broadcast"><i class="la la-bullhorn la-lg"></i> {{T "nav_broadcast"}} <span class="badge badge-soft-primary" style="font-size:8px">META</span></a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "broadcast"}}active{{end}}" href="/broadcast"><i class="la la-bullhorn la-lg"></i> {{T "nav_broadcast"}}<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;font-weight:600;padding:2px 5px;border-radius:3px">META</span></a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "drips"}}active{{end}}" href="/drips"><i class="la la-tint la-lg"></i> Drip Campaign</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "scheduled"}}active{{end}}" href="/scheduled"><i class="la la-clock la-lg"></i> {{T "nav_scheduled"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "sent"}}active{{end}}" href="/sent"><i class="la la-telegram la-lg"></i> {{T "nav_sent"}}</a></li>
@@ -310,8 +310,8 @@ if(a){var t=a.offsetTop-s.offsetHeight/2;if(t>0)s.scrollTop=t}
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_gateways"}}active{{end}}" href="/admin/gateways"><i class="la la-code la-lg"></i> {{T "adm_gateways"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_shorteners"}}active{{end}}" href="/admin/shorteners"><i class="la la-link la-lg"></i> {{T "adm_shorteners"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_plugins"}}active{{end}}" href="/admin/plugins"><i class="la la-puzzle-piece la-lg"></i> {{T "adm_plugins"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_meta"}}active{{end}}" href="/admin/meta"><i class="la la-cloud la-lg"></i> Meta API <span class="badge badge-soft-primary ms-1" style="font-size:9px">Meta</span></a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_metatemplates"}}active{{end}}" href="/admin/metatemplates"><i class="la la-file-alt la-lg"></i> Templates <span class="badge badge-soft-primary ms-1" style="font-size:9px">Meta</span></a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_meta"}}active{{end}}" href="/admin/meta"><i class="la la-cloud la-lg"></i> Meta API<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;font-weight:600;padding:2px 5px;border-radius:3px">META</span></a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_metatemplates"}}active{{end}}" href="/admin/metatemplates"><i class="la la-file-alt la-lg"></i> Templates<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;font-weight:600;padding:2px 5px;border-radius:3px">META</span></a></li>
       </ul>
       {{end}}
       <hr class="navbar-divider my-3">
