@@ -294,7 +294,7 @@ func (d *DB) GetUserSendLimit(userID int64) int {
 }
 
 func (d *DB) CountSentByUser(userID int64) int {
-	u, err := d.GetUserByID(userID)
+	_, err := d.GetUserByID(userID)
 	if err != nil { return 0 }
 	var n int
 	d.sql.QueryRow(`SELECT COUNT(*) FROM sent WHERE phone IN (SELECT phone FROM wa_accounts WHERE user_id=?) OR status='sent'`, userID).Scan(&n)
