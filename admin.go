@@ -100,6 +100,17 @@ func registerAdminRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/admin/roles", ap("admin_roles"))
 	mux.HandleFunc("/admin/roles/add", acp(func(r *http.Request) { db.AddRole(r.FormValue("name"), joinVals(r, "permissions")) }, "/admin/roles"))
 	mux.HandleFunc("/admin/roles/delete", acd(func(id int64) { db.DeleteRole(id) }, "/admin/roles"))
+	mux.HandleFunc("/admin/roles/edit", a(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Redirect(w, r, "/admin/roles", http.StatusSeeOther)
+			return
+		}
+		id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+		if id > 0 {
+			db.UpdateRole(id, r.FormValue("name"), joinVals(r, "permissions"))
+		}
+		http.Redirect(w, r, "/admin/roles", http.StatusSeeOther)
+	}))
 	mux.HandleFunc("/admin/packages", ap("admin_packages"))
 	mux.HandleFunc("/admin/packages/add", acp(func(r *http.Request) {
 		s, _ := strconv.Atoi(r.FormValue("send_limit"))

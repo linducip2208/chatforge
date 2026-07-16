@@ -326,9 +326,19 @@ func (d *DB) ListUsers() ([]User, error) {
 
 // Roles
 func (d *DB) AddRole(name, perms string) (int64, error) {
-	return d.exec(`INSERT INTO roles (name,permissions) VALUES (?,?)`, name, perms)
+	return d.exec(`INSERT INTO roles (name, permissions) VALUES (?,?)`, name, perms)
 }
 func (d *DB) DeleteRole(id int64) error { return d.del("roles", id) }
+func (d *DB) UpdateRole(id int64, name, perms string) error {
+	_, err := d.sql.Exec(`UPDATE roles SET name=?, permissions=? WHERE id=?`, name, perms, id)
+	return err
+}
+func (d *DB) GetRole(id int64) (*Role, error) {
+	var r Role
+	err := d.sql.QueryRow(`SELECT id, name, permissions, created_at FROM roles WHERE id=?`, id).Scan(&r.ID, &r.Name, &r.Permissions, &r.Created)
+	if err != nil { return nil, err }
+	return &r, nil
+}
 func (d *DB) ListRoles() ([]Role, error) {
 	rows, err := d.sql.Query(`SELECT id,name,permissions,created_at FROM roles ORDER BY id DESC`)
 	if err != nil {

@@ -592,6 +592,10 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 			if u, err := db.GetUserByID(eid); err == nil {
 				d.EditName = u.Name; d.EditPhone = u.Email; d.EditRole = u.Role
 			}
+		case "admin_roles":
+			if r, err := db.GetRole(eid); err == nil {
+				d.EditName = r.Name; d.EditContent = r.Permissions
+			}
 		}
 	}
 
