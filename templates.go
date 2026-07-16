@@ -201,6 +201,7 @@ document.querySelectorAll(".msg-full").forEach(function(el){
         <li class="nav-item"><a class="nav-link {{if eq .Active "inbox"}}active{{end}}" href="/inbox"><i class="la la-comments la-lg"></i> Live Chat{{if gt .UnreadCount 0}} <span class="badge badge-pill badge-danger ml-1 inbox-badge">{{.UnreadCount}}</span>{{end}}</a></li>
       </ul>
       <hr class="navbar-divider my-3">
+      {{if eq .Role "admin"}}
       <h6 class="navbar-heading">{{T "nav_whatsapp"}}</h6>
       <ul class="navbar-nav">
         <li class="nav-item"><a class="nav-link {{if eq .Active "wa"}}active{{end}}" href="/wa"><i class="la la-whatsapp la-lg"></i> {{T "nav_account_qr"}}</a></li>
@@ -210,6 +211,13 @@ document.querySelectorAll(".msg-full").forEach(function(el){
         <li class="nav-item"><a class="nav-link {{if eq .Active "sent"}}active{{end}}" href="/sent"><i class="la la-telegram la-lg"></i> {{T "nav_sent"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "received"}}active{{end}}" href="/received"><i class="la la-comment la-lg"></i> {{T "nav_received"}}</a></li>
       </ul>
+      {{else}}
+      <h6 class="navbar-heading">{{T "nav_whatsapp"}}</h6>
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link {{if eq .Active "wa"}}active{{end}}" href="/wa"><i class="la la-whatsapp la-lg"></i> {{T "nav_account_qr"}}</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "send"}}active{{end}}" href="/send"><i class="la la-paper-plane la-lg"></i> {{T "nav_send"}}</a></li>
+      </ul>
+      {{end}}
       <hr class="navbar-divider my-3">
       {{if eq .Role "admin"}}
       <h6 class="navbar-heading">{{T "nav_hosts"}}</h6>
@@ -220,6 +228,7 @@ document.querySelectorAll(".msg-full").forEach(function(el){
       </ul>
       <hr class="navbar-divider my-3">
       {{end}}
+      {{if eq .Role "admin"}}
       <h6 class="navbar-heading">{{T "nav_contacts"}}</h6>
       <ul class="navbar-nav">
         <li class="nav-item"><a class="nav-link {{if eq .Active "contacts"}}active{{end}}" href="/contacts"><i class="la la-address-book la-lg"></i> {{T "nav_contacts_saved"}}</a></li>
@@ -236,6 +245,14 @@ document.querySelectorAll(".msg-full").forEach(function(el){
         <li class="nav-item"><a class="nav-link {{if eq .Active "logger"}}active{{end}}" href="/logger"><i class="la la-clipboard-list la-lg"></i> {{T "nav_logger"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "settings"}}active{{end}}" href="/settings"><i class="la la-cog la-lg"></i> {{T "nav_settings"}}</a></li>
       </ul>
+      {{else}}
+      <h6 class="navbar-heading">{{T "nav_tools"}}</h6>
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link {{if eq .Active "templates"}}active{{end}}" href="/templates"><i class="la la-file-alt la-lg"></i> {{T "nav_templates"}}</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "apikeys"}}active{{end}}" href="/apikeys"><i class="la la-key la-lg"></i> {{T "nav_apikeys"}}</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "settings"}}active{{end}}" href="/settings"><i class="la la-cog la-lg"></i> {{T "nav_settings"}}</a></li>
+      </ul>
+      {{end}}
       {{if eq .Role "admin"}}
       <hr class="navbar-divider my-3">
       <h6 class="navbar-heading">{{T "nav_admin"}}</h6>
@@ -1084,7 +1101,7 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
   <div class="row">
     <div class="col-12 col-lg-4"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "role_add"}}</h4></div><div class="card-body">
       <form method="post" action="/admin/roles/add"><div class="form-group"><label>{{T "col_name"}}</label><input name class="form-control" required></div>
-      <div class="form-group"><label>{{T "role_perms"}}</label><select name="permissions" class="form-control" multiple><option value="manage_users">Users</option><option value="manage_packages">Packages</option><option value="manage_waservers">WA Servers</option><option value="manage_plugins">Plugins</option></select></div>
+      <div class="form-group"><label>{{T "role_perms"}}</label><select name="permissions" class="form-control" multiple size="8"><option value="manage_users">Users</option><option value="manage_roles">Roles</option><option value="manage_packages">Packages</option><option value="manage_vouchers">Vouchers</option><option value="manage_subscriptions">Subscriptions</option><option value="manage_transactions">Transactions</option><option value="manage_payouts">Payouts</option><option value="manage_pages">Pages</option><option value="manage_marketing">Marketing</option><option value="manage_languages">Languages</option><option value="manage_waservers">WA Servers</option><option value="manage_gateways">Gateways</option><option value="manage_shorteners">Shorteners</option><option value="manage_plugins">Plugins</option></select></div>
       <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>{{if .EditID}}<a href="/admin/waservers" class="btn btn-white btn-sm ms-2">Batal</a>{{end}}</form></div></div></div>
     <div class="col-12 col-lg-8"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "adm_roles"}}</h4></div>
       <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>{{T "role_perms"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>

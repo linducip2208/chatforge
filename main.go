@@ -390,9 +390,9 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		Languages: langs,
 		SentPerPage: 10, ReceivedPerPage: 10,
 		SentPage: 1, ReceivedPage: 1,
-		AppName: getEnv("APP_NAME", "ChatGo"),
+		AppName: db.GetSetting("app_name", getEnv("APP_NAME", "ChatGo")),
 		AppLogo: db.GetSetting("app_logo", getEnv("APP_LOGO", "/assets/theme/default-logo-light.png")),
-		AppEmail: getEnv("APP_EMAIL", "admin@chatgo.test"),
+		AppEmail: db.GetSetting("app_email", getEnv("APP_EMAIL", "admin@chatgo.test")),
 		AppURL: appURL(),
 	}
 	// pre-rendered translated strings with HTML/format
@@ -521,6 +521,7 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.AiPlugins, _ = db.ListAiPlugins()
 	case "admin_users":
 		d.Users, _ = db.ListUsers()
+		d.Roles, _ = db.ListRoles()
 	case "admin_roles":
 		d.Roles, _ = db.ListRoles()
 	case "admin_packages":
@@ -1136,6 +1137,8 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 	_ = db.SetSetting("biz_hours_end", r.FormValue("biz_hours_end"))
 	_ = db.SetSetting("biz_hours_off_days", r.FormValue("biz_hours_off_days"))
 	setBool("registrations", "registrations")
+	_ = db.SetSetting("app_name", r.FormValue("app_name"))
+	_ = db.SetSetting("app_email", r.FormValue("app_email"))
 
 	os.MkdirAll("web/assets/theme", 0o755)
 	if file, header, err := r.FormFile("logo_file"); err == nil {

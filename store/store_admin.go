@@ -280,6 +280,26 @@ func (d *DB) GetUserPackageLimit(userID int64) int {
 	if err != nil { return 0 }
 	return limit
 }
+
+func (d *DB) GetUserSendLimit(userID int64) int {
+	u, err := d.GetUserByID(userID)
+	if err != nil { return 0 }
+	var pkgName string
+	err = d.sql.QueryRow(`SELECT pkg FROM subscriptions WHERE user=? ORDER BY id DESC LIMIT 1`, u.Email).Scan(&pkgName)
+	if err != nil { return 0 }
+	var limit int
+	err = d.sql.QueryRow(`SELECT wa_send_limit FROM packages WHERE name=? LIMIT 1`, pkgName).Scan(&limit)
+	if err != nil { return 0 }
+	return limit
+}
+
+func (d *DB) CountSentByUser(userID int64) int {
+	u, err := d.GetUserByID(userID)
+	if err != nil { return 0 }
+	var n int
+	d.sql.QueryRow(`SELECT COUNT(*) FROM sent WHERE phone IN (SELECT phone FROM wa_accounts WHERE user_id=?) OR status='sent'`, userID).Scan(&n)
+	return n
+}
 func (d *DB) SetUserPassword(id int64, hash string) error {
 	_, err := d.sql.Exec(`UPDATE users SET password=? WHERE id=?`, hash, id)
 	return err
