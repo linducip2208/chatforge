@@ -172,7 +172,17 @@ func main() {
 	mux.HandleFunc("/store/orders", authMiddleware(p("orders")))
 	mux.HandleFunc("/store/orders/update", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
-		if id > 0 { db.UpdateOrderStatus(id, r.FormValue("status")) }
+		status := r.FormValue("status")
+		if id > 0 { db.UpdateOrderStatus(id, status) }
+		// WA notif to customer
+		phone := r.FormValue("phone")
+		if phone != "" {
+			s := engine.FirstSession()
+			if s != nil {
+				msg := fmt.Sprintf("Order #%d: *%s*\nStatus: %s", id, r.FormValue("product"), status)
+				engine.SendFrom(s.Phone, phone, msg)
+			}
+		}
 		http.Redirect(w, r, "/store/orders", http.StatusSeeOther)
 	}))
 	mux.HandleFunc("/forms", authMiddleware(p("forms")))
@@ -376,6 +386,7 @@ type pageData struct {
 	CSATCount      int
 	Depts          []store.Department
 	Recurrings     []store.RecurringCampaign
+	Notes          []store.ChatNote
 	Files          []string
 	Scheduleds     []store.Scheduled
 	Logs       []store.LogEntry
@@ -676,6 +687,7 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Templates, _ = db.ListTemplates()
 		d.Canned, _ = db.ListCanned()
 		d.Users, _ = db.ListUsers()
+		d.Notes, _ = db.GetNotes(d.Phone)
 		d.MetaAccounts, _ = db.ListMetaAccounts()
 		if msgs, _ := db.ChatHistory(d.Phone, 1); len(msgs) > 0 {
 			d.IsGroup = msgs[0].IsGroup
@@ -1165,13 +1177,15 @@ func handleInboxSend(w http.ResponseWriter, r *http.Request) {
 	}
 	phone := r.FormValue("phone")
 	message := r.FormValue("message")
+	sig := db.GetSetting("agent_signature", "")
+	if sig != "" { message += "\n\n" + sig }
 	accountPhone := strings.TrimPrefix(r.FormValue("account_phone"), "+")
 	if phone == "" || message == "" {
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprint(w, `{"ok":false,"error":"phone and message required"}`)
 		return
 	}
-	if err := engine.SendFrom(accountPhone, phone, msgtemplate.Render(message, msgtemplate.Vars{Phone: phone})); err != nil {
+	if err := engine.SendFrom(accountPhone, phone, message); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprintf(w, `{"ok":false,"error":%q}`, err.Error())
 		return

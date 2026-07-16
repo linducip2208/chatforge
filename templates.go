@@ -1140,6 +1140,12 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
       {{range .AgentMetrics}}<tr><td>{{.AgentName}}</td><td>{{.Chats}}</td><td>{{.Replied}}</td><td>{{printf "%.0f" .AvgTime}}</td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center py-4">No data yet.</td></tr>{{end}}
     </tbody></table></div>
   </div>
+  <div class="card mt-3"><div class="card-header"><h4 class="card-header-title"><i class="la la-star me-1"></i> CSAT Score</h4></div>
+    <div class="card-body text-center">
+      <div class="display-3 fw-bold text-warning">{{printf "%.1f" .CSATAvg}} ⭐</div>
+      <p class="text-muted">dari {{.CSATCount}} penilaian (30 hari)</p>
+    </div>
+  </div>
 {{end}}
 
 {{if eq .Page "depts"}}
@@ -1971,6 +1977,7 @@ else{if(b)b.remove()}
 </div>
 </div>
 <div class="card-footer bg-white border-top" style="padding:8px 16px">
+{{if .Notes}}<div class="mb-2" style="max-height:100px;overflow-y:auto">{{range .Notes}}<div class="small text-muted mb-1"><i class="la la-sticky-note me-1"></i> {{.Note}} <span class="text-muted" style="font-size:10px">{{.Created}}</span></div>{{end}}</div>{{end}}
 <div class="d-flex gap-1 mb-1">
   <form method="post" action="/inbox/note" class="d-flex gap-1 flex-grow-1"><input type="hidden" name="phone" value="{{.Phone}}"><input name="note" class="form-control form-control-sm" placeholder="Tambah catatan internal..." style="font-size:12px"><button class="btn btn-sm btn-outline-secondary" style="font-size:11px"><i class="la la-sticky-note"></i></button></form>
 </div>

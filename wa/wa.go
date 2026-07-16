@@ -437,6 +437,15 @@ func (e *Engine) onMessage(s *session, evt *events.Message) {
 		if e.db.GetAssignedAgent(senderPhone) == 0 {
 			e.db.AssignNextRoundRobin(senderPhone)
 		}
+		// auto-detect department from keywords
+		if depts, _ := e.db.ListDepts(); len(depts) > 0 {
+			for _, d := range depts {
+				if strings.Contains(strings.ToLower(text), strings.ToLower(d.Name)) {
+					e.db.AssignToDept(senderPhone, d.Name)
+					break
+				}
+			}
+		}
 		select {
 		case e.notifyCh <- senderPhone:
 		default:
@@ -458,9 +467,52 @@ func (e *Engine) onMessage(s *session, evt *events.Message) {
 		}
 	}
 
+	// Store Bot: menu, category, product, order flow
 	to := evt.Info.Chat
 	if !evt.Info.IsGroup && to.Server == waTypes.HiddenUserServer && !evt.Info.SenderAlt.IsEmpty() {
 		to = evt.Info.SenderAlt
+	}
+	if trimmed == "menu" || trimmed == "katalog" || trimmed == "produk" {
+		cats, _ := e.db.ListCategories()
+		if len(cats) > 0 {
+			reply := "*Katalog Produk*\n\nBalas nama kategori:\n"
+			for _, c := range cats { reply += "• " + c.Name + "\n" }
+			e.sendVia(s, to, reply)
+		} else { e.sendVia(s, to, "Belum ada produk.") }
+		return
+	}
+	// Check if matches a category -> show products in that category
+	if cats, _ := e.db.ListCategories(); len(cats) > 0 {
+		for _, cat := range cats {
+			if strings.EqualFold(strings.TrimSpace(cat.Name), trimmed) {
+				prods, _ := e.db.ProductsByCategory(cat.Name)
+				if len(prods) > 0 {
+					reply := fmt.Sprintf("*%s*\n\n", cat.Name)
+					for _, p := range prods {
+						reply += fmt.Sprintf("*%s*\n%s\nRp%.0f\n\n", p.Name, p.Description, p.Price)
+					}
+					reply += "Balas nama produk untuk order."
+					e.sendVia(s, to, reply)
+				}
+				return
+			}
+		}
+	}
+	// Check if matches a product -> create order
+	if prods, _ := e.db.ListProducts(); len(prods) > 0 {
+		for _, p := range prods {
+			if strings.Contains(strings.ToLower(p.Name), trimmed) || strings.Contains(trimmed, strings.ToLower(p.Name)) {
+				total := p.Price
+				orderID, _ := e.db.CreateOrder(senderPhone, name, p.ID, 1, total)
+				reply := fmt.Sprintf("✅ *Order #%d*\nProduk: %s\nHarga: Rp%.0f\n\nKetik *BAYAR* untuk pembayaran.", orderID, p.Name, total)
+				e.sendVia(s, to, reply)
+				return
+			}
+		}
+	}
+	if trimmed == "bayar" || trimmed == "checkout" || trimmed == "payment" {
+		e.sendVia(s, to, "Untuk pembayaran, silakan kunjungi: "+e.db.GetSetting("app_url", "/")+"/subscribe")
+		return
 	}
 
 	if evt.Info.IsGroup && e.db.GetSetting("reply_in_group", "0") != "1" {
