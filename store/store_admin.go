@@ -1,6 +1,9 @@
 package store
 
-import "database/sql"
+import (
+	"database/sql"
+	"fmt"
+)
 
 // Admin / AI / Android entities — the remaining Zender menus.
 // Auto-reply core & WhatsApp engine are untouched.
@@ -406,6 +409,13 @@ func (d *DB) AddSubscription(user, pkg, expire string) (int64, error) {
 	return d.exec(`INSERT INTO subscriptions (user,pkg,expire) VALUES (?,?,?)`, user, pkg, expire)
 }
 func (d *DB) DeleteSubscription(id int64) error { return d.del("subscriptions", id) }
+func (d *DB) GetActiveSubscription(userID int64) (*Subscription, error) {
+	var s Subscription
+	uid := fmt.Sprintf("%d", userID)
+	err := d.sql.QueryRow(`SELECT id, user, pkg, IFNULL(expire,''), created_at FROM subscriptions WHERE user=? AND status='active' ORDER BY id DESC LIMIT 1`, uid).Scan(&s.ID, &s.User, &s.Pkg, &s.Expire, &s.Created)
+	if err != nil { return nil, err }
+	return &s, nil
+}
 func (d *DB) ListSubscriptions() ([]Subscription, error) {
 	rows, err := d.sql.Query(`SELECT id,user,pkg,IFNULL(expire,''),created_at FROM subscriptions ORDER BY id DESC`)
 	if err != nil {

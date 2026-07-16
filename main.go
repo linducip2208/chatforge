@@ -434,7 +434,9 @@ type pageData struct {
 	Plugins       []store.Plugin
 	MetaAccounts  []store.MetaAccount
 	MetaTemplates []store.MetaTemplate
-	IsImpersonating bool
+	IsImpersonating    bool
+	UserPackage        string
+	UserPackageServices string
 	AiKeys        []store.AiKey
 	AiPlugins     []store.AiPlugin
 	AiTrainings   []store.AiTraining
@@ -621,6 +623,18 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 	d.AiTokenUsed = db.GetAiTokenUsage(uid)
 	d.UnreadCount = db.UnreadCount()
 	d.IsImpersonating = r.Header.Get("X-Impersonating") == "1"
+	// load user's active subscription and package
+	d.UserPackage = ""
+	d.UserPackageServices = ""
+	if uid > 0 {
+		if sub, err := db.GetActiveSubscription(uid); err == nil {
+			pkgID, _ := strconv.ParseInt(sub.Pkg, 10, 64)
+			if pkg, err := db.GetPackage(pkgID); err == nil {
+				d.UserPackage = pkg.Name
+				d.UserPackageServices = pkg.Services
+			}
+		}
+	}
 
 	// load entity lists per page (only what's needed)
 	switch page {

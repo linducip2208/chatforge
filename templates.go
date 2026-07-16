@@ -1466,8 +1466,8 @@ from=sender@email.com&subject=Judul Email&text=Isi email</code></pre>
           <h4 class="fw-bold">{{.Name}}</h4>
           <div class="display-4 fw-bold text-primary my-3">{{.Price}}</div>
           <p class="text-muted small">
-            Send: {{.SendLimit}} | Device: {{.DeviceLimit}} | WA: {{.WaAccountLimit}}<br>
-            Contact: {{.ContactLimit}} | AI: {{if .KeyLimit}}{{.KeyLimit}}{{else}}0{{end}}
+            <strong>Limits:</strong> Send:{{.SendLimit}} WA:{{.WaAccountLimit}} Dev:{{.DeviceLimit}} Contact:{{.ContactLimit}}<br>
+            <strong>Features:</strong> {{.Services}}
           </p>
           {{range $.PaymentGateways}}
           {{if eq .Status "active"}}
@@ -1787,7 +1787,7 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
         <div class="form-row"><div class="form-group col-6"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
         <div class="form-group col-3"><label>{{T "pkg_price"}}</label><input name="price" class="form-control" value="0"></div>
         <div class="form-group col-3"><label>{{T "pkg_hidden"}}</label><select name="hidden" class="form-control"><option value="1">Hidden</option><option value="2">Visible</option></select></div></div>
-        <div class="form-group"><label>{{T "pkg_services"}}</label><select name="services" class="form-control" multiple><option value="whatsapp">WhatsApp</option><option value="api">API</option><option value="webhooks">Webhooks</option><option value="templates">Templates</option><option value="ai">AI</option></select></div>
+        <div class="form-group"><label>{{T "pkg_services"}}</label><select name="services" class="form-control" multiple size="15"><option value="whatsapp">WhatsApp Web</option><option value="meta">Meta Cloud API</option><option value="broadcast">Broadcast</option><option value="drips">Drip Campaign</option><option value="recurring">Recurring Campaign</option><option value="ai">AI Auto Reply</option><option value="inbox">Live Chat</option><option value="contacts">Contacts</option><option value="store">Store Products</option><option value="payment">Payment Gateway</option><option value="forms">Interactive Forms</option><option value="analytics">Analytics</option><option value="api">API Keys</option><option value="webhooks">Webhooks</option><option value="templates">Templates</option><option value="macros">Macros</option><option value="translate">Auto Translate</option><option value="widget">Web Widget</option><option value="email">Email Gateway</option></select></div>
         <div class="form-group"><label>{{T "pkg_footermark"}}</label><select name="footermark" class="form-control"><option value="2">Off</option><option value="1">On</option></select></div>
         <hr><h6 class="text-uppercase text-muted small">Limits</h6>
         <div class="form-row">
