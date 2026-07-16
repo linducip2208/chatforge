@@ -286,8 +286,8 @@ document.querySelectorAll(".msg-full").forEach(function(el){
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_gateways"}}active{{end}}" href="/admin/gateways"><i class="la la-code la-lg"></i> {{T "adm_gateways"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_shorteners"}}active{{end}}" href="/admin/shorteners"><i class="la la-link la-lg"></i> {{T "adm_shorteners"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_plugins"}}active{{end}}" href="/admin/plugins"><i class="la la-puzzle-piece la-lg"></i> {{T "adm_plugins"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_meta"}}active{{end}}" href="/admin/meta"><i class="la la-cloud la-lg"></i> Meta API</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_metatemplates"}}active{{end}}" href="/admin/metatemplates"><i class="la la-file-alt la-lg"></i> Templates</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_meta"}}active{{end}}" href="/admin/meta"><i class="la la-cloud la-lg"></i> Meta API <span class="badge badge-soft-primary ms-1" style="font-size:9px">Meta</span></a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_metatemplates"}}active{{end}}" href="/admin/metatemplates"><i class="la la-file-alt la-lg"></i> Templates <span class="badge badge-soft-primary ms-1" style="font-size:9px">Meta</span></a></li>
       </ul>
       {{end}}
       <hr class="navbar-divider my-3">
@@ -894,7 +894,7 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
            <div class="form-group"><label>Interval (detik) <small class="text-muted">jeda antar pesan</small></label><input name="interval" type="number" class="form-control" value="300" min="30" placeholder="300-400"></div>
            {{if .MetaAccounts}}
            <div class="form-group"><label><i class="la la-cloud me-1"></i> Meta API <small class="text-muted">— kirim lewat Cloud API</small></label><select name="meta_account_id" class="form-control" onchange="toggleMetaTemplate(this)"><option value="0">-- Tidak pakai Meta --</option>{{range .MetaAccounts}}<option value="{{.ID}}">{{.Name}} ({{.PhoneNumberID}})</option>{{end}}</select></div>
-           <div class="form-group" id="metaTemplateGroup" style="display:none"><label>Meta Template <small class="text-muted">— opsional</small></label><select name="meta_template" class="form-control"><option value="">-- Plain text --</option>{{range .MetaTemplates}}<option value="{{.Name}}">{{.Name}} ({{.Language}})</option>{{end}}</select><small class="form-text text-muted">Jika dipilih, template akan dipakai. Variabel dari pesan akan masuk ke parameter.</small></div>
+            <div class="form-group" id="metaTemplateGroup" style="display:none"><label>Meta Template <small class="text-muted">— opsional</small></label><select name="meta_template" class="form-control"><option value="">-- Plain text --</option>{{range .MetaTemplates}}<option value="{{.Name}}">[Meta] {{.Name}} ({{.Language}})</option>{{end}}</select><small class="form-text text-muted">Jika dipilih, template akan dipakai. Variabel dari pesan akan masuk ke parameter.</small></div>
            <script>function toggleMetaTemplate(el){document.getElementById('metaTemplateGroup').style.display=el.value!=='0'?'block':'none'}</script>
            {{end}}
           <div class="form-group"><label>{{T "col_message"}}</label><textarea name="message" class="form-control" rows="3" required></textarea><small class="form-text text-muted">{{T "set_vars_hint"}}</small></div>
@@ -905,7 +905,7 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
     <div class="col-12 col-lg-7">
       <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "nav_broadcast"}}</h4></div>
         <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>{{T "bc_progress"}}</th><th>{{T "col_status"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
-           {{range .Campaigns}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td><a href="/broadcast/detail?id={{.ID}}" title="Lihat detail nomor terkirim">{{.Sent}}/{{.Total}}</a></td><td>{{if eq .Status "running"}}<span class="badge badge-soft-primary">running</span>{{else if eq .Status "paused"}}<span class="badge badge-soft-warning">paused</span>{{else if eq .Status "done"}}<span class="badge badge-soft-success">done</span>{{else}}<span class="badge badge-soft-secondary">{{.Status}}</span>{{end}}</td><td class="text-nowrap">
+           {{range .Campaigns}}<tr><td>{{.ID}}</td><td>{{.Name}}{{if .MetaAccountID}} <span class="badge badge-soft-primary" style="font-size:9px">Meta</span>{{end}}</td><td><a href="/broadcast/detail?id={{.ID}}" title="Lihat detail nomor terkirim">{{.Sent}}/{{.Total}}</a></td><td>{{if eq .Status "running"}}<span class="badge badge-soft-primary">running</span>{{else if eq .Status "paused"}}<span class="badge badge-soft-warning">paused</span>{{else if eq .Status "done"}}<span class="badge badge-soft-success">done</span>{{else}}<span class="badge badge-soft-secondary">{{.Status}}</span>{{end}}</td><td class="text-nowrap">
              {{if eq .Status "running"}}<form method="post" action="/broadcast/pause" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-warning" title="Pause"><i class="la la-pause"></i></button></form>{{end}}
              {{if eq .Status "paused"}}<form method="post" action="/broadcast/pause" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-success" title="Resume"><i class="la la-play"></i></button></form>{{end}}
              {{if eq .Status "done"}}<form method="post" action="/broadcast/retry" style="display:inline" onsubmit="return confirm('Jalankan ulang campaign ini?')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-info" title="Retry"><i class="la la-redo"></i></button></form>{{end}}
@@ -1664,7 +1664,7 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
       </form></div></div></div>
     <div class="col-12 col-lg-8"><div class="card"><div class="card-header"><h4 class="card-header-title">Meta Accounts</h4></div>
       <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Nama</th><th>Phone ID</th><th>Action</th></tr></thead><tbody>
-        {{range .MetaAccounts}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.PhoneNumberID}}</td><td><form method="post" action="/admin/meta/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">Delete</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
+        {{range .MetaAccounts}}<tr><td>{{.ID}}</td><td>{{.Name}} <span class="badge badge-soft-primary" style="font-size:9px">Meta</span></td><td>{{.PhoneNumberID}}</td><td><form method="post" action="/admin/meta/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">Delete</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
       </tbody></table></div></div></div>
   </div>
   <div class="card mt-3"><div class="card-header"><h4 class="card-header-title">Webhook URL</h4></div>
