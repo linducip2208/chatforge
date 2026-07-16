@@ -30,6 +30,12 @@ type Unsub struct {
 	Phone   string
 	Created string
 }
+type Tag struct {
+	ID      int64
+	Name    string
+	Color   string
+	Created string
+}
 type APIKey struct {
 	ID      int64
 	Name    string
@@ -47,7 +53,10 @@ type Campaign struct {
 	ID              int64
 	Name            string
 	Groups          string
+	Tags            string
 	Numbers         string
+	MediaType       string
+	MediaURL        string
 	AccountID       string
 	AccountIDs      string
 	MetaAccountID   int64
@@ -91,6 +100,8 @@ func (d *DB) migrateExtra() error {
 		`CREATE TABLE IF NOT EXISTS campaigns (id BIGINT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, ` + "`groups`" + ` VARCHAR(255) NOT NULL DEFAULT '', message TEXT NOT NULL, total INT NOT NULL DEFAULT 0, sent INT NOT NULL DEFAULT 0, status VARCHAR(20) NOT NULL DEFAULT 'pending', created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 		`CREATE TABLE IF NOT EXISTS scheduled (id BIGINT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, phone VARCHAR(64) NOT NULL, message TEXT NOT NULL, send_at DATETIME NOT NULL, repeat_min INT NOT NULL DEFAULT 0, status VARCHAR(20) NOT NULL DEFAULT 'pending', created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 		`CREATE TABLE IF NOT EXISTS logger (id BIGINT AUTO_INCREMENT PRIMARY KEY, type VARCHAR(40) NOT NULL, reason VARCHAR(255) NOT NULL DEFAULT '', content TEXT NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+		`CREATE TABLE IF NOT EXISTS tags (id BIGINT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, color VARCHAR(7) NOT NULL DEFAULT '#2c7be5', created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+		`CREATE TABLE IF NOT EXISTS contact_tags (contact_id BIGINT NOT NULL, tag_id BIGINT NOT NULL, PRIMARY KEY (contact_id, tag_id), FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE, FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 	}
 	for _, s := range stmts {
 		if _, err := d.sql.Exec(s); err != nil {
@@ -101,6 +112,9 @@ func (d *DB) migrateExtra() error {
 	d.sql.Exec(`ALTER TABLE campaigns ADD COLUMN numbers TEXT NOT NULL AFTER ` + "`groups`")
 	d.sql.Exec(`ALTER TABLE campaigns ADD COLUMN meta_account_id BIGINT NOT NULL DEFAULT 0 AFTER send_mode`)
 	d.sql.Exec(`ALTER TABLE campaigns ADD COLUMN meta_template VARCHAR(255) NOT NULL DEFAULT '' AFTER meta_account_id`)
+	d.sql.Exec(`ALTER TABLE campaigns ADD COLUMN media_type VARCHAR(20) NOT NULL DEFAULT '' AFTER numbers`)
+	d.sql.Exec(`ALTER TABLE campaigns ADD COLUMN media_url VARCHAR(1024) NOT NULL DEFAULT '' AFTER media_type`)
+	d.sql.Exec(`ALTER TABLE campaigns ADD COLUMN tags VARCHAR(512) NOT NULL DEFAULT '' AFTER ` + "`groups`")
 	return nil
 }
 
@@ -289,8 +303,8 @@ func (d *DB) WebhooksForEvent(event string) ([]Webhook, error) {
 }
 
 // ---- Campaigns ----
-func (d *DB) AddCampaign(name, groups, numbers, message string, total int, accountIDs, sendMode string, interval int, metaAccountID int64, metaTemplate string) (int64, error) {
-	res, err := d.sql.Exec("INSERT INTO campaigns (name, `groups`, numbers, message, total, status, account_ids, send_mode, meta_account_id, meta_template, msg_interval) VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)", name, groups, numbers, message, total, accountIDs, sendMode, metaAccountID, metaTemplate, interval)
+func (d *DB) AddCampaign(name, groups, numbers, mediaType, mediaURL, message string, total int, accountIDs, sendMode string, interval int, metaAccountID int64, metaTemplate, tags string) (int64, error) {
+	res, err := d.sql.Exec("INSERT INTO campaigns (name, `groups`, tags, numbers, media_type, media_url, message, total, status, account_ids, send_mode, meta_account_id, meta_template, msg_interval) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)", name, groups, tags, numbers, mediaType, mediaURL, message, total, accountIDs, sendMode, metaAccountID, metaTemplate, interval)
 	if err != nil { return 0, err }
 	return res.LastInsertId()
 }
@@ -308,25 +322,25 @@ func (d *DB) AppendCampaignSentTo(id int64, phone string) error {
 }
 func (d *DB) DeleteCampaign(id int64) error { _, err := d.sql.Exec(`DELETE FROM campaigns WHERE id=?`, id); return err }
 func (d *DB) ListCampaigns() ([]Campaign, error) {
-	rows, err := d.sql.Query("SELECT id, name, `groups`, IFNULL(numbers,''), message, total, sent, status, IFNULL(account_id,''), IFNULL(account_ids,''), IFNULL(send_mode,'round_robin'), IFNULL(meta_account_id,0), IFNULL(meta_template,''), IFNULL(msg_interval,3), IFNULL(sent_to,''), created_at FROM campaigns ORDER BY id DESC")
+	rows, err := d.sql.Query("SELECT id, name, `groups`, IFNULL(tags,''), IFNULL(numbers,''), IFNULL(media_type,''), IFNULL(media_url,''), message, total, sent, status, IFNULL(account_id,''), IFNULL(account_ids,''), IFNULL(send_mode,'round_robin'), IFNULL(meta_account_id,0), IFNULL(meta_template,''), IFNULL(msg_interval,3), IFNULL(sent_to,''), created_at FROM campaigns ORDER BY id DESC")
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []Campaign
 	for rows.Next() {
 		var c Campaign
-		rows.Scan(&c.ID, &c.Name, &c.Groups, &c.Numbers, &c.Message, &c.Total, &c.Sent, &c.Status, &c.AccountID, &c.AccountIDs, &c.SendMode, &c.MetaAccountID, &c.MetaTemplate, &c.Interval, &c.SentTo, &c.Created)
+		rows.Scan(&c.ID, &c.Name, &c.Groups, &c.Tags, &c.Numbers, &c.MediaType, &c.MediaURL, &c.Message, &c.Total, &c.Sent, &c.Status, &c.AccountID, &c.AccountIDs, &c.SendMode, &c.MetaAccountID, &c.MetaTemplate, &c.Interval, &c.SentTo, &c.Created)
 		out = append(out, c)
 	}
 	return out, nil
 }
 func (d *DB) PendingCampaigns() ([]Campaign, error) {
-	rows, err := d.sql.Query("SELECT id, name, `groups`, IFNULL(numbers,''), message, total, sent, status, IFNULL(account_id,''), IFNULL(account_ids,''), IFNULL(send_mode,'round_robin'), IFNULL(meta_account_id,0), IFNULL(meta_template,''), IFNULL(msg_interval,3), IFNULL(sent_to,''), created_at FROM campaigns WHERE status='running' OR status='pending'")
+	rows, err := d.sql.Query("SELECT id, name, `groups`, IFNULL(tags,''), IFNULL(numbers,''), IFNULL(media_type,''), IFNULL(media_url,''), message, total, sent, status, IFNULL(account_id,''), IFNULL(account_ids,''), IFNULL(send_mode,'round_robin'), IFNULL(meta_account_id,0), IFNULL(meta_template,''), IFNULL(msg_interval,3), IFNULL(sent_to,''), created_at FROM campaigns WHERE status='running' OR status='pending'")
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []Campaign
 	for rows.Next() {
 		var c Campaign
-		rows.Scan(&c.ID, &c.Name, &c.Groups, &c.Numbers, &c.Message, &c.Total, &c.Sent, &c.Status, &c.AccountID, &c.AccountIDs, &c.SendMode, &c.MetaAccountID, &c.MetaTemplate, &c.Interval, &c.SentTo, &c.Created)
+		rows.Scan(&c.ID, &c.Name, &c.Groups, &c.Tags, &c.Numbers, &c.MediaType, &c.MediaURL, &c.Message, &c.Total, &c.Sent, &c.Status, &c.AccountID, &c.AccountIDs, &c.SendMode, &c.MetaAccountID, &c.MetaTemplate, &c.Interval, &c.SentTo, &c.Created)
 		out = append(out, c)
 	}
 	return out, nil
@@ -420,4 +434,70 @@ func (d *DB) MessageChartData() (labels, sent, received string) {
 
 func (d *DB) CountUsers() int {
 	var n int; d.sql.QueryRow(`SELECT COUNT(*) FROM users`).Scan(&n); return n
+}
+
+// ---- Tags ----
+func (d *DB) AddTag(name, color string) (int64, error) {
+	res, err := d.sql.Exec(`INSERT INTO tags (name, color) VALUES (?, ?)`, name, color)
+	if err != nil { return 0, err }
+	return res.LastInsertId()
+}
+func (d *DB) DeleteTag(id int64) error {
+	_, err := d.sql.Exec(`DELETE FROM tags WHERE id=?`, id)
+	return err
+}
+func (d *DB) ListTags() ([]Tag, error) {
+	rows, err := d.sql.Query(`SELECT id, name, color, created_at FROM tags ORDER BY name`)
+	if err != nil { return nil, err }
+	defer rows.Close()
+	var out []Tag
+	for rows.Next() {
+		var t Tag
+		rows.Scan(&t.ID, &t.Name, &t.Color, &t.Created)
+		out = append(out, t)
+	}
+	return out, nil
+}
+func (d *DB) SetContactTags(contactID int64, tagIDs []int64) error {
+	d.sql.Exec(`DELETE FROM contact_tags WHERE contact_id=?`, contactID)
+	for _, tid := range tagIDs {
+		d.sql.Exec(`INSERT IGNORE INTO contact_tags (contact_id, tag_id) VALUES (?, ?)`, contactID, tid)
+	}
+	return nil
+}
+func (d *DB) ContactsByTag(tagID int64) ([]Contact, error) {
+	rows, err := d.sql.Query(`SELECT c.id, c.name, c.phone, c.groups, c.created_at FROM contacts c JOIN contact_tags ct ON ct.contact_id=c.id WHERE ct.tag_id=? ORDER BY c.name`, tagID)
+	if err != nil { return nil, err }
+	defer rows.Close()
+	var out []Contact
+	for rows.Next() {
+		var c Contact
+		rows.Scan(&c.ID, &c.Name, &c.Phone, &c.Groups, &c.Created)
+		out = append(out, c)
+	}
+	return out, nil
+}
+func (d *DB) GetContactTags(contactID int64) []int64 {
+	rows, err := d.sql.Query(`SELECT tag_id FROM contact_tags WHERE contact_id=?`, contactID)
+	if err != nil { return nil }
+	defer rows.Close()
+	var out []int64
+	for rows.Next() {
+		var tid int64
+		rows.Scan(&tid)
+		out = append(out, tid)
+	}
+	return out
+}
+func (d *DB) CampaignReport(campaignID int64) (sent, replied int) {
+	d.sql.QueryRow(`SELECT COUNT(*) FROM sent WHERE id IN (SELECT id FROM campaigns WHERE id=?)`, campaignID).Scan(&sent)
+	// count replies: messages from same phone numbers within 24h of campaign start
+	return sent, 0
+}
+
+// Rate limit
+func (d *DB) TodaySentCount(phone string) int {
+	var n int
+	d.sql.QueryRow(`SELECT COUNT(*) FROM sent WHERE channel='whatsmeow' AND DATE(created_at)=CURDATE()`).Scan(&n)
+	return n
 }

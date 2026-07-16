@@ -1,6 +1,7 @@
 package wa
 
 import (
+	"strconv"
 	"strings"
 	"time"
 
@@ -94,6 +95,27 @@ func (e *Engine) runCampaign(c store.Campaign) {
 			targets = append(targets, store.Contact{Phone: n})
 		}
 	}
+	// tag filter: if tags specified, intersect with contacts from those tags
+	if c.Tags != "" {
+		tagSet := map[string]bool{}
+		for _, tid := range strings.Split(c.Tags, ",") {
+			tid = strings.TrimSpace(tid)
+			if tid == "" { continue }
+			tagID, _ := strconv.ParseInt(tid, 10, 64)
+			list, _ := e.db.ContactsByTag(tagID)
+			for _, ct := range list {
+				tagSet[ct.Phone] = true
+			}
+		}
+		// filter targets: only keep those in tagSet
+		var filtered []store.Contact
+		for _, ct := range targets {
+			if tagSet[ct.Phone] {
+				filtered = append(filtered, ct)
+			}
+		}
+		targets = filtered
+	}
 	// determine Meta client (if selected)
 	var metaClient *meta.Client
 	if c.MetaAccountID > 0 {
@@ -102,49 +124,66 @@ func (e *Engine) runCampaign(c store.Campaign) {
 			metaClient = meta.New(acc.PhoneNumberID, acc.AccessToken, acc.VerifyToken)
 		}
 	}
+	// rate limit config
+	maxDaily, _ := strconv.Atoi(e.db.GetSetting("rate_max_daily", "0"))
+	rndMin, _ := strconv.Atoi(e.db.GetSetting("rate_random_min", "0"))
+	rndMax, _ := strconv.Atoi(e.db.GetSetting("rate_random_max", "0"))
+	if rndMax <= rndMin { rndMax = rndMin + 5 }
 
 	for _, ct := range targets {
-		// check terminated (pause/stop)
-		if e.campaignTerminated(c.ID) {
-			return
-		}
-		if e.db.IsUnsub(ct.Phone) {
-			continue
+		if e.campaignTerminated(c.ID) { return }
+		if e.db.IsUnsub(ct.Phone) { continue }
+		// rate limit
+		if maxDaily > 0 {
+			todaySent := e.db.TodaySentCount("")
+			if todaySent >= maxDaily {
+				e.db.Log("campaign", "rate_limit", "Daily limit reached: "+itoa(int64(maxDaily)))
+				return
+			}
 		}
 		var sendErr error
+		msg := msgtemplate.Render(c.Message, msgtemplate.Vars{Name: ct.Name, Phone: ct.Phone, Message: ""})
 		if metaClient != nil {
 			// Meta API sending
-			msg := msgtemplate.Render(c.Message, msgtemplate.Vars{Name: ct.Name, Phone: ct.Phone, Message: ""})
-			if c.MetaTemplate != "" {
+			if c.MediaURL != "" && c.MediaType == "image" {
+				_, sendErr = metaClient.SendImage(onlyDigits(ct.Phone), c.MediaURL, msg)
+			} else if c.MediaURL != "" && c.MediaType == "document" {
+				_, sendErr = metaClient.SendDocument(onlyDigits(ct.Phone), c.MediaURL, "document", msg)
+			} else if c.MetaTemplate != "" {
 				lang := "id"
 				_, sendErr = metaClient.SendTemplate(onlyDigits(ct.Phone), c.MetaTemplate, lang, []string{msg})
 			} else {
 				_, sendErr = metaClient.SendText(onlyDigits(ct.Phone), msg)
 			}
-			if sendErr == nil {
-				_ = e.db.IncCampaignSent(c.ID)
-			}
+			if sendErr == nil { _ = e.db.IncCampaignSent(c.ID) }
 			e.db.AppendCampaignSentTo(c.ID, ct.Phone)
 		} else {
-			// WhatsApp Web sending
 			st, _ := e.Status()
-			if st != "connected" {
-				return
-			}
+			if st != "connected" { return }
 			sendSession := sel.Next(e)
 			if sendSession == nil { continue }
-			msg := msgtemplate.Render(c.Message, msgtemplate.Vars{Name: ct.Name, Phone: ct.Phone, Message: ""})
 			digits := onlyDigits(ct.Phone)
 			if digits != "" {
-				jid := waTypes.NewJID(digits, waTypes.DefaultUserServer)
-				if sendErr = e.sendVia(sendSession, jid, msg); sendErr == nil {
-					_ = e.db.IncCampaignSent(c.ID)
+				if c.MediaURL != "" && c.MediaType == "image" {
+					sendErr = e.SendMedia(sendSession.phone, ct.Phone, "image", c.MediaURL, msg)
+				} else if c.MediaURL != "" && c.MediaType == "document" {
+					sendErr = e.SendMedia(sendSession.phone, ct.Phone, "document", c.MediaURL, msg)
+				} else {
+					jid := waTypes.NewJID(digits, waTypes.DefaultUserServer)
+					sendErr = e.sendVia(sendSession, jid, msg)
 				}
+				if sendErr == nil { _ = e.db.IncCampaignSent(c.ID) }
 			}
 			_ = e.db.AppendCampaignSentTo(c.ID, ct.Phone)
 		}
 		interval := c.Interval
 		if interval <= 0 { interval = 300 }
+		// random delay
+		if rndMax > 0 {
+			randDelay := rndMin + int(time.Now().UnixNano())%(rndMax-rndMin)
+			interval = randDelay
+			if interval < 30 { interval = 30 }
+		}
 		time.Sleep(time.Duration(interval) * time.Second)
 	}
 	_ = e.db.UpdateCampaignStatus(c.ID, "done")

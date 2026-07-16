@@ -235,6 +235,7 @@ document.querySelectorAll(".msg-full").forEach(function(el){
       <ul class="navbar-nav">
         <li class="nav-item"><a class="nav-link {{if eq .Active "contacts"}}active{{end}}" href="/contacts"><i class="la la-address-book la-lg"></i> {{T "nav_contacts_saved"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "groups"}}active{{end}}" href="/contacts/groups"><i class="la la-list la-lg"></i> {{T "nav_contacts_groups"}}</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "tags"}}active{{end}}" href="/tags"><i class="la la-tags la-lg"></i> Tags</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "unsub"}}active{{end}}" href="/contacts/unsub"><i class="la la-unlink la-lg"></i> {{T "nav_contacts_unsub"}}</a></li>
       </ul>
       <hr class="navbar-divider my-3">
@@ -722,6 +723,18 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 </div>
 <div class="card-body"><small class="form-text text-muted">{{T "set_group_hint"}}</small></div>
 </div>
+
+<div class="card mt-3">
+<div class="card-header"><h4 class="card-header-title"><i class="la la-shield me-1"></i> Rate Limiter (Anti-Ban)</h4></div>
+<div class="card-body">
+<div class="row">
+<div class="col-md-4"><div class="form-group"><label>Max Per Day (0=unlimited)</label><input type="number" name="rate_max_daily" class="form-control" value="{{.RateMaxDaily}}"></div></div>
+<div class="col-md-4"><div class="form-group"><label>Random Min (detik)</label><input type="number" name="rate_random_min" class="form-control" value="{{.RateRandomMin}}"></div></div>
+<div class="col-md-4"><div class="form-group"><label>Random Max (detik)</label><input type="number" name="rate_random_max" class="form-control" value="{{.RateRandomMax}}"></div></div>
+</div>
+<small class="form-text text-muted">Set 0 untuk unlimited. Random delay akan menggantikan interval tetap, dipilih acak antara min-max.</small>
+</div></div>
+</div>
 </div>
 
 <div class="st-panel" id="st-system">
@@ -813,6 +826,27 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
   </div>
 {{end}}
 
+{{if eq .Page "tags"}}
+  <div class="row">
+    <div class="col-12 col-lg-4">
+      <div class="card"><div class="card-header"><h4 class="card-header-title">Tambah Tag</h4></div>
+        <div class="card-body"><form method="post" action="/tags/add">
+          <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" placeholder="VIP" required></div>
+          <div class="form-group"><label>Warna</label><input type="color" name="color" class="form-control form-control-color" value="#2c7be5" style="height:40px;padding:4px"></div>
+          <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
+        </form></div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-8">
+      <div class="card"><div class="card-header"><h4 class="card-header-title">Tags</h4></div>
+        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Warna</th><th>{{T "col_name"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
+          {{range .Tags}}<tr><td>{{.ID}}</td><td><span style="display:inline-block;width:20px;height:20px;border-radius:4px;background:{{.Color}}"></span></td><td>{{.Name}}</td><td><form method="post" action="/tags/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
+        </tbody></table></div>
+      </div>
+    </div>
+  </div>
+{{end}}
+
 {{if eq .Page "unsub"}}
   <div class="row">
     <div class="col-12 col-lg-4">
@@ -837,10 +871,12 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
   <div class="row">
     <div class="col-12 col-lg-5">
       <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "bc_add"}}</h4></div>
-        <div class="card-body"><form method="post" action="/broadcast">
+        <div class="card-body"><form method="post" action="/broadcast" enctype="multipart/form-data">
           <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
            <div class="form-group"><label>{{T "bc_groups"}}</label><select name="groups" class="form-control" multiple>{{range .Groups}}<option value="{{.ID}}">{{.Name}} ({{.Count}})</option>{{end}}</select></div>
+           {{if .Tags}}<div class="form-group"><label>Tags <small class="text-muted">— filter by tag</small></label><select name="tags" class="form-control" multiple>{{range .Tags}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select><small class="form-text text-muted">Pilih tag untuk kirim hanya ke kontak dengan tag tsb.</small></div>{{end}}
            <div class="form-group"><label>Nomor Langsung <small class="text-muted">— satu per baris</small></label><textarea name="numbers" class="form-control" rows="4" placeholder="628123456789&#10;628987654321&#10;..."></textarea><small class="form-text text-muted">Tempel nomor langsung (tanpa grup). Bisa digabung dengan grup di atas.</small></div>
+           <div class="form-group"><label><i class="la la-image me-1"></i> Media <small class="text-muted">— opsional</small></label><input type="file" name="media_file" class="form-control" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx"><small class="form-text text-muted">Upload gambar/video/dokumen untuk dikirim bersama pesan.</small></div>
            <div class="form-group"><label>{{T "bc_account"}}</label><div class="border rounded p-2" style="max-height:160px;overflow-y:auto">{{range .ConnectedAccounts}}{{if .Phone}}<div class="form-check"><input class="form-check-input" type="checkbox" name="account_ids" value="+{{.Phone}}" id="bc_{{.Phone}}"><label class="form-check-label small" for="bc_{{.Phone}}">+{{.Phone}}</label></div>{{end}}{{end}}{{if not .HasConnected}}<small class="text-muted">Belum ada nomor terkoneksi</small>{{end}}</div><small class="form-text text-muted">Biarkan kosong = semua nomor terhubung. Checklist = hanya nomor itu.</small></div>
            <div class="form-group"><label>Mode Pengiriman</label><div class="border rounded p-2"><div class="form-check"><input class="form-check-input" type="radio" name="send_mode" value="round_robin" id="mode_rr" checked><label class="form-check-label" for="mode_rr"><strong>Round Robin</strong> <small class="text-muted">— kirim bergantian merata ke tiap nomor</small></label></div><div class="form-check mt-1"><input class="form-check-input" type="radio" name="send_mode" value="random" id="mode_rand"><label class="form-check-label" for="mode_rand"><strong>Random</strong> <small class="text-muted">— kirim acak ke nomor manapun</small></label></div></div></div>
            <div class="form-group"><label>Interval (detik) <small class="text-muted">jeda antar pesan</small></label><input name="interval" type="number" class="form-control" value="300" min="30" placeholder="300-400"></div>

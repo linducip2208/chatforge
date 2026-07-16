@@ -137,7 +137,11 @@ func main() {
 	mux.HandleFunc("/drips/step/add", authMiddleware(handleDripStepAdd))
 	mux.HandleFunc("/drips/step/delete", authMiddleware(crudDel(func(id int64) { db.DeleteDripStep(id) }, "/drips")))
 	mux.HandleFunc("/drips/delete", authMiddleware(crudDel(func(id int64) { db.DeleteDrip(id) }, "/drips")))
-	mux.HandleFunc("/drips/toggle", authMiddleware(handleDripToggle))
+		mux.HandleFunc("/drips/toggle", authMiddleware(handleDripToggle))
+	mux.HandleFunc("/tags", authMiddleware(handleTags))
+	mux.HandleFunc("/tags/add", authMiddleware(crudPost(func(r *http.Request) { db.AddTag(r.FormValue("name"), r.FormValue("color")) }, "/tags")))
+	mux.HandleFunc("/tags/delete", authMiddleware(crudDel(func(id int64) { db.DeleteTag(id) }, "/tags")))
+	mux.HandleFunc("/contacts/tags", authMiddleware(handleContactTags))
 		mux.HandleFunc("/scheduled", authMiddleware(handleScheduled))
 	mux.HandleFunc("/scheduled/delete", authMiddleware(crudDel(func(id int64) { db.DeleteScheduled(id) }, "/scheduled")))
 	mux.HandleFunc("/templates", p("templates"))
@@ -244,6 +248,9 @@ type pageData struct {
 	BizHoursStart    string
 	BizHoursEnd      string
 	BizHoursOffDays  string
+	RateMaxDaily      string
+	RateRandomMin     string
+	RateRandomMax     string
 	ForceOwnKey      bool
 	Registrations    bool
 	AiTokenQuota     int64
@@ -267,6 +274,7 @@ type pageData struct {
 	Webhooks   []store.Webhook
 	Campaigns  []store.Campaign
 	Drips      []store.Drip
+	Tags       []store.Tag
 	Scheduleds []store.Scheduled
 	Logs       []store.LogEntry
 	// admin/ai/devices
@@ -460,6 +468,9 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 	d.BizHoursStart = db.GetSetting("biz_hours_start", "08:00")
 	d.BizHoursEnd = db.GetSetting("biz_hours_end", "17:00")
 	d.BizHoursOffDays = db.GetSetting("biz_hours_off_days", "Saturday,Sunday")
+	d.RateMaxDaily = db.GetSetting("rate_max_daily", "0")
+	d.RateRandomMin = db.GetSetting("rate_random_min", "0")
+	d.RateRandomMax = db.GetSetting("rate_random_max", "0")
 	d.ForceOwnKey = db.GetSetting("force_own_key", "0") == "1"
 	d.Registrations = db.GetSetting("registrations", "1") == "1"
 	d.AiTokenQuota = int64(db.GetUserAiQuota(uid))
@@ -472,6 +483,7 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 	case "contacts":
 		d.Contacts, _ = db.ListContacts()
 		d.Groups, _ = db.ListGroups()
+		d.Tags, _ = db.ListTags()
 	case "groups":
 		d.Groups, _ = db.ListGroups()
 	case "unsub":
@@ -493,6 +505,8 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.MetaTemplates, _ = db.ListMetaTemplates()
 	case "drips":
 		d.Drips, _ = db.ListDrips()
+	case "tags":
+		d.Tags, _ = db.ListTags()
 	case "scheduled":
 		d.Scheduleds, _ = db.ListScheduled()
 	case "sent":
@@ -665,6 +679,8 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_broadcast"), T("nav_whatsapp"), T("nav_broadcast"), "la-bullhorn"
 	case "drips":
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Drip Campaign", T("nav_whatsapp"), "Drip Campaign", "la-tint"
+	case "tags":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Tags", T("nav_contacts"), "Contact Tags", "la-tags"
 	case "scheduled":
 		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_scheduled"), T("nav_whatsapp"), T("nav_scheduled"), "la-clock"
 	case "templates":
@@ -1176,6 +1192,9 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 	_ = db.SetSetting("biz_hours_start", r.FormValue("biz_hours_start"))
 	_ = db.SetSetting("biz_hours_end", r.FormValue("biz_hours_end"))
 	_ = db.SetSetting("biz_hours_off_days", r.FormValue("biz_hours_off_days"))
+	_ = db.SetSetting("rate_max_daily", r.FormValue("rate_max_daily"))
+	_ = db.SetSetting("rate_random_min", r.FormValue("rate_random_min"))
+	_ = db.SetSetting("rate_random_max", r.FormValue("rate_random_max"))
 	setBool("registrations", "registrations")
 	_ = db.SetSetting("app_name", r.FormValue("app_name"))
 	_ = db.SetSetting("app_email", r.FormValue("app_email"))
@@ -1274,9 +1293,36 @@ func handleBroadcast(w http.ResponseWriter, r *http.Request) {
 
 	metaAccountID, _ := strconv.ParseInt(r.FormValue("meta_account_id"), 10, 64)
 	metaTemplate := r.FormValue("meta_template")
+	tags := joinVals(r, "tags")
+	mediaType := ""; mediaURL := ""
+	if r.FormValue("media_type") != "" {
+		mediaType = r.FormValue("media_type")
+		mediaURL = r.FormValue("media_url")
+	}
+	// handle file upload
+	file, header, ferr := r.FormFile("media_file")
+	if ferr == nil {
+		defer file.Close()
+		ext := strings.ToLower(filepath.Ext(header.Filename))
+		mediaDir := "public/uploads/"
+		os.MkdirAll(mediaDir, 0755)
+		fname := fmt.Sprintf("%s%d%s", mediaDir, time.Now().UnixNano(), ext)
+		out, _ := os.Create(fname)
+		if out != nil {
+			io.Copy(out, file)
+			out.Close()
+			mediaURL = "/" + fname
+			switch ext {
+			case ".jpg", ".jpeg", ".png", ".gif", ".webp": mediaType = "image"
+			case ".mp4", ".mov", ".avi": mediaType = "video"
+			case ".pdf", ".doc", ".docx", ".xls", ".xlsx": mediaType = "document"
+			default: mediaType = "document"
+			}
+		}
+	}
 	interval, _ := strconv.Atoi(r.FormValue("interval"))
 	if interval <= 0 { interval = 300 }
-	_, _ = db.AddCampaign(name, groups, normalizedNumbers, message, len(seen), accountID, sendMode, interval, metaAccountID, metaTemplate)
+	_, _ = db.AddCampaign(name, groups, normalizedNumbers, mediaType, mediaURL, message, len(seen), accountID, sendMode, interval, metaAccountID, metaTemplate, tags)
 	http.Redirect(w, r, "/broadcast", http.StatusSeeOther)
 }
 
@@ -1305,7 +1351,7 @@ func handleCampaignRetry(w http.ResponseWriter, r *http.Request) {
 		for _, c := range camps {
 			if c.ID == id {
 				// clone campaign as new pending
-				db.AddCampaign(c.Name+" (retry)", c.Groups, c.Numbers, c.Message, c.Total, c.AccountIDs, c.SendMode, c.Interval, c.MetaAccountID, c.MetaTemplate)
+				db.AddCampaign(c.Name+" (retry)", c.Groups, c.Numbers, c.MediaType, c.MediaURL, c.Message, c.Total, c.AccountIDs, c.SendMode, c.Interval, c.MetaAccountID, c.MetaTemplate, c.Tags)
 				break
 			}
 		}
@@ -1358,6 +1404,28 @@ func handleDripToggle(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	http.Redirect(w, r, "/drips", http.StatusSeeOther)
+}
+
+func handleTags(w http.ResponseWriter, r *http.Request) {
+	render(w, r, "tags")
+}
+
+func handleContactTags(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Redirect(w, r, "/contacts", http.StatusSeeOther)
+		return
+	}
+	contactID, _ := strconv.ParseInt(r.FormValue("contact_id"), 10, 64)
+	if contactID > 0 {
+		var tagIDs []int64
+		for _, s := range r.Form["tag_ids"] {
+			if id, err := strconv.ParseInt(s, 10, 64); err == nil {
+				tagIDs = append(tagIDs, id)
+			}
+		}
+		db.SetContactTags(contactID, tagIDs)
+	}
+	http.Redirect(w, r, "/contacts", http.StatusSeeOther)
 }
 
 // ---- Contact CSV Import ----
