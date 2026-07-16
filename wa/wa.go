@@ -604,6 +604,13 @@ skipAIAll:
 		e.db.LogSent(to.User, rendered, "autoreply", "whatsmeow"); e.db.Log("autoreply", "sent", fmt.Sprintf("auto-reply -> %s: %s", to.User, rendered))
 		return
 	}
+	// Fallback: no rule matched
+	if e.db.GetSetting("biz_hours_enabled", "0") == "1" {
+		reply := e.db.GetSetting("biz_hours_reply", "Saat ini di luar jam operasional.")
+		e.sendVia(s, to, reply)
+		e.db.LogSent(to.User, reply, "autoreply", "whatsmeow")
+		return
+	}
 afterAI:
 
 	if e.db.GetSetting("fallback_enabled", "0") == "1" && !evt.Info.IsGroup {

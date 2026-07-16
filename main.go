@@ -219,6 +219,8 @@ func main() {
 	mux.HandleFunc("/uploads", authMiddleware(p("uploads")))
 	mux.HandleFunc("/widget.js", handleWidgetJS)
 	mux.HandleFunc("/widget/chat", handleWidgetChat)
+	mux.HandleFunc("/inbox/label", authMiddleware(handleInboxLabel))
+	mux.HandleFunc("/inbox/filter/", authMiddleware(handleInboxFilter))
 	mux.HandleFunc("/inbox/canned", authMiddleware(handleInboxCanned))
 		mux.HandleFunc("/scheduled", authMiddleware(handleScheduled))
 	mux.HandleFunc("/scheduled/delete", authMiddleware(crudDel(func(id int64) { db.DeleteScheduled(id) }, "/scheduled")))
@@ -331,6 +333,8 @@ type pageData struct {
 	RateRandomMax     string
 	AutoCloseHours    string
 	AutoCloseMessage  string
+	AgentSignature    string
+	BizHoursReply     string
 	ForceOwnKey      bool
 	Registrations    bool
 	AiTokenQuota     int64
@@ -571,6 +575,8 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 	d.RateRandomMax = db.GetSetting("rate_random_max", "0")
 	d.AutoCloseHours = db.GetSetting("auto_close_hours", "0")
 	d.AutoCloseMessage = db.GetSetting("auto_close_message", "Chat ini ditutup otomatis. Silakan hubungi kami kembali jika perlu bantuan.")
+	d.AgentSignature = db.GetSetting("agent_signature", "")
+	d.BizHoursReply = db.GetSetting("biz_hours_reply", "Saat ini di luar jam operasional. Pesan Anda akan kami balas saat jam kerja.")
 	d.ForceOwnKey = db.GetSetting("force_own_key", "0") == "1"
 	d.Registrations = db.GetSetting("registrations", "1") == "1"
 	d.AiTokenQuota = int64(db.GetUserAiQuota(uid))
@@ -1118,7 +1124,7 @@ func handleInboxChat(w http.ResponseWriter, r *http.Request) {
 		message := r.FormValue("message")
 		accountPhone := strings.TrimPrefix(r.FormValue("account_phone"), "+")
 		if phone != "" && message != "" {
-			if err := engine.SendFrom(accountPhone, phone, msgtemplate.Render(message, msgtemplate.Vars{Phone: phone})); err != nil {
+	if err := engine.SendFrom(accountPhone, phone, message); err != nil {
 				http.Redirect(w, r, "/inbox/chat?phone="+phone+"&msg="+template.URLQueryEscaper(err.Error()), http.StatusSeeOther)
 				return
 			}
@@ -1378,6 +1384,8 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 	_ = db.SetSetting("rate_random_max", r.FormValue("rate_random_max"))
 	_ = db.SetSetting("auto_close_hours", r.FormValue("auto_close_hours"))
 	_ = db.SetSetting("auto_close_message", r.FormValue("auto_close_message"))
+	_ = db.SetSetting("agent_signature", r.FormValue("agent_signature"))
+	_ = db.SetSetting("biz_hours_reply", r.FormValue("biz_hours_reply"))
 	setBool("registrations", "registrations")
 	_ = db.SetSetting("app_name", r.FormValue("app_name"))
 	_ = db.SetSetting("app_email", r.FormValue("app_email"))
@@ -1706,6 +1714,24 @@ func handleWidgetChat(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.WriteHeader(200)
+}
+
+func handleInboxLabel(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		db.SetConversationLabel(r.FormValue("phone"), r.FormValue("label"))
+	}
+	http.Redirect(w, r, "/inbox", http.StatusSeeOther)
+}
+
+func handleInboxFilter(w http.ResponseWriter, r *http.Request) {
+	ft := strings.TrimPrefix(r.URL.Path, "/inbox/filter/")
+	w.Header().Set("Content-Type", "application/json")
+	items := db.InboxFiltered(ft)
+	if items == nil {
+		fmt.Fprint(w, "[]")
+		return
+	}
+	json.NewEncoder(w).Encode(items)
 }
 
 func handleInboxCanned(w http.ResponseWriter, r *http.Request) {

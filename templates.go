@@ -1853,6 +1853,7 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
 <button class="sub-btn active" onclick={{js "var d=document.querySelectorAll('#inboxList .inbox-conv');for(var i=0;i<d.length;i++)d[i].style.display='';var s=this.parentElement.querySelectorAll('button');for(var i=0;i<s.length;i++)s[i].classList.remove('active');this.classList.add('active')"}}>Semua</button>
 <button class="sub-btn" onclick={{js "var d=document.querySelectorAll('#inboxList .inbox-conv');for(var i=0;i<d.length;i++){var g=d[i].getAttribute('data-group');d[i].style.display=g==='private'?'':'none'};var s=this.parentElement.querySelectorAll('button');for(var i=0;i<s.length;i++)s[i].classList.remove('active');this.classList.add('active')"}}>Private</button>
 <button class="sub-btn" onclick={{js "var d=document.querySelectorAll('#inboxList .inbox-conv');for(var i=0;i<d.length;i++){var g=d[i].getAttribute('data-group');d[i].style.display=g==='group'?'':'none'};var s=this.parentElement.querySelectorAll('button');for(var i=0;i<s.length;i++)s[i].classList.remove('active');this.classList.add('active')"}}>Group</button>
+<button class="sub-btn" onclick="window.location='/inbox?filter=unread'">Unread</button>
 </div>
 <div class="list-group list-group-flush" id="inboxList">
 {{range .InboxConversations}}

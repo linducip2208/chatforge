@@ -1,6 +1,7 @@
 package store
 
 import (
+	"fmt"
 	"os"
 )
 
@@ -38,6 +39,7 @@ func (d *DB) migratePlus() error {
 		`CREATE TABLE IF NOT EXISTS recurring_campaigns (id BIGINT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, ` + "`groups`" + ` VARCHAR(512) NOT NULL DEFAULT '', message TEXT NOT NULL, day_of_week INT NOT NULL DEFAULT 0, hour INT NOT NULL DEFAULT 9, status VARCHAR(20) NOT NULL DEFAULT 'active', last_run DATETIME NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 		`ALTER TABLE agent_assignments ADD COLUMN IF NOT EXISTS dept VARCHAR(100) NOT NULL DEFAULT ''`,
 		`ALTER TABLE agent_assignments ADD COLUMN IF NOT EXISTS last_activity DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP`,
+		`ALTER TABLE agent_assignments ADD COLUMN IF NOT EXISTS label VARCHAR(50) NOT NULL DEFAULT ''`,
 	}
 	for _, s := range stmts {
 		if _, err := d.sql.Exec(s); err != nil {
@@ -45,6 +47,39 @@ func (d *DB) migratePlus() error {
 		}
 	}
 	return nil
+}
+
+// ---- Labels ----
+func (d *DB) SetConversationLabel(phone, label string) error {
+	_, err := d.sql.Exec(`UPDATE agent_assignments SET label=? WHERE phone=?`, label, phone)
+	return err
+}
+func (d *DB) GetConversationLabel(phone string) string {
+	var l string
+	d.sql.QueryRow(`SELECT label FROM agent_assignments WHERE phone=?`, phone).Scan(&l)
+	return l
+}
+func (d *DB) InboxFiltered(filter string) []map[string]string {
+	where := ""
+	switch filter {
+	case "unread":
+		where = " AND r.is_read=0"
+	case "today":
+		where = " AND DATE(r.created_at)=CURDATE()"
+	case "week":
+		where = " AND r.created_at > DATE_SUB(NOW(), INTERVAL 7 DAY)"
+	}
+	rows, err := d.sql.Query(`SELECT r.phone, COALESCE(g.name, MAX(r.name)) as name, MAX(r.is_group) as is_group, COUNT(CASE WHEN r.is_read=0 THEN 1 END) as unread, MAX(r.channel) as channel, IFNULL(a.label,'') as label FROM received r LEFT JOIN wa_groups g ON r.phone = g.jid LEFT JOIN agent_assignments a ON a.phone=r.phone WHERE 1=1` + where + ` GROUP BY r.phone ORDER BY MAX(r.id) DESC LIMIT 50`)
+	if err != nil { return nil }
+	defer rows.Close()
+	var out []map[string]string
+	for rows.Next() {
+		var phone, name, channel, label string
+		var isGroup, unread int
+		rows.Scan(&phone, &name, &isGroup, &unread, &channel, &label)
+		out = append(out, map[string]string{"phone": phone, "name": name, "channel": channel, "unread": fmt.Sprintf("%d", unread), "label": label})
+	}
+	return out
 }
 
 // ---- Chat Notes ----
