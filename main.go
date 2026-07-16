@@ -228,6 +228,7 @@ type pageData struct {
 	BizHoursEnd      string
 	BizHoursOffDays  string
 	ForceOwnKey      bool
+	Registrations    bool
 	AiTokenQuota     int64
 	AiTokenUsed      int64
 	ChartLabels       template.JS
@@ -283,6 +284,7 @@ type pageData struct {
 	AppName       string
 	AppLogo       string
 	AppEmail      string
+	AppURL        string
 	Statuses      []store.WAStatus
 	// pagination
 	SentPage       int
@@ -293,6 +295,11 @@ type pageData struct {
 	ReceivedPerPage int
 	ReceivedTotal  int
 	ReceivedPages  []int
+	PageNum        int
+	InboxTotal     int
+	InboxPages     []int
+	LogTotal       int
+	LogPages       []int
 }
 
 type DocsStep struct {
@@ -366,14 +373,15 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		Page: page, Active: page, Status: status, Phone: phone,
 		Flash:       r.URL.Query().Get("msg"),
 		AutoReplies: ars, Sent: sent, Received: received,
-		CountSent: len(sent), CountReceived: len(received),
+		CountSent: db.CountSent(), CountReceived: db.CountReceived(),
 		LangCode: cur.Code, LangName: cur.Name, LangFlag: cur.Flag,
 		Languages: langs,
-		SentPerPage: 20, ReceivedPerPage: 20,
+		SentPerPage: 10, ReceivedPerPage: 10,
 		SentPage: 1, ReceivedPage: 1,
 		AppName: getEnv("APP_NAME", "ChatGo"),
-		AppLogo: getEnv("APP_LOGO", "/assets/theme/default-logo-light.png"),
+		AppLogo: db.GetSetting("app_logo", getEnv("APP_LOGO", "/assets/theme/default-logo-light.png")),
 		AppEmail: getEnv("APP_EMAIL", "admin@chatgo.test"),
+		AppURL: getEnv("APP_URL", "http://127.0.0.1:8080"),
 	}
 	// pre-rendered translated strings with HTML/format
 	d.WaConnectedDesc = template.HTML(fmt.Sprintf(T("wa_connected_desc"), template.HTMLEscapeString(phone)))
@@ -426,6 +434,7 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 	d.BizHoursEnd = db.GetSetting("biz_hours_end", "17:00")
 	d.BizHoursOffDays = db.GetSetting("biz_hours_off_days", "Saturday,Sunday")
 	d.ForceOwnKey = db.GetSetting("force_own_key", "0") == "1"
+	d.Registrations = db.GetSetting("registrations", "1") == "1"
 	d.AiTokenQuota = int64(db.GetUserAiQuota(uid))
 	d.AiTokenUsed = db.GetAiTokenUsage(uid)
 	d.UnreadCount = db.UnreadCount()
@@ -460,7 +469,10 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.SentTotal = db.CountSent()
 		d.SentPages = pageNums(d.SentPage, (d.SentTotal+d.SentPerPage-1)/d.SentPerPage)
 	case "inbox":
-		d.InboxConversations, _ = db.GroupInbox()
+		d.PageNum = pageFromQuery(r)
+		d.InboxConversations, _ = db.GroupInboxPaginated(d.PageNum, 10)
+		d.InboxTotal = db.CountInbox()
+		d.InboxPages = pageNums(d.PageNum, (d.InboxTotal+9)/10)
 		d.Statuses, _ = db.ListStatuses()
 	case "inbox_chat":
 		d.Phone = r.URL.Query().Get("phone")
@@ -481,8 +493,11 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Received, _ = db.ListReceivedPaginated(d.ReceivedPage, d.ReceivedPerPage)
 		d.ReceivedTotal = db.CountReceived()
 		d.ReceivedPages = pageNums(d.ReceivedPage, (d.ReceivedTotal+d.ReceivedPerPage-1)/d.ReceivedPerPage)
-	case "logger":
-		d.Logs, _ = db.ListLog(200)
+			case "logger":
+		d.PageNum = pageFromQuery(r)
+		d.Logs, _ = db.ListLogPaginated(d.PageNum, 10)
+		d.LogTotal = db.CountLog()
+		d.LogPages = pageNums(d.PageNum, (d.LogTotal+9)/10)
 	case "hosts_android":
 		d.Devices, _ = db.ListDevices()
 	case "ussd":
@@ -1076,6 +1091,19 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 	_ = db.SetSetting("biz_hours_start", r.FormValue("biz_hours_start"))
 	_ = db.SetSetting("biz_hours_end", r.FormValue("biz_hours_end"))
 	_ = db.SetSetting("biz_hours_off_days", r.FormValue("biz_hours_off_days"))
+	setBool("registrations", "registrations")
+
+	os.MkdirAll("web/assets/theme", 0o755)
+	if file, header, err := r.FormFile("logo_file"); err == nil {
+		defer file.Close()
+		dest := filepath.Join("web/assets/theme", "logo-"+strconv.FormatInt(time.Now().Unix(), 10)+filepath.Ext(header.Filename))
+		if f, e := os.Create(dest); e == nil {
+			io.Copy(f, file)
+			f.Close()
+			db.SetSetting("app_logo", "/"+strings.ReplaceAll(dest, "\\", "/"))
+		}
+	}
+	_ = db.SetSetting("app_name", r.FormValue("app_name"))
 	setBool("force_own_key", "force_own_key")
 	http.Redirect(w, r, "/settings", http.StatusSeeOther)
 }

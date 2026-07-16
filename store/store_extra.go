@@ -363,7 +363,11 @@ func (d *DB) Log(typ, reason, content string) {
 	d.sql.Exec(`INSERT INTO logger (type, reason, content) VALUES (?,?,?)`, typ, reason, content)
 }
 func (d *DB) ListLog(limit int) ([]LogEntry, error) {
-	rows, err := d.sql.Query(`SELECT id, type, reason, content, created_at FROM logger ORDER BY id DESC LIMIT ?`, limit)
+	return d.ListLogPaginated(1, limit)
+}
+func (d *DB) ListLogPaginated(page, perPage int) ([]LogEntry, error) {
+	offset := (page - 1) * perPage
+	rows, err := d.sql.Query(`SELECT id, type, reason, content, created_at FROM logger ORDER BY id DESC LIMIT ? OFFSET ?`, perPage, offset)
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []LogEntry
@@ -373,6 +377,9 @@ func (d *DB) ListLog(limit int) ([]LogEntry, error) {
 		out = append(out, l)
 	}
 	return out, nil
+}
+func (d *DB) CountLog() int {
+	var n int; d.sql.QueryRow(`SELECT COUNT(*) FROM logger`).Scan(&n); return n
 }
 func (d *DB) ClearLog() error {
 	_, err := d.sql.Exec(`DELETE FROM logger`)

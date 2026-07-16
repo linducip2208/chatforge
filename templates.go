@@ -257,51 +257,68 @@ document.querySelectorAll(".msg-full").forEach(function(el){
 {{define "home"}}{{template "layout" .}}{{end}}
 {{define "content"}}
 {{if eq .Page "home"}}
-  <div class="row">
-    <div class="col-12 col-lg-6 col-xl-3">
-      <div class="card"><div class="card-body"><div class="row align-items-center">
-        <div class="col"><h6 class="text-uppercase text-muted mb-2">{{T "dash_status"}}</h6><span class="h2 mb-0">{{if eq .Status "connected"}}{{T "dash_active"}}{{else}}{{T "dash_inactive"}}{{end}}</span></div>
-        <div class="col-auto"><span class="h2 la la-whatsapp la-lg text-muted mb-0"></span></div>
-      </div></div></div>
-    </div>
-    <div class="col-12 col-lg-6 col-xl-3">
-      <div class="card"><div class="card-body"><div class="row align-items-center">
-        <div class="col"><h6 class="text-uppercase text-muted mb-2">{{T "dash_connected_number"}}</h6><span class="h2 mb-0">{{if .Phone}}+{{.Phone}}{{else}}-{{end}}</span></div>
-        <div class="col-auto"><span class="h2 la la-mobile la-lg text-muted mb-0"></span></div>
-      </div></div></div>
-    </div>
-    <div class="col-12 col-lg-6 col-xl-3">
-      <div class="card"><div class="card-body"><div class="row align-items-center">
-        <div class="col"><h6 class="text-uppercase text-muted mb-2">{{T "dash_total_out"}}</h6><span class="h2 mb-0">{{.CountSent}}</span></div>
-        <div class="col-auto"><span class="h2 la la-telegram la-lg text-muted mb-0"></span></div>
-      </div></div></div>
-    </div>
-    <div class="col-12 col-lg-6 col-xl-3">
-      <div class="card"><div class="card-body"><div class="row align-items-center">
-        <div class="col"><h6 class="text-uppercase text-muted mb-2">Total Users</h6><span class="h2 mb-0">{{.TotalUsers}}</span></div>
-        <div class="col-auto"><span class="h2 la la-users la-lg text-muted mb-0"></span></div>
-      </div></div></div>
-    </div>
-  </div>
-  <div class="row"><div class="col-6 col-xl-3"><div class="card"><div class="card-body"><div class="row align-items-center"><div class="col"><h6 class="text-uppercase text-muted mb-2">Active WA</h6><span class="h2 mb-0">{{.ActiveAccounts}}</span></div><div class="col-auto"><span class="h2 la la-whatsapp la-lg text-success mb-0"></span></div></div></div></div></div>
-  <div class="col-6 col-xl-3"><div class="card"><div class="card-body"><div class="row align-items-center"><div class="col"><h6 class="text-uppercase text-muted mb-2">Campaigns</h6><span class="h2 mb-0">{{.RunningCampaigns}}</span></div><div class="col-auto"><span class="h2 la la-bullhorn la-lg text-warning mb-0"></span></div></div></div></div></div>
-  <div class="col-12 col-xl-6"><div class="card"><div class="card-body p-2"><div class="d-flex gap-2 flex-wrap align-items-center">{{range .ActiveAccountList}}{{if .Phone}}<a href="/send?to=+{{.Phone}}" class="badge bg-success bg-opacity-10 text-success text-decoration-none small py-2 px-3">+{{.Phone}} ✉️</a>{{end}}{{else}}<span class="text-muted small">No active accounts</span>{{end}}</div></div></div></div></div>
-  <div class="row"><div class="col-12"><div class="card"><div class="card-header"><h4 class="card-header-title">Message Activity (7 days)</h4></div><div class="card-body"><canvas id="msgChart" height="80"></canvas></div></div></div></div>
-  <script>new Chart(document.getElementById('msgChart'),{type:'bar',data:{labels:[{{.ChartLabels}}],datasets:[{label:'Sent',data:[{{.ChartSent}}],backgroundColor:'#4F46E5',borderRadius:4},{label:'Received',data:[{{.ChartReceived}}],backgroundColor:'#10B981',borderRadius:4}]},options:{responsive:true,scales:{y:{beginAtZero:true}}}})</script>
-  <div class="row">
-    <div class="col-12 col-xl-6">
-      <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "dash_recent_in"}}</h4><a href="/received" class="btn btn-sm btn-white">{{T "btn_all"}}</a></div>
-      <div class="table-responsive"><table class="table table-sm table-nowrap card-table"><thead><tr><th>{{T "col_from"}}</th><th>{{T "col_name"}}</th><th>{{T "col_message"}}</th><th>{{T "col_time"}}</th></tr></thead><tbody>
-        {{range .Received}}<tr><td>{{.Phone}}</td><td>{{.Name}}</td><td>{{.Message}}</td><td class="text-muted">{{.Created}}</td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
-      </tbody></table></div></div>
-    </div>
-    <div class="col-12 col-xl-6">
-      <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "dash_recent_out"}}</h4><a href="/sent" class="btn btn-sm btn-white">{{T "btn_all"}}</a></div>
-      <div class="table-responsive"><table class="table table-sm table-nowrap card-table"><thead><tr><th>{{T "col_to"}}</th><th>{{T "col_message"}}</th><th>{{T "col_status"}}</th><th>{{T "col_time"}}</th></tr></thead><tbody>
-        {{range .Sent}}<tr><td>{{.Phone}}</td><td>{{.Message}}</td><td><span class="badge badge-soft-success">{{.Status}}</span></td><td class="text-muted">{{.Created}}</td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
-      </tbody></table></div></div>
-    </div>
-  </div>
+<div class="row">
+<div class="col-12 col-sm-6 col-xl-3">
+<div class="card"><div class="card-body"><div class="row align-items-center">
+<div class="col"><h6 class="text-uppercase text-muted mb-2 small">Total Sent</h6><span class="h2 mb-0">{{.CountSent}}</span></div>
+<div class="col-auto"><span class="h2 la la-telegram la-lg text-primary mb-0"></span></div>
+</div></div></div>
+</div>
+<div class="col-12 col-sm-6 col-xl-3">
+<div class="card"><div class="card-body"><div class="row align-items-center">
+<div class="col"><h6 class="text-uppercase text-muted mb-2 small">Total Received</h6><span class="h2 mb-0">{{.CountReceived}}</span></div>
+<div class="col-auto"><span class="h2 la la-comment la-lg text-success mb-0"></span></div>
+</div></div></div>
+</div>
+<div class="col-12 col-sm-6 col-xl-3">
+<div class="card"><div class="card-body"><div class="row align-items-center">
+<div class="col"><h6 class="text-uppercase text-muted mb-2 small">Active WA</h6><span class="h2 mb-0">{{.ActiveAccounts}}</span></div>
+<div class="col-auto"><span class="h2 la la-whatsapp la-lg text-success mb-0"></span></div>
+</div></div></div>
+</div>
+<div class="col-12 col-sm-6 col-xl-3">
+<div class="card"><div class="card-body"><div class="row align-items-center">
+<div class="col"><h6 class="text-uppercase text-muted mb-2 small">Unread</h6><span class="h2 mb-0">{{.UnreadCount}}</span></div>
+<div class="col-auto"><span class="h2 la la-envelope la-lg text-warning mb-0"></span></div>
+</div></div></div>
+</div>
+</div>
+<div class="row">
+<div class="col-12 col-lg-8">
+<div class="card"><div class="card-header"><h4 class="card-header-title">Message Activity</h4><small class="text-muted">7 hari terakhir</small></div>
+<div class="card-body"><canvas id="msgChart" height="100"></canvas></div></div>
+</div>
+<div class="col-12 col-lg-4">
+<div class="card mb-3"><div class="card-header"><h4 class="card-header-title">Status WA</h4></div>
+<div class="card-body">
+{{if .ConnectedAccounts}}
+{{range .ConnectedAccounts}}<div class="d-flex align-items-center justify-content-between mb-2"><span><span class="status-dot" style="background:#00d97e"></span> +{{.Phone}}</span><a href="/send?to=+{{.Phone}}" class="badge bg-primary bg-opacity-10 text-primary text-decoration-none small py-1 px-2">Kirim</a></div>{{end}}
+{{else}}<span class="text-muted small">Tidak ada WA terkoneksi. <a href="/wa">Hubungkan</a></span>{{end}}
+</div></div>
+<div class="card"><div class="card-header"><h4 class="card-header-title">Campaigns</h4></div>
+<div class="card-body">
+<div class="d-flex justify-content-between mb-1"><span>Running</span><span class="badge badge-soft-warning">{{.RunningCampaigns}}</span></div>
+<a href="/broadcast" class="btn btn-sm btn-white w-100">Kelola Broadcast</a>
+</div></div>
+</div>
+</div>
+<div class="row mt-3">
+<div class="col-12 col-lg-6">
+<div class="card"><div class="card-header"><h4 class="card-header-title">Recent Received</h4><a href="/received" class="btn btn-sm btn-white">All</a></div>
+<div class="table-responsive"><table class="table table-sm table-nowrap card-table mb-0"><thead><tr><th>From</th><th>Message</th><th>Time</th></tr></thead><tbody>
+{{range .Received}}<tr><td><strong>{{if .Name}}{{.Name}}{{else}}+{{.Phone}}{{end}}</strong></td><td class="text-muted small" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{.Message}}</td><td class="text-muted small">{{.Created}}</td></tr>{{else}}<tr><td colspan="3" class="text-muted text-center">-</td></tr>{{end}}
+</tbody></table></div></div>
+</div>
+<div class="col-12 col-lg-6">
+<div class="card"><div class="card-header"><h4 class="card-header-title">Recent Sent</h4><a href="/sent" class="btn btn-sm btn-white">All</a></div>
+<div class="table-responsive"><table class="table table-sm table-nowrap card-table mb-0"><thead><tr><th>To</th><th>Message</th><th>Status</th></tr></thead><tbody>
+{{range .Sent}}<tr><td><strong>+{{.Phone}}</strong></td><td class="text-muted small" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{.Message}}</td><td><span class="badge badge-soft-success">{{.Status}}</span></td></tr>{{else}}<tr><td colspan="3" class="text-muted text-center">-</td></tr>{{end}}
+</tbody></table></div></div>
+</div>
+</div>
+<script>
+new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.ChartLabels}}],datasets:[{label:'Sent',data:[{{.ChartSent}}],borderColor:'#4F46E5',backgroundColor:'rgba(79,70,229,.1)',fill:true,tension:.3,pointRadius:2,pointHoverRadius:5},{label:'Received',data:[{{.ChartReceived}}],borderColor:'#10B981',backgroundColor:'rgba(16,185,129,.1)',fill:true,tension:.3,pointRadius:2,pointHoverRadius:5}]},options:{responsive:true,interaction:{intersect:false,mode:'index'},plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true,grid:{color:'rgba(0,0,0,.05)'}},x:{grid:{display:false}}}}})
+</script>
 {{end}}
 
 {{if eq .Page "wa"}}
@@ -399,42 +416,75 @@ document.querySelectorAll(".msg-full").forEach(function(el){
 </tbody></table></div></div></div></div>
 {{end}}
 {{if eq .Page "settings"}}
-  <div class="row justify-content-center">
-    <div class="col-12 col-lg-8">
-      <form method="post" action="/settings">
-        <div class="card">
-          <div class="card-header"><h4 class="card-header-title">{{T "set_welcome_title"}}</h4>
-            <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="welcome_enabled" {{if .WelcomeEnabled}}checked{{end}}></div>
-          </div>
-          <div class="card-body">
-            <label>{{T "set_welcome_msg"}}</label>
-            <textarea name="welcome_message" class="form-control" rows="3" placeholder="{{T "set_welcome_ph"}}">{{.WelcomeMessage}}</textarea>
-            <small class="form-text text-muted">{{T "set_vars_hint"}}</small>
-          </div>
-        </div>
+<style>
+.setting-tabs{display:flex;border-bottom:2px solid #e0e0e0;margin-bottom:16px}
+.setting-tabs .st{background:none;border:none;padding:10px 20px;font-size:14px;font-weight:600;color:#6e788c;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px}
+.setting-tabs .st:hover{color:#152e4d}
+.setting-tabs .st.active{color:#2c7be5;border-bottom-color:#2c7be5}
+.st-panel{display:none}
+.st-panel.active{display:block}
+</style>
+<div class="setting-tabs">
+<button class="st active" onclick="var p=document.querySelectorAll('.st-panel');for(var i=0;i<p.length;i++)p[i].classList.remove('active');document.getElementById('st-branding').classList.add('active');var b=this.parentElement.querySelectorAll('.st');for(var i=0;i<b.length;i++)b[i].classList.remove('active');this.classList.add('active')"><i class="la la-paint-brush me-1"></i>Branding</button>
+<button class="st" onclick="var p=document.querySelectorAll('.st-panel');for(var i=0;i<p.length;i++)p[i].classList.remove('active');document.getElementById('st-messaging').classList.add('active');var b=this.parentElement.querySelectorAll('.st');for(var i=0;i<b.length;i++)b[i].classList.remove('active');this.classList.add('active')"><i class="la la-comment me-1"></i>Messaging</button>
+<button class="st" onclick="var p=document.querySelectorAll('.st-panel');for(var i=0;i<p.length;i++)p[i].classList.remove('active');document.getElementById('st-system').classList.add('active');var b=this.parentElement.querySelectorAll('.st');for(var i=0;i<b.length;i++)b[i].classList.remove('active');this.classList.add('active')"><i class="la la-cog me-1"></i>System</button>
+</div>
 
-        <div class="card">
-          <div class="card-header"><h4 class="card-header-title">{{T "set_fallback_title"}}</h4>
-            <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="fallback_enabled" {{if .FallbackEnabled}}checked{{end}}></div>
-          </div>
-          <div class="card-body">
-            <label>{{T "set_fallback_msg"}}</label>
-            <textarea name="fallback_message" class="form-control" rows="3" placeholder="{{T "set_fallback_ph"}}">{{.FallbackMessage}}</textarea>
-            <small class="form-text text-muted">{{T "set_fallback_hint"}}</small>
-          </div>
-        </div>
+<form method="post" action="/settings" enctype="multipart/form-data">
+<div class="st-panel active" id="st-branding">
+<div class="card"><div class="card-header"><h4 class="card-header-title">Branding</h4></div>
+<div class="card-body">
+<div class="form-group"><label>App Name</label><input name="app_name" class="form-control" value="{{.AppName}}"></div>
+<div class="form-group"><label>Logo Upload</label>
+<div class="d-flex gap-2 align-items-center"><input type="file" name="logo_file" class="form-control" accept="image/*" style="flex:1"><img src="{{.AppLogo}}" onerror="this.style.display='none'" style="height:38px;border-radius:6px;border:1px solid #eee"></div>
+<small class="form-text text-muted">Upload PNG. Path saat ini: <code>{{.AppLogo}}</code></small>
+</div>
+<div class="form-group"><label>Admin Email</label><input name="app_email" class="form-control" value="{{.AppEmail}}"></div>
+<div class="form-group"><label>Domain</label><input class="form-control" value="{{.AppURL}}" disabled><small class="form-text text-muted">Edit APP_URL di .env</small></div>
+</div></div>
+</div>
 
-        <div class="card">
-          <div class="card-header"><h4 class="card-header-title">{{T "set_group_title"}}</h4>
-            <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="reply_in_group" {{if .ReplyInGroup}}checked{{end}}></div>
-          </div>
-          <div class="card-body"><small class="form-text text-muted">{{T "set_group_hint"}}</small></div>
-        </div>
+<div class="st-panel" id="st-messaging">
+<div class="card">
+<div class="card-header"><h4 class="card-header-title">{{T "set_welcome_title"}}</h4>
+<div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="welcome_enabled" {{if .WelcomeEnabled}}checked{{end}}></div>
+</div>
+<div class="card-body">
+<label>{{T "set_welcome_msg"}}</label>
+<textarea name="welcome_message" class="form-control" rows="3" placeholder="{{T "set_welcome_ph"}}">{{.WelcomeMessage}}</textarea>
+<small class="form-text text-muted">{{T "set_vars_hint"}}</small>
+</div>
+</div>
+<div class="card">
+<div class="card-header"><h4 class="card-header-title">{{T "set_fallback_title"}}</h4>
+<div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="fallback_enabled" {{if .FallbackEnabled}}checked{{end}}></div>
+</div>
+<div class="card-body">
+<label>{{T "set_fallback_msg"}}</label>
+<textarea name="fallback_message" class="form-control" rows="3" placeholder="{{T "set_fallback_ph"}}">{{.FallbackMessage}}</textarea>
+<small class="form-text text-muted">{{T "set_fallback_hint"}}</small>
+</div>
+</div>
+<div class="card">
+<div class="card-header"><h4 class="card-header-title">{{T "set_group_title"}}</h4>
+<div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="reply_in_group" {{if .ReplyInGroup}}checked{{end}}></div>
+</div>
+<div class="card-body"><small class="form-text text-muted">{{T "set_group_hint"}}</small></div>
+</div>
+</div>
 
-        <button class="btn btn-primary lift"><i class="la la-save me-1"></i> {{T "set_save"}}</button>
-      </form>
-    </div>
-  </div>
+<div class="st-panel" id="st-system">
+<div class="card"><div class="card-header"><h4 class="card-header-title">System Settings</h4></div>
+<div class="card-body">
+<div class="form-group"><label>Registrations</label>
+<select name="registrations" class="form-control"><option value="1" {{if .Registrations}}selected{{end}}>Enabled</option><option value="0" {{if not .Registrations}}selected{{end}}>Disabled</option></select></div>
+<div class="form-group"><label>Listen Address</label><input class="form-control" value="0.0.0.0:8080" disabled><small class="form-text text-muted">Edit <code>CHATGO_ADDR</code> di <code>.env</code></small></div>
+<div class="form-group"><label>MySQL Connection</label><input class="form-control" value="***" disabled><small class="form-text text-muted">Edit <code>CHATGO_MYSQL</code> di <code>.env</code></small></div>
+</div></div>
+</div>
+
+<button class="btn btn-primary lift mt-3"><i class="la la-save me-1"></i> {{T "set_save"}}</button>
+</form>
 {{end}}
 
 {{if eq .Page "contacts"}}
@@ -649,6 +699,7 @@ document.querySelectorAll(".msg-full").forEach(function(el){
     <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "log_type"}}</th><th>{{T "log_reason"}}</th><th>{{T "col_message"}}</th><th>{{T "col_time"}}</th></tr></thead><tbody>
       {{range .Logs}}<tr><td>{{.ID}}</td><td><span class="badge badge-soft-secondary">{{.Type}}</span></td><td>{{.Reason}}</td><td>{{.Content}}</td><td class="text-muted">{{.Created}}</td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center">-</td></tr>{{end}}
     </tbody></table></div>
+    {{if .LogPages}}<div class="card-footer"><div class="pagination">{{range .LogPages}}{{if eq . $.PageNum}}<span class="active">{{.}}</span>{{else}}<a href="?page={{.}}">{{.}}</a>{{end}}{{end}}</div></div>{{end}}
   </div>
 {{end}}
 
@@ -746,12 +797,45 @@ document.querySelectorAll(".msg-full").forEach(function(el){
 {{end}}
 
 {{if eq .Page "admin"}}
-  <div class="row">
-    <div class="col-6 col-lg-3"><div class="card"><div class="card-body"><h6 class="text-uppercase text-muted mb-2">{{T "adm_users"}}</h6><a href="/admin/users" class="h2 mb-0 d-block">{{T "btn_all"}} <i class="la la-users"></i></a></div></div></div>
-    <div class="col-6 col-lg-3"><div class="card"><div class="card-body"><h6 class="text-uppercase text-muted mb-2">{{T "adm_packages"}}</h6><a href="/admin/packages" class="h2 mb-0 d-block">{{T "btn_all"}} <i class="la la-box"></i></a></div></div></div>
-    <div class="col-6 col-lg-3"><div class="card"><div class="card-body"><h6 class="text-uppercase text-muted mb-2">{{T "adm_waservers"}}</h6><a href="/admin/waservers" class="h2 mb-0 d-block">{{T "btn_all"}} <i class="la la-server"></i></a></div></div></div>
-    <div class="col-6 col-lg-3"><div class="card"><div class="card-body"><h6 class="text-uppercase text-muted mb-2">{{T "adm_transactions"}}</h6><a href="/admin/transactions" class="h2 mb-0 d-block">{{T "btn_all"}} <i class="la la-money-bill"></i></a></div></div></div>
-  </div>
+<div class="row">
+<div class="col-6 col-xl-3">
+<div class="card"><div class="card-body"><div class="row align-items-center">
+<div class="col"><h6 class="text-uppercase text-muted mb-2 small">Total Users</h6><span class="h2 mb-0">{{.TotalUsers}}</span></div>
+<div class="col-auto"><span class="h2 la la-users la-lg text-primary mb-0"></span></div>
+</div></div></div>
+</div>
+<div class="col-6 col-xl-3">
+<div class="card"><div class="card-body"><div class="row align-items-center">
+<div class="col"><h6 class="text-uppercase text-muted mb-2 small">Active WA</h6><span class="h2 mb-0">{{.ActiveAccounts}}</span></div>
+<div class="col-auto"><span class="h2 la la-whatsapp la-lg text-success mb-0"></span></div>
+</div></div></div>
+</div>
+<div class="col-6 col-xl-3">
+<div class="card"><div class="card-body"><div class="row align-items-center">
+<div class="col"><h6 class="text-uppercase text-muted mb-2 small">Campaigns</h6><span class="h2 mb-0">{{.RunningCampaigns}}</span></div>
+<div class="col-auto"><span class="h2 la la-bullhorn la-lg text-warning mb-0"></span></div>
+</div></div></div>
+</div>
+<div class="col-6 col-xl-3">
+<div class="card"><div class="card-body"><div class="row align-items-center">
+<div class="col"><h6 class="text-uppercase text-muted mb-2 small">Total Sent</h6><span class="h2 mb-0">{{.CountSent}}</span></div>
+<div class="col-auto"><span class="h2 la la-telegram la-lg text-info mb-0"></span></div>
+</div></div></div>
+</div>
+</div>
+<div class="row mt-3">
+<div class="col-12"><div class="card"><div class="card-header"><h4 class="card-header-title">System Overview</h4></div>
+<div class="card-body"><canvas id="adminChart" height="80"></canvas></div></div></div>
+</div>
+<div class="row mt-3">
+<div class="col-6 col-xl-3"><a href="/admin/users" class="card text-decoration-none"><div class="card-body text-center py-4"><i class="la la-users la-2x text-primary mb-2 d-block"></i><strong>Users</strong><br><small class="text-muted">Manage Users</small></div></a></div>
+<div class="col-6 col-xl-3"><a href="/admin/packages" class="card text-decoration-none"><div class="card-body text-center py-4"><i class="la la-box la-2x text-success mb-2 d-block"></i><strong>Packages</strong><br><small class="text-muted">Manage Packages</small></div></a></div>
+<div class="col-6 col-xl-3"><a href="/admin/waservers" class="card text-decoration-none"><div class="card-body text-center py-4"><i class="la la-server la-2x text-warning mb-2 d-block"></i><strong>WA Servers</strong><br><small class="text-muted">Manage Servers</small></div></a></div>
+<div class="col-6 col-xl-3"><a href="/admin/subscriptions" class="card text-decoration-none"><div class="card-body text-center py-4"><i class="la la-star la-2x text-danger mb-2 d-block"></i><strong>Subscriptions</strong><br><small class="text-muted">Manage Subs</small></div></a></div>
+</div>
+<script>
+new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.ChartLabels}}],datasets:[{label:'Sent',data:[{{.ChartSent}}],borderColor:'#4F46E5',backgroundColor:'rgba(79,70,229,.1)',fill:true,tension:.3,pointRadius:2},{label:'Received',data:[{{.ChartReceived}}],borderColor:'#10B981',backgroundColor:'rgba(16,185,129,.1)',fill:true,tension:.3,pointRadius:2}]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}})
+</script>
 {{end}}
 
 {{if eq .Page "admin_users"}}
@@ -1008,8 +1092,8 @@ document.querySelectorAll(".msg-full").forEach(function(el){
   </div>
   <div class="card mt-3"><div class="card-header"><h4 class="card-header-title">Webhook URL</h4></div>
   <div class="card-body">
-    <p class="small text-muted">Copy URL ini ke Facebook Developer Console > WhatsApp > Configuration > Webhook:</p>
-    <code id="webhookUrl" style="word-break:break-all">http://YOUR_DOMAIN:8080/webhook/meta</code>
+    <p class="small text-muted">Copy URL ini ke Facebook Developer Console &gt; WhatsApp &gt; Configuration &gt; Webhook:</p>
+    <code id="webhookUrl" style="word-break:break-all">{{.AppURL}}/webhook/meta</code>
     <p class="small text-muted mt-2">Verify Token: sesuai yang diisi di form atas.</p>
   </div></div>
 {{end}}
@@ -1105,6 +1189,7 @@ document.querySelectorAll(".msg-full").forEach(function(el){
 <div class="list-group-item text-center text-muted py-4">Belum ada percakapan</div>
 {{end}}
 </div>
+{{if .InboxPages}}<div class="card-footer"><div class="pagination">{{range .InboxPages}}{{if eq . $.PageNum}}<span class="active">{{.}}</span>{{else}}<a href="?page={{.}}">{{.}}</a>{{end}}{{end}}</div></div>{{end}}
 </div>
 
 <div class="tab-panel" id="status-panel">

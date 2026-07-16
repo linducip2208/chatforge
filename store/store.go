@@ -293,8 +293,9 @@ func (d *DB) ListReceivedPaginated(page, perPage int) ([]ReceivedMessage, error)
 }
 func (d *DB) CountReceived() int { var n int; d.sql.QueryRow(`SELECT COUNT(*) FROM received`).Scan(&n); return n }
 
-func (d *DB) GroupInbox() ([]InboxConversation, error) {
-	rows, err := d.sql.Query(`SELECT r.phone, COALESCE(g.name, MAX(r.name)) as name, MAX(r.is_group) as is_group, COUNT(CASE WHEN r.is_read=0 THEN 1 END) as unread, MAX(r.channel) as channel FROM received r LEFT JOIN wa_groups g ON r.phone = g.jid GROUP BY r.phone ORDER BY MAX(r.id) DESC LIMIT 100`)
+func (d *DB) GroupInboxPaginated(page, perPage int) ([]InboxConversation, error) {
+	offset := (page - 1) * perPage
+	rows, err := d.sql.Query(`SELECT r.phone, COALESCE(g.name, MAX(r.name)) as name, MAX(r.is_group) as is_group, COUNT(CASE WHEN r.is_read=0 THEN 1 END) as unread, MAX(r.channel) as channel FROM received r LEFT JOIN wa_groups g ON r.phone = g.jid GROUP BY r.phone ORDER BY MAX(r.id) DESC LIMIT ? OFFSET ?`, perPage, offset)
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []InboxConversation
@@ -306,6 +307,16 @@ func (d *DB) GroupInbox() ([]InboxConversation, error) {
 		out = append(out, c)
 	}
 	return out, nil
+}
+
+func (d *DB) CountInbox() int {
+	var n int
+	d.sql.QueryRow(`SELECT COUNT(DISTINCT phone) FROM received`).Scan(&n)
+	return n
+}
+
+func (d *DB) GroupInbox() ([]InboxConversation, error) {
+	return d.GroupInboxPaginated(1, 100)
 }
 
 func (d *DB) ChatHistory(phone string, limit int) ([]ChatMessage, error) {
