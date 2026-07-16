@@ -240,9 +240,11 @@ document.querySelectorAll(".msg-full").forEach(function(el){
       </ul>
       <hr class="navbar-divider my-3">
       <h6 class="navbar-heading">{{T "nav_tools"}}</h6>
-      <ul class="navbar-nav">
+      <ul class="nav nav-sm flex-column">
+        <li class="nav-item"><a class="nav-link {{if eq .Active "settings"}}active{{end}}" href="/settings"><i class="la la-cog la-lg"></i> {{T "nav_settings"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "autoreply"}}active{{end}}" href="/autoreply"><i class="la la-robot la-lg"></i> {{T "nav_autoreply"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "templates"}}active{{end}}" href="/templates"><i class="la la-file-alt la-lg"></i> {{T "nav_templates"}}</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "canned"}}active{{end}}" href="/canned"><i class="la la-comment-dots la-lg"></i> Canned</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "apikeys"}}active{{end}}" href="/apikeys"><i class="la la-key la-lg"></i> {{T "nav_apikeys"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "webhooks"}}active{{end}}" href="/webhooks"><i class="la la-code-branch la-lg"></i> {{T "nav_webhooks"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "logger"}}active{{end}}" href="/logger"><i class="la la-clipboard-list la-lg"></i> {{T "nav_logger"}}</a></li>
@@ -968,6 +970,28 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
   </div>
 {{end}}
 
+{{if eq .Page "canned"}}
+  <div class="row">
+    <div class="col-12 col-lg-5">
+      <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> Add Canned Response</h4></div>
+        <div class="card-body"><form method="post" action="/canned/add">
+          <div class="form-group"><label>Shortcut <small class="text-muted">— ketik di inbox</small></label><input name="shortcut" class="form-control" placeholder="/salam"></div>
+          <div class="form-group"><label>Judul</label><input name="name" class="form-control" placeholder="Salam Pembuka" required></div>
+          <div class="form-group"><label>{{T "col_message"}}</label><textarea name="message" class="form-control" rows="3" required></textarea></div>
+          <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
+        </form></div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-7">
+      <div class="card"><div class="card-header"><h4 class="card-header-title">Canned Responses</h4></div>
+        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>Shortcut</th><th>Nama</th><th>{{T "col_message"}}</th><th></th></tr></thead><tbody>
+          {{range .Canned}}<tr><td><code>{{.Shortcut}}</code></td><td>{{.Name}}</td><td style="max-width:250px">{{.Message}}</td><td><form method="post" action="/canned/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
+        </tbody></table></div>
+      </div>
+    </div>
+  </div>
+{{end}}
+
 {{if eq .Page "templates"}}
   <div class="row">
     <div class="col-12 col-lg-5">
@@ -1634,9 +1658,10 @@ else{if(b)b.remove()}
 <button type="submit" id="sendBtn"><i class="la la-paper-plane"></i></button>
 </div>
 </form>
-<div class="d-flex gap-1 mt-2 flex-wrap">
-{{range .Templates}}<button class="btn btn-sm btn-outline-secondary template-btn" data-content="{{.Content}}" title="{{.Name}}" style="font-size:11px;padding:2px 8px">{{.Name}}</button>{{end}}
-</div>
+        <div class="d-flex gap-1 mt-2 flex-wrap">
+          {{range .Templates}}<button class="btn btn-sm btn-outline-secondary template-btn" data-content="{{.Content}}" title="{{.Name}}" style="font-size:11px;padding:2px 8px">{{.Name}}</button>{{end}}
+          {{range .Canned}}<button class="btn btn-sm btn-outline-info canned-btn" data-content="{{.Message}}" title="{{.Name}}" style="font-size:11px;padding:2px 8px">{{if .Shortcut}}/{{.Shortcut}}{{else}}{{.Name}}{{end}}</button>{{end}}
+        </div>
 </div>
 </div>
 <script>

@@ -424,6 +424,10 @@ func (e *Engine) onMessage(s *session, evt *events.Message) {
 		e.log.Infof("group msg: %s → %s: %s", name, groupName, text)
 	} else {
 		e.db.LogReceived(senderPhone, name, text, false, "", "", "whatsmeow"); e.db.Log("received", "private", fmt.Sprintf("%s (%s): %s", name, senderPhone, text))
+		// auto-assign round robin for new conversations
+		if e.db.GetAssignedAgent(senderPhone) == 0 {
+			e.db.AssignNextRoundRobin(senderPhone)
+		}
 		select {
 		case e.notifyCh <- senderPhone:
 		default:

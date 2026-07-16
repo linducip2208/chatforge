@@ -15,6 +15,10 @@ type DB struct {
 	mu  sync.Mutex
 }
 
+func (d *DB) QueryRow(query string, args ...interface{}) *sql.Row {
+	return d.sql.QueryRow(query, args...)
+}
+
 type AutoReply struct {
 	ID        int64
 	Keyword   string

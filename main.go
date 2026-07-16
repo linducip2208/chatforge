@@ -4,6 +4,7 @@ import (
 	crand "crypto/rand"
 	"encoding/csv"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -142,6 +143,13 @@ func main() {
 	mux.HandleFunc("/tags/add", authMiddleware(crudPost(func(r *http.Request) { db.AddTag(r.FormValue("name"), r.FormValue("color")) }, "/tags")))
 	mux.HandleFunc("/tags/delete", authMiddleware(crudDel(func(id int64) { db.DeleteTag(id) }, "/tags")))
 	mux.HandleFunc("/contacts/tags", authMiddleware(handleContactTags))
+	mux.HandleFunc("/canned", authMiddleware(handleCanned))
+	mux.HandleFunc("/canned/add", authMiddleware(crudPost(func(r *http.Request) { db.AddCanned(r.FormValue("shortcut"), r.FormValue("name"), r.FormValue("message")) }, "/canned")))
+	mux.HandleFunc("/canned/delete", authMiddleware(crudDel(func(id int64) { db.DeleteCanned(id) }, "/canned")))
+	mux.HandleFunc("/inbox/assign", authMiddleware(handleInboxAssign))
+	mux.HandleFunc("/inbox/close", authMiddleware(handleInboxClose))
+	mux.HandleFunc("/track/", handleLinkTrack)
+	mux.HandleFunc("/inbox/canned", authMiddleware(handleInboxCanned))
 		mux.HandleFunc("/scheduled", authMiddleware(handleScheduled))
 	mux.HandleFunc("/scheduled/delete", authMiddleware(crudDel(func(id int64) { db.DeleteScheduled(id) }, "/scheduled")))
 	mux.HandleFunc("/templates", p("templates"))
@@ -275,6 +283,7 @@ type pageData struct {
 	Campaigns  []store.Campaign
 	Drips      []store.Drip
 	Tags       []store.Tag
+	Canned     []store.CannedResponse
 	Scheduleds []store.Scheduled
 	Logs       []store.LogEntry
 	// admin/ai/devices
@@ -507,6 +516,9 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Drips, _ = db.ListDrips()
 	case "tags":
 		d.Tags, _ = db.ListTags()
+	case "canned":
+		d.Canned, _ = db.ListCanned()
+		d.Users, _ = db.ListUsers()
 	case "scheduled":
 		d.Scheduleds, _ = db.ListScheduled()
 	case "sent":
@@ -520,10 +532,12 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.InboxTotal = db.CountInbox()
 		d.InboxPages = pageNums(d.PageNum, (d.InboxTotal+9)/10)
 		d.Statuses, _ = db.ListStatuses()
+		d.Canned, _ = db.ListCanned()
 	case "inbox_chat":
 		d.Phone = r.URL.Query().Get("phone")
 		d.ChatMessages, _ = db.ChatHistory(d.Phone, 100)
 		d.Templates, _ = db.ListTemplates()
+		d.Canned, _ = db.ListCanned()
 		d.MetaAccounts, _ = db.ListMetaAccounts()
 		if msgs, _ := db.ChatHistory(d.Phone, 1); len(msgs) > 0 {
 			d.IsGroup = msgs[0].IsGroup
@@ -681,6 +695,8 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Drip Campaign", T("nav_whatsapp"), "Drip Campaign", "la-tint"
 	case "tags":
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Tags", T("nav_contacts"), "Contact Tags", "la-tags"
+	case "canned":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Canned Responses", T("nav_tools"), "Canned Responses", "la-comment-dots"
 	case "scheduled":
 		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_scheduled"), T("nav_whatsapp"), T("nav_scheduled"), "la-clock"
 	case "templates":
@@ -1428,6 +1444,47 @@ func handleContactTags(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/contacts", http.StatusSeeOther)
 }
 
+func handleCanned(w http.ResponseWriter, r *http.Request) {
+	render(w, r, "canned")
+}
+
+func handleInboxAssign(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		phone := r.FormValue("phone")
+		agentID, _ := strconv.ParseInt(r.FormValue("agent_id"), 10, 64)
+		if agentID > 0 {
+			db.AssignAgent(phone, agentID)
+		}
+	}
+	http.Redirect(w, r, "/inbox", http.StatusSeeOther)
+}
+
+func handleInboxClose(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		db.CloseConversation(r.FormValue("phone"))
+	}
+	http.Redirect(w, r, "/inbox", http.StatusSeeOther)
+}
+
+func handleLinkTrack(w http.ResponseWriter, r *http.Request) {
+	token := strings.TrimPrefix(r.URL.Path, "/track/")
+	db.LogLinkClick(token)
+	var url string
+	db.QueryRow(`SELECT url FROM link_clicks WHERE token=?`, token).Scan(&url)
+	if url == "" { url = "/" }
+	http.Redirect(w, r, url, http.StatusFound)
+}
+
+func handleInboxCanned(w http.ResponseWriter, r *http.Request) {
+	canned, _ := db.ListCanned()
+	var list []map[string]string
+	for _, c := range canned {
+		list = append(list, map[string]string{"name": c.Name, "message": c.Message})
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(list)
+}
+
 // ---- Contact CSV Import ----
 func handleContactImport(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -1613,6 +1670,9 @@ func handleMetaWebhook(w http.ResponseWriter, r *http.Request) {
 					continue
 				}
 				db.LogReceived(m.From, "", text, false, "", "", "meta")
+				if db.GetAssignedAgent(m.From) == 0 {
+					db.AssignNextRoundRobin(m.From)
+				}
 				db.MarkRead(m.From)
 				engine.Notify(m.From)
 				db.Log("meta", "received", fmt.Sprintf("%s -> %s: %s", m.From, acc.Name, text))

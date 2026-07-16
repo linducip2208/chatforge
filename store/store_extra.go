@@ -102,7 +102,10 @@ func (d *DB) migrateExtra() error {
 		`CREATE TABLE IF NOT EXISTS logger (id BIGINT AUTO_INCREMENT PRIMARY KEY, type VARCHAR(40) NOT NULL, reason VARCHAR(255) NOT NULL DEFAULT '', content TEXT NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 		`CREATE TABLE IF NOT EXISTS tags (id BIGINT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, color VARCHAR(7) NOT NULL DEFAULT '#2c7be5', created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 		`CREATE TABLE IF NOT EXISTS contact_tags (contact_id BIGINT NOT NULL, tag_id BIGINT NOT NULL, PRIMARY KEY (contact_id, tag_id), FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE, FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
-	}
+		`CREATE TABLE IF NOT EXISTS canned_responses (id BIGINT AUTO_INCREMENT PRIMARY KEY, shortcut VARCHAR(32) NOT NULL DEFAULT '', name VARCHAR(255) NOT NULL, message TEXT NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+		`CREATE TABLE IF NOT EXISTS agent_assignments (phone VARCHAR(64) PRIMARY KEY, agent_id BIGINT NOT NULL DEFAULT 0, assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, status VARCHAR(20) NOT NULL DEFAULT 'open') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+		`CREATE TABLE IF NOT EXISTS link_clicks (id BIGINT AUTO_INCREMENT PRIMARY KEY, token VARCHAR(16) NOT NULL UNIQUE, url VARCHAR(2048) NOT NULL, campaign_id BIGINT NOT NULL DEFAULT 0, phone VARCHAR(64) NOT NULL DEFAULT '', clicked_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+		`CREATE TABLE IF NOT EXISTS ab_tests (id BIGINT AUTO_INCREMENT PRIMARY KEY, campaign_id BIGINT NOT NULL, variant_a TEXT NOT NULL, variant_b TEXT NOT NULL, a_sent INT NOT NULL DEFAULT 0, b_sent INT NOT NULL DEFAULT 0, a_replied INT NOT NULL DEFAULT 0, b_replied INT NOT NULL DEFAULT 0, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`}
 	for _, s := range stmts {
 		if _, err := d.sql.Exec(s); err != nil {
 			return err
@@ -500,4 +503,111 @@ func (d *DB) TodaySentCount(phone string) int {
 	var n int
 	d.sql.QueryRow(`SELECT COUNT(*) FROM sent WHERE channel='whatsmeow' AND DATE(created_at)=CURDATE()`).Scan(&n)
 	return n
+}
+
+// ---- Canned Responses ----
+type CannedResponse struct {
+	ID       int64
+	Shortcut string
+	Name     string
+	Message  string
+	Created  string
+}
+
+func (d *DB) AddCanned(shortcut, name, message string) (int64, error) {
+	res, err := d.sql.Exec(`INSERT INTO canned_responses (shortcut, name, message) VALUES (?, ?, ?)`, shortcut, name, message)
+	if err != nil { return 0, err }
+	return res.LastInsertId()
+}
+func (d *DB) DeleteCanned(id int64) error {
+	_, err := d.sql.Exec(`DELETE FROM canned_responses WHERE id=?`, id)
+	return err
+}
+func (d *DB) ListCanned() ([]CannedResponse, error) {
+	rows, err := d.sql.Query(`SELECT id, shortcut, name, message, created_at FROM canned_responses ORDER BY shortcut`)
+	if err != nil { return nil, err }
+	defer rows.Close()
+	var out []CannedResponse
+	for rows.Next() {
+		var c CannedResponse
+		rows.Scan(&c.ID, &c.Shortcut, &c.Name, &c.Message, &c.Created)
+		out = append(out, c)
+	}
+	return out, nil
+}
+
+// ---- Agent Assignment ----
+func (d *DB) AssignAgent(phone string, agentID int64) error {
+	_, err := d.sql.Exec(`INSERT INTO agent_assignments (phone, agent_id, status) VALUES (?, ?, 'open') ON DUPLICATE KEY UPDATE agent_id=VALUES(agent_id)`, phone, agentID)
+	return err
+}
+func (d *DB) CloseConversation(phone string) error {
+	_, err := d.sql.Exec(`UPDATE agent_assignments SET status='closed' WHERE phone=?`, phone)
+	return err
+}
+func (d *DB) GetAssignedAgent(phone string) int64 {
+	var n int64
+	d.sql.QueryRow(`SELECT agent_id FROM agent_assignments WHERE phone=?`, phone).Scan(&n)
+	return n
+}
+func (d *DB) GetUnassignedCount() int {
+	var n int
+	d.sql.QueryRow(`SELECT COUNT(*) FROM agent_assignments WHERE agent_id=0 AND status='open'`).Scan(&n)
+	return n
+}
+func (d *DB) AssignNextRoundRobin(phone string) int64 {
+	users, _ := d.ListUsers()
+	var ids []int64
+	for _, u := range users {
+		if u.Role == "admin" || u.Role == "agent" { ids = append(ids, u.ID) }
+	}
+	if len(ids) == 0 { return 0 }
+	var assigned int64
+	d.sql.QueryRow(`SELECT IFNULL(MAX(agent_id),0) FROM agent_assignments ORDER BY assigned_at DESC LIMIT 1`).Scan(&assigned)
+	nextIdx := 0
+	for i, id := range ids {
+		if id > assigned { nextIdx = i; break }
+	}
+	if nextIdx >= len(ids) { nextIdx = 0 }
+	agentID := ids[nextIdx]
+	d.sql.Exec(`INSERT INTO agent_assignments (phone, agent_id, status) VALUES (?, ?, 'open') ON DUPLICATE KEY UPDATE agent_id=VALUES(agent_id)`, phone, agentID)
+	return agentID
+}
+
+// ---- Link Tracking ----
+func (d *DB) TrackLink(token, url string, campaignID int64, phone string) {
+	d.sql.Exec(`INSERT INTO link_clicks (token, url, campaign_id, phone) VALUES (?, ?, ?, ?)`, token, url, campaignID, phone)
+}
+func (d *DB) LogLinkClick(token string) {
+	d.sql.Exec(`UPDATE link_clicks SET clicked_at=NOW() WHERE token=?`, token)
+}
+func (d *DB) LinkClicks(campaignID int64) int {
+	var n int
+	d.sql.QueryRow(`SELECT COUNT(*) FROM link_clicks WHERE campaign_id=? AND clicked_at > created_at`, campaignID).Scan(&n)
+	return n
+}
+
+// ---- A/B Testing ----
+type ABTest struct {
+	ID         int64
+	CampaignID int64
+	VariantA   string
+	VariantB   string
+	ASent      int
+	BSent      int
+	AReplied   int
+	BReplied   int
+	Created    string
+}
+
+func (d *DB) CreateABTest(campaignID int64, variantA, variantB string) (int64, error) {
+	res, err := d.sql.Exec(`INSERT INTO ab_tests (campaign_id, variant_a, variant_b) VALUES (?, ?, ?)`, campaignID, variantA, variantB)
+	if err != nil { return 0, err }
+	return res.LastInsertId()
+}
+func (d *DB) GetABTest(campaignID int64) (*ABTest, error) {
+	var ab ABTest
+	err := d.sql.QueryRow(`SELECT id, campaign_id, variant_a, variant_b, a_sent, b_sent, a_replied, b_replied, created_at FROM ab_tests WHERE campaign_id=?`, campaignID).Scan(&ab.ID, &ab.CampaignID, &ab.VariantA, &ab.VariantB, &ab.ASent, &ab.BSent, &ab.AReplied, &ab.BReplied, &ab.Created)
+	if err != nil { return nil, err }
+	return &ab, nil
 }
