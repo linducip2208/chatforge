@@ -258,6 +258,8 @@ document.querySelectorAll(".msg-full").forEach(function(el){
         <li class="nav-item"><a class="nav-link {{if eq .Active "uploads"}}active{{end}}" href="/uploads"><i class="la la-folder-open la-lg"></i> Files</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "calendar"}}active{{end}}" href="/calendar"><i class="la la-calendar la-lg"></i> Calendar</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "customers"}}active{{end}}" href="/customers"><i class="la la-users la-lg"></i> Customers</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "merge"}}active{{end}}" href="/merge"><i class="la la-code-branch la-lg"></i> Merge</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "macros"}}active{{end}}" href="/macros"><i class="la la-bolt la-lg"></i> Macros</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "apikeys"}}active{{end}}" href="/apikeys"><i class="la la-key la-lg"></i> {{T "nav_apikeys"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "webhooks"}}active{{end}}" href="/webhooks"><i class="la la-code-branch la-lg"></i> {{T "nav_webhooks"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "logger"}}active{{end}}" href="/logger"><i class="la la-clipboard-list la-lg"></i> {{T "nav_logger"}}</a></li>
@@ -285,6 +287,7 @@ document.querySelectorAll(".msg-full").forEach(function(el){
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_paygateways"}}active{{end}}" href="/admin/gateways-pay"><i class="la la-credit-card la-lg"></i> Pay Gateways</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_transactions_pay"}}active{{end}}" href="/admin/transactions-pay"><i class="la la-receipt la-lg"></i> Pay Logs</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "backup"}}active{{end}}" href="/backup"><i class="la la-database la-lg"></i> Backup</a></li>
+        <li class="nav-item"><a class="nav-link {{if eq .Active "audit"}}active{{end}}" href="/audit"><i class="la la-history la-lg"></i> Audit</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_payouts"}}active{{end}}" href="/admin/payouts"><i class="la la-hand-holding-usd la-lg"></i> {{T "adm_payouts"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_pages"}}active{{end}}" href="/admin/pages"><i class="la la-file la-lg"></i> {{T "adm_pages"}}</a></li>
         <li class="nav-item"><a class="nav-link {{if eq .Active "admin_marketing"}}active{{end}}" href="/admin/marketing"><i class="la la-bullhorn la-lg"></i> {{T "adm_marketing"}}</a></li>
@@ -1274,6 +1277,43 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
       </form>
       <p class="text-muted mt-2">Backup akan disimpan ke <code>public/backups/</code></p>
     </div>
+  </div>
+{{end}}
+
+{{if eq .Page "macros"}}
+  <div class="row">
+    <div class="col-12 col-lg-4">
+      <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> Add Macro</h4></div>
+        <div class="card-body"><form method="post" action="/macros/add">
+          <div class="form-group"><label>Name</label><input name="name" class="form-control" placeholder="Quick Resolve" required></div>
+          <div class="form-group"><label>Actions</label><textarea name="actions" class="form-control" rows="4" placeholder="assign:1;tag:resolved;reply:Terima kasih!;close" required></textarea><small class="form-text text-muted">Format: action:value;action:value. Actions: assign, tag, reply, close</small></div>
+          <button class="btn btn-primary"><i class="la la-plus"></i> Create</button>
+        </form></div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-8">
+      <div class="card"><div class="card-header"><h4 class="card-header-title">Macros</h4></div>
+        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Name</th><th>Actions</th><th></th></tr></thead><tbody>
+          {{range .Macros}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td><code>{{.Actions}}</code></td><td><form method="post" action="/macros/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">Del</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
+        </tbody></table></div>
+      </div>
+    </div>
+  </div>
+{{end}}
+
+{{if eq .Page "merge"}}
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-code-branch me-1"></i> Duplicate Contacts</h4></div>
+    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>Phone</th><th>Count</th><th>Names</th><th>IDs</th><th></th></tr></thead><tbody>
+      {{range .Duplicates}}<tr><td>{{index . "phone"}}</td><td>{{index . "cnt"}}</td><td>{{index . "names"}}</td><td>{{index . "ids"}}</td><td><form method="post" action="/merge/execute"><input type="hidden" name="keep_id" value="{{index (split (index . "ids") ",") 0}}">{{range $i, $id := split (index . "ids") ","}}{{if gt $i 0}}<input type="hidden" name="merge_ids" value="{{$id}}">{{end}}{{end}}<button class="btn btn-sm btn-warning">Merge</button></form></td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center py-4">No duplicates found.</td></tr>{{end}}
+    </tbody></table></div>
+  </div>
+{{end}}
+
+{{if eq .Page "audit"}}
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-history me-1"></i> Audit Log</h4></div>
+    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>User</th><th>Action</th><th>Detail</th><th>IP</th><th>{{T "col_time"}}</th></tr></thead><tbody>
+      {{range .AuditLogs}}<tr><td>{{.ID}}</td><td>#{{.UserID}}</td><td>{{.Action}}</td><td>{{.Detail}}</td><td>{{.IP}}</td><td class="text-muted small">{{.Created}}</td></tr>{{else}}<tr><td colspan="6" class="text-muted text-center py-4">No audit entries yet.</td></tr>{{end}}
+    </tbody></table></div>
   </div>
 {{end}}
 

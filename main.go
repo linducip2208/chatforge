@@ -237,6 +237,15 @@ func main() {
 	mux.HandleFunc("/calendar", authMiddleware(p("calendar")))
 	mux.HandleFunc("/backup", authMiddleware(handleBackup))
 	mux.HandleFunc("/translate", authMiddleware(handleTranslate))
+	mux.HandleFunc("/macros", authMiddleware(p("macros")))
+	mux.HandleFunc("/macros/add", authMiddleware(crudPost(func(r *http.Request) { db.AddMacro(r.FormValue("name"), r.FormValue("actions")) }, "/macros")))
+	mux.HandleFunc("/macros/delete", authMiddleware(crudDel(func(id int64) { db.DeleteMacro(id) }, "/macros")))
+	mux.HandleFunc("/macros/execute", authMiddleware(handleMacroExecute))
+	mux.HandleFunc("/merge", authMiddleware(p("merge")))
+	mux.HandleFunc("/merge/execute", authMiddleware(handleMergeExecute))
+	mux.HandleFunc("/priority/set", authMiddleware(handleSetPriority))
+	mux.HandleFunc("/audit", authMiddleware(p("audit")))
+	mux.HandleFunc("/email-webhook", handleEmailWebhook)
 		mux.HandleFunc("/scheduled", authMiddleware(handleScheduled))
 	mux.HandleFunc("/scheduled/delete", authMiddleware(crudDel(func(id int64) { db.DeleteScheduled(id) }, "/scheduled")))
 	mux.HandleFunc("/templates", p("templates"))
@@ -394,6 +403,9 @@ type pageData struct {
 	Notes          []store.ChatNote
 	CalEvents      []store.CalendarEvent
 	Files          []string
+	Macros         []store.InboxMacro
+	Duplicates     []map[string]interface{}
+	AuditLogs      []store.AuditLog
 	Scheduleds     []store.Scheduled
 	Logs       []store.LogEntry
 	// admin/ai/devices
@@ -674,6 +686,12 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Contacts, _ = db.ListContacts()
 	case "calendar":
 		d.CalEvents = db.GetCalendarEvents()
+	case "macros":
+		d.Macros, _ = db.ListMacros()
+	case "merge":
+		d.Duplicates = db.FindDuplicateContacts()
+	case "audit":
+		d.AuditLogs, _ = db.ListAuditLogs()
 	case "canned":
 		d.Canned, _ = db.ListCanned()
 		d.Users, _ = db.ListUsers()
@@ -885,6 +903,12 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Calendar", "Schedule", "Campaign Calendar", "la-calendar"
 	case "backup":
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Backup", "System", "Database Backup", "la-database"
+	case "macros":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Macros", "Tools", "Inbox Macros", "la-bolt"
+	case "merge":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Merge", "Contacts", "Merge Duplicates", "la-code-branch"
+	case "audit":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Audit", "System", "Audit Log", "la-history"
 	case "tracker":
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Link Tracker", T("nav_tools"), "Link Clicks", "la-link"
 	case "abtests":
@@ -967,6 +991,7 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		"js": func(s string) template.JS { return template.JS(s) },
 		"add": func(a, b int) int { return a + b },
 		"mult": func(a, b float64) float64 { return a * b },
+		"split": func(s, sep string) []string { return strings.Split(s, sep) },
 		"permBadges": func(perms string) template.HTML {
 			if perms == "" { return "-" }
 			parts := strings.Split(perms, ",")
@@ -1799,6 +1824,59 @@ func handleTranslate(w http.ResponseWriter, r *http.Request) {
 	} else {
 		fmt.Fprint(w, text)
 	}
+}
+
+func handleMacroExecute(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost { http.Redirect(w, r, "/inbox", http.StatusSeeOther); return }
+	phone := r.FormValue("phone")
+	actions := r.FormValue("actions")
+	uid := getUserID(r)
+	for _, a := range strings.Split(actions, ";") {
+		parts := strings.SplitN(a, ":", 2)
+		if len(parts) < 2 { continue }
+		switch parts[0] {
+		case "assign": aid, _ := strconv.ParseInt(parts[1], 10, 64); db.AssignAgent(phone, aid)
+		case "tag": db.SetConversationLabel(phone, parts[1])
+		case "reply":
+			sig := db.GetSetting("agent_signature", "")
+			msg := parts[1]; if sig != "" { msg += "\n\n" + sig }
+			if s := engine.FirstSession(); s != nil { engine.SendFrom(s.Phone, phone, msg) }
+		case "close": db.CloseConversation(phone)
+		}
+	}
+	db.LogAudit(uid, "macro", fmt.Sprintf("%s on %s", actions, phone), r.RemoteAddr)
+	http.Redirect(w, r, "/inbox", http.StatusSeeOther)
+}
+
+func handleMergeExecute(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		kid, _ := strconv.ParseInt(r.FormValue("keep_id"), 10, 64)
+		var mids []int64
+		for _, s := range r.Form["merge_ids"] {
+			if id, err := strconv.ParseInt(s, 10, 64); err == nil { mids = append(mids, id) }
+		}
+		db.MergeContacts(kid, mids)
+	}
+	http.Redirect(w, r, "/merge", http.StatusSeeOther)
+}
+
+func handleSetPriority(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		pri, _ := strconv.Atoi(r.FormValue("priority"))
+		db.SetContactPriority(r.FormValue("phone"), pri)
+	}
+	http.Redirect(w, r, "/inbox", http.StatusSeeOther)
+}
+
+func handleEmailWebhook(w http.ResponseWriter, r *http.Request) {
+	from := r.FormValue("from")
+	subject := r.FormValue("subject")
+	body := r.FormValue("text")
+	if from == "" && subject == "" { w.WriteHeader(200); return }
+	msg := fmt.Sprintf("Email dari %s:\n*%s*\n\n%s", from, subject, body)
+	db.LogReceived(from, subject, msg, false, "", "", "email")
+	engine.Notify(from)
+	w.WriteHeader(200)
 }
 
 func handleInboxCanned(w http.ResponseWriter, r *http.Request) {
