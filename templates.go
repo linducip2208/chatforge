@@ -2178,6 +2178,7 @@ document.getElementById('chatInput').focus();
 <div class="docs-section" id="start"><h3>Quick Start</h3>
 <p class="text-muted">Langkah pertama menggunakan {{.AppName}}</p>
 <p><strong>Demo Login:</strong> <code>{{.AppEmail}}</code> / <code>password</code></p>
+<p class="small text-muted mb-3"><span class="badge badge-soft-success" style="font-size:9px">WA Web</span> = WhatsApp Web (whatsmeow) &nbsp; <span class="badge badge-soft-primary" style="font-size:9px">Meta</span> = WhatsApp Cloud API (Business)</p>
 <div class="row g-2">
 <div class="col-12 col-md-6"><div class="card"><div class="card-body"><strong>1. Hubungkan WA</strong><p class="small text-muted mb-0">Buka Akun & QR → Scan QR dengan WhatsApp → Connected</p></div></div></div>
 <div class="col-12 col-md-6"><div class="card"><div class="card-body"><strong>2. Tambah Kontak</strong><p class="small text-muted mb-0">Import CSV atau tambah manual di Contacts</p></div></div></div>
@@ -2188,17 +2189,17 @@ document.getElementById('chatInput').focus();
 <div class="docs-section" id="wa"><h3>WhatsApp Setup</h3>
 <table class="table table-sm"><thead><tr><th>Fitur</th><th>Lokasi</th><th>Cara</th></tr></thead>
 <tbody>
-<tr><td>WA Web Connect</td><td>/wa</td><td>Klik Tambah Akun → Scan QR</td></tr>
-<tr><td>Multi-Akun WA</td><td>/wa</td><td>Tambah beberapa nomor, kelola sekaligus</td></tr>
-<tr><td>Meta Cloud API</td><td>/admin/meta</td><td>Input Phone ID + Access Token + Verify Token</td></tr>
-<tr><td>Meta Templates</td><td>/admin/metatemplates</td><td>Daftar template WA Business yang sudah approved</td></tr>
+<tr><td>WA Web Connect</td><td>/wa</td><td>Klik Tambah Akun → Scan QR <span class="badge badge-soft-success" style="font-size:9px">WA Web</span></td></tr>
+<tr><td>Multi-Akun WA</td><td>/wa</td><td>Tambah beberapa nomor, kelola sekaligus <span class="badge badge-soft-success" style="font-size:9px">WA Web</span></td></tr>
+<tr><td>Meta Cloud API</td><td>/admin/meta</td><td>Input Phone ID + Access Token + Verify Token <span class="badge badge-soft-primary" style="font-size:9px">Meta</span></td></tr>
+<tr><td>Meta Templates</td><td>/admin/metatemplates</td><td>Daftar template WA Business yang sudah approved <span class="badge badge-soft-primary" style="font-size:9px">Meta</span></td></tr>
 <tr><td>Kirim Pesan</td><td>/send</td><td>Kirim pesan langsung ke satu nomor</td></tr>
 </tbody></table></div>
 
 <div class="docs-section" id="broadcast"><h3>Broadcast & Campaign</h3>
 <table class="table table-sm"><thead><tr><th>Fitur</th><th>Lokasi</th><th>Keterangan</th></tr></thead>
 <tbody>
-<tr><td>Broadcast Massal</td><td>/broadcast</td><td>Pilih grup + nomor langsung + tag filter</td></tr>
+<tr><td>Broadcast Massal</td><td>/broadcast</td><td>Pilih grup + nomor langsung + tag filter. Bisa via WA Web atau <span class="badge badge-soft-primary" style="font-size:9px">Meta</span></td></tr>
 <tr><td>Media Broadcast</td><td>/broadcast</td><td>Upload gambar/video/dokumen</td></tr>
 <tr><td>Round Robin / Random</td><td>/broadcast</td><td>Radio select di form broadcast</td></tr>
 <tr><td>Pause / Resume</td><td>/broadcast</td><td>Tombol ⏸/▶ di campaign list</td></tr>
