@@ -1,4 +1,4 @@
-package main
+﻿package main
 
 const templates = `
 {{define "layout"}}<!DOCTYPE html>
@@ -2306,208 +2306,176 @@ html{scroll-behavior:smooth}
 .docs-nav a{display:block;padding:4px 12px;color:#555;text-decoration:none;font-size:13px;border-left:2px solid transparent;transition:.15s}
 .docs-nav a:hover,.docs-nav a.active{border-left-color:#4F46E5;color:#4F46E5;background:rgba(79,70,229,.05)}
 .docs-section{margin-bottom:32px}
-.docs-section h3{font-weight:700;margin-bottom:4px;padding-bottom:8px;border-bottom:2px solid #eee}
-.badge-soft-info{background:rgba(44,123,229,.1);color:#2c7be5}
+.docs-section h3{font-weight:700;margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid #eee}
+.docs-section h4{font-weight:600;margin:16px 0 8px}
+.docs-step{background:#f8f9fc;border-left:3px solid #4F46E5;padding:12px 16px;margin:8px 0;border-radius:0 8px 8px 0}
+.docs-step strong{color:#4F46E5}
+pre code{font-size:13px}
 </style>
 <div class="row">
-<div class="col-12 col-lg-3">
-  <div class="docs-nav">
-    <a href="#start">Quick Start</a>
-    <a href="#wa">WhatsApp Setup</a>
-    <a href="#broadcast">Broadcast & Campaign</a>
-    <a href="#drip">Drip Campaign</a>
-    <a href="#store">Store & Products</a>
-    <a href="#payment">Payment Gateway</a>
-    <a href="#inbox">Live Chat Inbox</a>
-    <a href="#ai">AI Auto Reply</a>
-    <a href="#team">Team & Support</a>
-    <a href="#contacts">Contacts & CRM</a>
-    <a href="#safety">Safety & Blacklist</a>
-    <a href="#analytics">Analytics</a>
-    <a href="#tools">Tools & System</a>
-    <a href="#widget">Web Widget</a>
-    <a href="#api">API Reference</a>
-  </div>
-</div>
+<div class="col-12 col-lg-3"><div class="docs-nav">
+<a href="#quick">Quick Start</a>
+<a href="#wa">Hubungkan WA</a>
+<a href="#contacts">Kontak</a>
+<a href="#broadcast">Broadcast</a>
+<a href="#drip">Drip</a>
+<a href="#ai">AI Auto Reply</a>
+<a href="#inbox">Inbox</a>
+<a href="#store">WA Store</a>
+<a href="#payment">Payment</a>
+<a href="#team">Team Support</a>
+<a href="#analytics">Analytics</a>
+<a href="#tools">Tools</a>
+<a href="#api">API</a>
+</div></div>
 <div class="col-12 col-lg-9">
 
-<div class="docs-section" id="start"><h3>Quick Start</h3>
-<p class="text-muted">Langkah pertama menggunakan {{.AppName}}</p>
-<p><strong>Demo Login:</strong> <code>{{.AppEmail}}</code> / <code>password</code></p>
-<p class="small text-muted mb-3"><span class="badge badge-soft-success" style="font-size:10px">WA Web</span> WhatsApp Web (whatsmeow) &nbsp; <span class="badge badge-soft-primary" style="font-size:10px">Meta</span> WhatsApp Cloud API &nbsp; <span class="badge badge-soft-info" style="font-size:10px">Both</span> Tersedia di kedua channel</p>
-<div class="row g-2">
-<div class="col-12 col-md-6"><div class="card"><div class="card-body"><strong>1. Hubungkan WA</strong><p class="small text-muted mb-0">Buka Akun & QR → Scan QR dengan WhatsApp → Connected</p></div></div></div>
-<div class="col-12 col-md-6"><div class="card"><div class="card-body"><strong>2. Tambah Kontak</strong><p class="small text-muted mb-0">Import CSV atau tambah manual di Contacts</p></div></div></div>
-<div class="col-12 col-md-6"><div class="card"><div class="card-body"><strong>3. Buat Broadcast</strong><p class="small text-muted mb-0">Pilih grup kontak → tulis pesan → kirim massal</p></div></div></div>
-<div class="col-12 col-md-6"><div class="card"><div class="card-body"><strong>4. Setup AI</strong><p class="small text-muted mb-0">Tambah AI Key → buat Auto Reply rule → AI balas otomatis</p></div></div></div>
-</div></div>
+<div class="docs-section" id="quick">
+<h3>Quick Start</h3>
+<p>Demo: <code>{{.AppEmail}}</code> / <code>password</code></p>
+<div class="docs-step"><strong>1. Hubungkan WA:</strong> Buka WhatsApp di HP → Perangkat Tertaut → Tautkan Perangkat. Di ChatGo: buka <code>/wa</code> → Tambah Akun → Scan QR.</div>
+<div class="docs-step"><strong>2. Tambah Kontak:</strong> <code>/contacts</code> → import CSV atau tambah manual.</div>
+<div class="docs-step"><strong>3. Kirim Broadcast:</strong> <code>/broadcast</code> → pilih grup → tulis pesan → kirim massal.</div>
+<div class="docs-step"><strong>4. Setup AI:</strong> Tambah API key di <code>/ai/keys</code> → buat rule di <code>/autoreply</code>.</div>
+<div class="docs-step"><strong>5. Live Chat:</strong> <code>/inbox</code> — semua pesan masuk real-time.</div>
+</div>
 
-<div class="docs-section" id="wa"><h3>WhatsApp Setup</h3>
-<table class="table table-sm"><thead><tr><th>Fitur</th><th>Lokasi</th><th>Cara</th></tr></thead>
-<tbody>
-<tr><td>WA Web Connect</td><td>/wa</td><td>Klik Tambah Akun → Scan QR <span class="badge badge-soft-success" style="font-size:9px">WA Web</span></td></tr>
-<tr><td>Multi-Akun WA</td><td>/wa</td><td>Tambah beberapa nomor <span class="badge badge-soft-success" style="font-size:9px">WA Web</span></td></tr>
-<tr><td>Meta Cloud API</td><td>/admin/meta</td><td>Phone ID + Access Token <span class="badge badge-soft-primary" style="font-size:9px">Meta</span></td></tr>
-<tr><td>Meta Templates</td><td>/admin/metatemplates</td><td>Template WA Business <span class="badge badge-soft-primary" style="font-size:9px">Meta</span></td></tr>
-<tr><td>Kirim Pesan</td><td>/send</td><td>Kirim pesan ke satu nomor <span class="badge badge-soft-success" style="font-size:9px">WA Web</span></td></tr>
-</tbody></table></div>
-
-<div class="docs-section" id="broadcast"><h3>Broadcast & Campaign</h3>
-<table class="table table-sm"><thead><tr><th>Fitur</th><th>Lokasi</th><th>Keterangan</th></tr></thead>
-<tbody>
-<tr><td>Broadcast Massal</td><td>/broadcast</td><td>Pilih grup + nomor + tag filter <span class="badge badge-soft-info" style="font-size:9px">Both</span></td></tr>
-<tr><td>Media Broadcast</td><td>/broadcast</td><td>Upload gambar/video/dokumen <span class="badge badge-soft-info" style="font-size:9px">Both</span></td></tr>
-<tr><td>Round Robin / Random</td><td>/broadcast</td><td>Radio select di form broadcast</td></tr>
-<tr><td>Pause / Resume</td><td>/broadcast</td><td>Tombol ⏸/▶ di campaign list</td></tr>
-<tr><td>Retry Campaign</td><td>/broadcast</td><td>Tombol ↩ untuk jalankan ulang</td></tr>
-<tr><td>Auto-Resume</td><td>Background</td><td>Restart server → lanjut dari nomor terakhir</td></tr>
-<tr><td>Link Tracking</td><td>/broadcast</td><td>URL otomatis di-track via /track/:token</td></tr>
-<tr><td>A/B Testing</td><td>/ab-tests</td><td>Buat varian A/B, lihat hasil</td></tr>
-<tr><td>Recurring Campaign</td><td>/recurring</td><td>Jadwal broadcast otomatis daily/weekly</td></tr>
-<tr><td>Scheduled Message</td><td>/scheduled</td><td>Jadwalkan pesan ke nomor spesifik</td></tr>
-<tr><td>Anti-Ban Rate Limiter</td><td>/settings</td><td>Max/day + random delay interval</td></tr>
-</tbody></table></div>
-
-<div class="docs-section" id="drip"><h3>Drip Campaign</h3>
-<p class="text-muted">Multi-step follow-up otomatis saat customer kirim pesan.</p>
+<div class="docs-section" id="wa">
+<h3>Hubungkan WhatsApp</h3>
 <table class="table table-sm">
-<tr><td><strong>Setup</strong></td><td>/drips → buat drip → tambah steps (delay + message)</td></tr>
-<tr><td><strong>Auto-Enroll</strong></td><td>Setiap pesan masuk → otomatis masuk semua drip aktif</td></tr>
-<tr><td><strong>STOP</strong></td><td>Customer reply "STOP" → unenroll dari semua drip</td></tr>
-<tr><td><strong>Pause</strong></td><td>Toggle Active/Inactive di halaman /drips</td></tr>
-</table></div>
+<tr><td width="180"><strong>WhatsApp Web</strong> <span class="badge badge-soft-success">WA Web</span></td><td>Scan QR di <code>/wa</code> → perangkat tertaut. Multi-akun, unlimited nomor (sesuai paket).</td></tr>
+<tr><td><strong>Meta Cloud API</strong> <span class="badge" style="background:#4F46E5;color:#fff;font-size:10px">META</span></td><td><code>/admin/meta</code> → input Phone ID + Token dari Facebook. Support template, webhook, tidak perlu HP online.</td></tr>
+<tr><td><strong>Web Widget</strong></td><td>Embed <code>&lt;script src="/widget.js"&gt;&lt;/script&gt;</code> di website. Chat muncul di pojok kanan bawah.</td></tr>
+<tr><td><strong>Email to WA</strong></td><td>POST ke <code>/email-webhook</code> — forward email ke WA inbox.</td></tr>
+</table>
+</div>
 
-<div class="docs-section" id="store"><h3>WA Store Bot</h3>
-<table class="table table-sm"><thead><tr><th>Fitur</th><th>Lokasi</th><th>Cara</th></tr></thead>
-<tbody>
-<tr><td>Product Catalog</td><td>/store</td><td>Tambah produk: nama, harga, gambar, kategori, stok</td></tr>
-<tr><td>Kategori</td><td>/store</td><td>Tambah/hapus kategori produk</td></tr>
-<tr><td>Order Management</td><td>/store/orders</td><td>Lihat & update status order (new→paid→shipped)</td></tr>
-<tr><td>WA Menu Bot</td><td>Auto</td><td>Chat "menu" → daftar kategori → pilih produk → order</td></tr>
-<tr><td>WA Order Notif</td><td>Auto</td><td>Status order berubah → WA otomatis ke customer</td></tr>
-</tbody></table></div>
+<div class="docs-section" id="contacts">
+<h3>Kontak & Groups</h3>
+<div class="docs-step"><strong>1. Tambah Manual:</strong> <code>/contacts</code> → nama + nomor + group</div>
+<div class="docs-step"><strong>2. CSV Import:</strong> Upload CSV (name, phone, groups). Group auto-create.</div>
+<div class="docs-step"><strong>3. CSV Export:</strong> Tombol Export di Contacts</div>
+<div class="docs-step"><strong>4. Bulk Delete:</strong> Centang → Delete</div>
+<div class="docs-step"><strong>5. Groups:</strong> <code>/contacts/groups</code> — atur grup + language ID/EN per grup</div>
+<div class="docs-step"><strong>6. Tags:</strong> <code>/tags</code> — label warna (VIP, Leads). Filter di broadcast.</div>
+<div class="docs-step"><strong>7. Merge Duplikat:</strong> <code>/merge</code> — auto-detect & gabung</div>
+<div class="docs-step"><strong>8. Number Validator:</strong> Tombol Validate di broadcast form</div>
+</table>
+</div>
 
-<div class="docs-section" id="payment"><h3>Payment Gateway</h3>
-<table class="table table-sm"><thead><tr><th>Gateway</th><th>Region</th><th>Setup</th></tr></thead>
-<tbody>
-<tr><td>Midtrans</td><td>Indonesia</td><td>/admin/gateways-pay → pilih midtrans → input Server Key</td></tr>
-<tr><td>Xendit</td><td>Indonesia</td><td>/admin/gateways-pay → pilih xendit → input API Key</td></tr>
-<tr><td>PayPal</td><td>International</td><td>/admin/gateways-pay → pilih paypal → input Access Token</td></tr>
-<tr><td>Stripe</td><td>International</td><td>/admin/gateways-pay → pilih stripe → input Secret Key</td></tr>
-</tbody></table>
-<p class="text-muted"><strong>Flow:</strong> User pilih paket di /subscribe → checkout via gateway → callback → subscription auto-active</p></div>
+<div class="docs-section" id="broadcast">
+<h3>Broadcast</h3>
+<div class="docs-step"><strong>1.</strong> <code>/broadcast</code> → nama campaign + pilih grup target + nomor langsung</div>
+<div class="docs-step"><strong>2.</strong> Upload media (gambar/video/dokumen) — dikirim bersama pesan</div>
+<div class="docs-step"><strong>3.</strong> Pilih akun WA + mode (Round Robin / Random)</div>
+<div class="docs-step"><strong>4.</strong> Interval + Rate Limiter di Settings</div>
+<div class="docs-step"><strong>5.</strong> Pause / Resume / Stop / Retry campaign</div>
+<div class="docs-step"><strong>6.</strong> Link Tracking auto + A/B Testing</div>
+<div class="docs-step"><strong>7.</strong> Recurring Campaign: <code>/recurring</code> — jadwal daily/weekly</div>
+<div class="docs-step"><strong>8.</strong> Campaign Calendar: <code>/calendar</code></div>
+</div>
 
-<div class="docs-section" id="inbox"><h3>Live Chat Inbox</h3>
-<table class="table table-sm"><thead><tr><th>Fitur</th><th>Cara</th></tr></thead>
-<tbody>
-<tr><td>Real-time Inbox</td><td>/inbox — SSE auto-refresh, filter Private/Group/Unread</td></tr>
-<tr><td>Send/Receive</td><td>Klik conversation → kirim pesan langsung</td></tr>
-<tr><td>Media Preview</td><td>Gambar/video tampil inline</td></tr>
-<tr><td>Status Tab</td><td>Lihat story/status dari kontak</td></tr>
-</tbody></table></div>
+<div class="docs-section" id="drip">
+<h3>Drip Campaign — Follow-up Otomatis</h3>
+<div class="docs-step"><strong>1. Buat Drip:</strong> <code>/drips</code> → nama + add steps (message + delay menit)</div>
+<div class="docs-step"><strong>2. Auto-Enroll:</strong> Setiap chat masuk → otomatis masuk semua drip aktif</div>
+<div class="docs-step"><strong>3. STOP:</strong> User reply "STOP" atau "berhenti" → unenroll</div>
+<div class="docs-step"><strong>4. Contoh Step:</strong> 0: "Halo Kak!" → +120min: "Ada yang bisa dibantu?" → +1day: "Promo spesial!"</div>
+</div>
 
-<div class="docs-section" id="ai"><h3>AI Auto Reply</h3>
-<table class="table table-sm"><thead><tr><th>Fitur</th><th>Cara</th></tr></thead>
-<tbody>
-<tr><td>AI Keys</td><td>/ai/keys → tambah key (OpenAI/Gemini/Claude/DeepSeek)</td></tr>
-<tr><td>Auto Reply Rules</td><td>/autoreply → match type (contains/exact/starts/AI)</td></tr>
-<tr><td>Knowledge Base</td><td>/knowledge → tambah Q&A, import CSV, upload PDF/URL</td></tr>
-<tr><td>AI Global Mode</td><td>/settings → centang "AI untuk Semua Pesan"</td></tr>
-<tr><td>AI Store Agent (RAG)</td><td>AI auto-inject product catalog + customer profile ke context</td></tr>
-<tr><td>Human Handoff</td><td>/settings → keyword trigger untuk stop AI → kirim kontak admin</td></tr>
-<tr><td>Memory Window</td><td>/settings → berapa pesan terakhir dikirim ke AI</td></tr>
-<tr><td>Working Hours</td><td>/settings → jam kerja + pesan luar jam + off days</td></tr>
-</tbody></table></div>
+<div class="docs-section" id="ai">
+<h3>AI Auto Reply</h3>
+<div class="docs-step"><strong>1. AI Key:</strong> <code>/ai/keys</code> → tambah OpenAI/Gemini/Claude/DeepSeek</div>
+<div class="docs-step"><strong>2. Knowledge Base:</strong> <code>/knowledge</code> → Q&A manual atau import CSV/PDF</div>
+<div class="docs-step"><strong>3. Buat Rule:</strong> <code>/autoreply</code> → Match Type (Contains/Exact/AI) → centang AI</div>
+<div class="docs-step"><strong>4. AI Global:</strong> Settings → AI untuk Semua Pesan</div>
+<div class="docs-step"><strong>5. Store Agent:</strong> AI auto-inject katalog produk + profil customer</div>
+<div class="docs-step"><strong>6. Human Handoff:</strong> Keyword trigger → stop AI → kontak admin</div>
+<div class="docs-step"><strong>7. Working Hours:</strong> Jam kerja + pesan luar jam</div>
+<div class="docs-step"><strong>8. Variables:</strong> {name} {phone} {message}. Spintax: {Halo|Hai}</div>
+</div>
 
-<div class="docs-section" id="team"><h3>Team & Support</h3>
-<table class="table table-sm"><thead><tr><th>Fitur</th><th>Lokasi</th><th>Cara</th></tr></thead>
-<tbody>
-<tr><td>Agent Assignment</td><td>Inbox Chat</td><td>Dropdown assign agent, auto round-robin</td></tr>
-<tr><td>Departments</td><td>/depts</td><td>Buat Sales/Support/Billing + assign agents</td></tr>
-<tr><td>Chat Transfer</td><td>Inbox Chat</td><td>Dropdown transfer ke agent lain</td></tr>
-<tr><td>Conversation Notes</td><td>Inbox Chat</td><td>Catat note internal, tampil di bawah chat</td></tr>
-<tr><td>Close Conversation</td><td>Inbox Chat</td><td>Tombol Close → kirim CSAT survey</td></tr>
-<tr><td>Canned Responses</td><td>/canned</td><td>Shortcut balasan cepat, muncul di inbox</td></tr>
-<tr><td>Agent Signature</td><td>/settings</td><td>Auto-append di akhir pesan agent</td></tr>
-<tr><td>Chat Labels</td><td>Inbox</td><td>Tag conversation (urgent/follow-up/resolved)</td></tr>
-<tr><td>Inbox Macros</td><td>/macros</td><td>One-click multi-action: assign+tag+reply+close</td></tr>
-<tr><td>Auto-Close Idle</td><td>/settings</td><td>Tutup otomatis setelah X jam + follow-up</td></tr>
-<tr><td>CSAT Survey</td><td>Auto</td><td>Auto-kirim rating request saat close</td></tr>
-<tr><td>VIP Priority</td><td>Inbox</td><td>Set priority=1, antrian lebih cepat</td></tr>
-</tbody></table></div>
+<div class="docs-section" id="inbox">
+<h3>Live Chat Inbox</h3>
+<div class="docs-step"><strong>1.</strong> <code>/inbox</code> — WhatsApp-style. Tab Chat + Status</div>
+<div class="docs-step"><strong>2.</strong> Filter: Semua / Private / Group / Unread</div>
+<div class="docs-step"><strong>3.</strong> Channel: WA Web atau Meta (dropdown di chat header)</div>
+<div class="docs-step"><strong>4.</strong> Canned Responses: <code>/canned</code> — tombol shortcut di bawah input</div>
+<div class="docs-step"><strong>5.</strong> Templates: <code>/templates</code> — klik untuk insert</div>
+</div>
 
-<div class="docs-section" id="contacts"><h3>Contacts & CRM</h3>
-<table class="table table-sm"><thead><tr><th>Fitur</th><th>Lokasi</th><th>Cara</th></tr></thead>
-<tbody>
-<tr><td>Contact List</td><td>/contacts</td><td>Tambah/edit/hapus kontak manual</td></tr>
-<tr><td>CSV Import</td><td>/contacts</td><td>Upload CSV (name,phone,groups)</td></tr>
-<tr><td>CSV Export</td><td>/contacts</td><td>Download semua kontak ke CSV</td></tr>
-<tr><td>Bulk Delete</td><td>/contacts</td><td>Centang → Delete Selected</td></tr>
-<tr><td>Contact Groups</td><td>/contacts/groups</td><td>Atur grup + language per grup</td></tr>
-<tr><td>Contact Tags</td><td>/tags</td><td>Tag custom (VIP, Leads) + warna</td></tr>
-<tr><td>Multi-Lang Groups</td><td>/contacts/groups</td><td>Set bahasa ID/EN per grup</td></tr>
-<tr><td>Unsubscribe</td><td>/contacts/unsub</td><td>Kelola nomor yang opt-out</td></tr>
-<tr><td>Customer Directory</td><td>/customers</td><td>Search & chat langsung</td></tr>
-<tr><td>Contact Merge</td><td>/merge</td><td>Deteksi & gabung duplikat</td></tr>
-<tr><td>Number Validator</td><td>/broadcast</td><td>Tombol Validate cek format+blacklist</td></tr>
-</tbody></table></div>
+<div class="docs-section" id="store">
+<h3>WA Store Bot</h3>
+<div class="docs-step"><strong>1. Setup:</strong> <code>/store</code> → tambah kategori + produk (nama, harga, gambar)</div>
+<div class="docs-step"><strong>2. Flow Customer:</strong> Chat "menu" → lihat kategori → pilih produk → auto-order</div>
+<div class="docs-step"><strong>3. Pembayaran:</strong> Chat "BAYAR" → diarahkan ke halaman pembayaran</div>
+<div class="docs-step"><strong>4. Order:</strong> <code>/store/orders</code> → update status. WA notif otomatis.</div>
+</div>
 
-<div class="docs-section" id="safety"><h3>Safety & Blacklist</h3>
-<table class="table table-sm"><thead><tr><th>Fitur</th><th>Lokasi</th><th>Cara</th></tr></thead>
-<tbody>
-<tr><td>Smart Blacklist</td><td>/blacklist</td><td>Auto-detect spam → auto-block. Manual add/remove</td></tr>
-<tr><td>Spam Detection</td><td>Auto</td><td>8+ identik dalam 10 menit → auto-blacklist</td></tr>
-<tr><td>Rate Limiter</td><td>/settings</td><td>Max/day + random delay anti-ban</td></tr>
-</tbody></table></div>
+<div class="docs-section" id="payment">
+<h3>Payment Gateway</h3>
+<div class="docs-step"><strong>1.</strong> <code>/admin/gateways-pay</code> → tambah Midtrans/PayPal/Stripe/Xendit</div>
+<div class="docs-step"><strong>2.</strong> Buat Package: <code>/admin/packages</code> → harga + limit + services (fitur)</div>
+<div class="docs-step"><strong>3.</strong> User subscribe: <code>/subscribe</code> → pilih package → gateway → bayar</div>
+<div class="docs-step"><strong>4.</strong> Auto-activate: callback → verify → subscription aktif</div>
+<div class="docs-step"><strong>5.</strong> Reminder: <code>/reminders</code> — jadwal tagihan + auto-WA</div>
+</div>
 
-<div class="docs-section" id="analytics"><h3>Analytics & Reports</h3>
-<table class="table table-sm"><thead><tr><th>Fitur</th><th>Lokasi</th><th>Keterangan</th></tr></thead>
-<tbody>
-<tr><td>Dashboard Chart</td><td>/home</td><td>Grafik 7 hari sent vs received</td></tr>
-<tr><td>Agent Performance</td><td>/analytics</td><td>Chats, replies, avg response time</td></tr>
-<tr><td>CSAT Score</td><td>/analytics</td><td>Average rating dari survey</td></tr>
-<tr><td>Link Tracker</td><td>/tracker</td><td>Lihat semua link + klik status</td></tr>
-<tr><td>Campaign Calendar</td><td>/calendar</td><td>Visual timeline campaign + recurring</td></tr>
-<tr><td>Audit Log</td><td>/audit</td><td>Trace siapa ngapain kapan</td></tr>
-<tr><td>Payment Reminders</td><td>/reminders</td><td>Auto-WA tagihan + due tracking</td></tr>
-</tbody></table></div>
+<div class="docs-section" id="team">
+<h3>Team & Support</h3>
+<div class="docs-step"><strong>Agent Assignment:</strong> Auto round-robin. Assign manual via dropdown.</div>
+<div class="docs-step"><strong>Departments:</strong> <code>/depts</code> — Sales/Support/Billing. Auto-detect keyword.</div>
+<div class="docs-step"><strong>Chat Transfer + Notes + Labels + Close + CSAT Survey</strong></div>
+<div class="docs-step"><strong>Macros:</strong> <code>/macros</code> — one-click assign+tag+reply+close</div>
+<div class="docs-step"><strong>Auto-Close + VIP Priority + Agent Signature</strong></div>
+</div>
 
-<div class="docs-section" id="tools"><h3>Tools & System</h3>
-<table class="table table-sm"><thead><tr><th>Fitur</th><th>Lokasi</th><th>Keterangan</th></tr></thead>
-<tbody>
-<tr><td>Templates</td><td>/templates</td><td>Template pesan reusable</td></tr>
-<tr><td>API Keys</td><td>/apikeys</td><td>Generate key untuk API access</td></tr>
-<tr><td>Webhooks</td><td>/webhooks</td><td>Kirim event ke URL eksternal</td></tr>
-<tr><td>Language</td><td>Navbar</td><td>Switch ID ↔ EN, semua konten bilingual</td></tr>
-<tr><td>Whitelabel</td><td>/settings</td><td>Ganti logo, nama, email</td></tr>
-<tr><td>Database Backup</td><td>/backup</td><td>One-click backup DB</td></tr>
-<tr><td>File Manager</td><td>/uploads</td><td>Browse uploaded media</td></tr>
-<tr><td>Auto-Translate</td><td>POST /translate</td><td>AI translate text ke bahasa target</td></tr>
-<tr><td>Email→WA Gateway</td><td>POST /email-webhook</td><td>Forward email ke WA inbox</td></tr>
-</tbody></table></div>
+<div class="docs-section" id="analytics">
+<h3>Analytics</h3>
+<div class="docs-step"><strong>Dashboard:</strong> Chart 7 hari sent vs received</div>
+<div class="docs-step"><strong>Agent:</strong> <code>/analytics</code> — chats, replies, response time</div>
+<div class="docs-step"><strong>CSAT:</strong> <code>/csat</code> & <code>/analytics</code> — rating survey</div>
+<div class="docs-step"><strong>Link Tracker:</strong> <code>/tracker</code> — URL clicks</div>
+<div class="docs-step"><strong>Audit:</strong> <code>/audit</code> — user activity log</div>
+</div>
 
-<div class="docs-section" id="widget"><h3>Web Widget</h3>
-<p class="text-muted">Embeddable chat widget untuk website.</p>
-<pre class="bg-light p-3 rounded"><code>&lt;script src="{{.AppURL}}/widget.js"&gt;&lt;/script&gt;</code></pre>
-<p class="small text-muted">Tambah script ini di HTML website kamu. Tombol chat otomatis muncul di pojok kanan bawah.</p></div>
+<div class="docs-section" id="tools">
+<h3>Tools</h3>
+<div class="docs-step"><strong>Translate:</strong> <code>/translate-tool</code> — AI translate ke 9 bahasa</div>
+<div class="docs-step"><strong>Forms:</strong> <code>/forms</code> — interactive form builder</div>
+<div class="docs-step"><strong>Files:</strong> <code>/uploads</code> — browse uploaded media</div>
+<div class="docs-step"><strong>Backup:</strong> <code>/backup</code> — one-click DB backup</div>
+<div class="docs-step"><strong>Safety:</strong> <code>/blacklist</code> — auto spam detection. Settings — Rate Limiter</div>
+</div>
 
-<div class="docs-section" id="api"><h3>API Reference</h3>
-<pre class="bg-light p-3 rounded"><code># Send message
-POST /api/send
-Header: X-API-Key: &lt;your-api-key&gt;
-Body: {"phone":"628123456789","message":"Hello"}
+<div class="docs-section" id="api">
+<h3>API Reference</h3>
+<pre class="bg-light p-3 rounded"><code>POST /api/send
+Header: X-API-Key: YOUR_KEY
+Body: {"phone":"628xx","message":"text"}
 
-# List contacts
 GET /api/contacts
-Header: X-API-Key: &lt;your-api-key&gt;
-
-# Send from specific account
-POST /api/send
-Body: {"phone":"628xx","message":"text","account_phone":"+628xx"}</code></pre></div>
+Header: X-API-Key: YOUR_KEY</code></pre>
+<p class="small text-muted">API Keys: <code>/apikeys</code>. Webhooks: <code>/webhooks</code>.</p>
+</div>
 
 </div></div>
+<script>
+(function(){
+var n=document.querySelectorAll('.docs-nav a');
+var s=document.querySelectorAll('.docs-section');
+addEventListener('scroll',function(){
+var st=scrollY+90;
+s.forEach(function(sec,i){
+var t=sec.offsetTop,h=sec.offsetHeight;
+n.forEach(function(a){a.classList.remove('active')});
+if(st>=t && st<t+h && n[i+1])n[i+1].classList.add('active');
+});
+});
+n.forEach(function(a){a.addEventListener('click',function(e){e.preventDefault();var el=document.getElementById(this.getAttribute('href').slice(1));if(el)el.scrollIntoView({behavior:'smooth',block:'start'})})});
+})();
+</script>
 {{end}}
-
 
 
 {{if eq .Page "knowledge"}}
