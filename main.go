@@ -538,6 +538,7 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.ChatMessages, _ = db.ChatHistory(d.Phone, 100)
 		d.Templates, _ = db.ListTemplates()
 		d.Canned, _ = db.ListCanned()
+		d.Users, _ = db.ListUsers()
 		d.MetaAccounts, _ = db.ListMetaAccounts()
 		if msgs, _ := db.ChatHistory(d.Phone, 1); len(msgs) > 0 {
 			d.IsGroup = msgs[0].IsGroup

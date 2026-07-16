@@ -579,7 +579,7 @@ func (d *DB) TrackLink(token, url string, campaignID int64, phone string) {
 	d.sql.Exec(`INSERT INTO link_clicks (token, url, campaign_id, phone) VALUES (?, ?, ?, ?)`, token, url, campaignID, phone)
 }
 func (d *DB) LogLinkClick(token string) {
-	d.sql.Exec(`UPDATE link_clicks SET clicked_at=NOW() WHERE token=?`, token)
+	d.sql.Exec(`UPDATE link_clicks SET clicked_at=NOW() WHERE token=? AND clicked_at=created_at`, token)
 }
 func (d *DB) LinkClicks(campaignID int64) int {
 	var n int

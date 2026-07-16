@@ -1634,7 +1634,7 @@ else{if(b)b.remove()}
 </select>
 <select id="chatAccountPhone" class="form-select form-select-sm" style="width:auto;display:inline"> {{range .ConnectedAccounts}}{{if eq .Status "connected"}}<option value="+{{.Phone}}">+{{.Phone}}</option>{{end}}{{end}}</select>
 <select id="chatMetaAccount" class="form-select form-select-sm" style="width:auto;display:none"> {{range .MetaAccounts}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select>
-</div>
+{{if .Users}}<form method="post" action="/inbox/assign" style="display:inline" class="me-1"><input type="hidden" name="phone" value="{{.Phone}}"><select name="agent_id" class="form-select form-select-sm" style="width:auto;font-size:11px" onchange="this.form.submit()"><option value="0">Unassigned</option>{{range .Users}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select></form><form method="post" action="/inbox/close" style="display:inline"><input type="hidden" name="phone" value="{{.Phone}}"><button class="btn btn-sm btn-outline-danger" style="font-size:11px;padding:2px 8px">Close</button></form>{{end}}</div>
 </div>
 <div class="card-body p-0">
 <div class="chat-area" id="chatMessages">
@@ -1730,6 +1730,12 @@ else{if(b)b.remove()}
 };
 
 document.querySelectorAll('.template-btn').forEach(function(btn){
+btn.addEventListener('click',function(){
+document.getElementById('chatInput').value=this.dataset.content;
+document.getElementById('chatInput').focus();
+});
+});
+document.querySelectorAll('.canned-btn').forEach(function(btn){
 btn.addEventListener('click',function(){
 document.getElementById('chatInput').value=this.dataset.content;
 document.getElementById('chatInput').focus();

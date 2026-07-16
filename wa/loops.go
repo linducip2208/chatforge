@@ -1,6 +1,9 @@
 package wa
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -143,6 +146,8 @@ func (e *Engine) runCampaign(c store.Campaign) {
 		}
 		var sendErr error
 		msg := msgtemplate.Render(c.Message, msgtemplate.Vars{Name: ct.Name, Phone: ct.Phone, Message: ""})
+		// link tracking: replace URLs with tracking links
+		msg = replaceTrackURLs(e, msg, c.ID, ct.Phone)
 		if metaClient != nil {
 			// Meta API sending
 			if c.MediaURL != "" && c.MediaType == "image" {
@@ -338,4 +343,20 @@ func (e *Engine) dripLoop() {
 			time.Sleep(2 * time.Second)
 		}
 	}
+}
+
+// replaceTrackURLs finds URLs in message, creates tracking links, and replaces them.
+var urlRe = regexp.MustCompile(`https?://[^\s"]+`)
+
+func replaceTrackURLs(e *Engine, msg string, campaignID int64, phone string) string {
+	matches := urlRe.FindAllString(msg, -1)
+	for _, url := range matches {
+		tok := make([]byte, 6)
+		rand.Read(tok)
+		token := hex.EncodeToString(tok)
+		e.db.TrackLink(token, url, campaignID, phone)
+		appURL := e.db.GetSetting("app_url", "http://localhost:8080")
+		msg = strings.Replace(msg, url, appURL+"/track/"+token, 1)
+	}
+	return msg
 }
