@@ -174,7 +174,23 @@ func (d *DB) migrateAdmin() error {
 			return err
 		}
 	}
+	d.seedDefaults()
 	return nil
+}
+
+func (d *DB) seedDefaults() {
+	var n int
+	d.sql.QueryRow(`SELECT COUNT(*) FROM roles`).Scan(&n)
+	if n == 0 {
+		d.sql.Exec(`INSERT INTO roles (name, permissions) VALUES ('admin','manage_users,manage_packages,manage_waservers,manage_plugins')`)
+		d.sql.Exec(`INSERT INTO roles (name, permissions) VALUES ('user','')`)
+	}
+	d.sql.QueryRow(`SELECT COUNT(*) FROM packages`).Scan(&n)
+	if n == 0 {
+		d.sql.Exec(`INSERT INTO packages (name, price, send_limit, device_limit, receive_limit, wa_send_limit, wa_receive_limit, wa_account_limit, contact_limit, scheduled_limit, key_limit, webhook_limit, action_limit) VALUES ('Free','0',50,0,50,50,50,0,100,5,2,2,2)`)
+		d.sql.Exec(`INSERT INTO packages (name, price, send_limit, device_limit, receive_limit, wa_send_limit, wa_receive_limit, wa_account_limit, contact_limit, scheduled_limit, key_limit, webhook_limit, action_limit) VALUES ('Pro','29',500,3,500,500,500,3,1000,20,10,10,10)`)
+		d.sql.Exec(`INSERT INTO packages (name, price, send_limit, device_limit, receive_limit, wa_send_limit, wa_receive_limit, wa_account_limit, contact_limit, scheduled_limit, key_limit, webhook_limit, action_limit) VALUES ('Enterprise','99',9999,10,9999,9999,9999,10,99999,100,100,100,100)`)
+	}
 }
 
 func (d *DB) MustListAiTrainings() []AiTraining {
