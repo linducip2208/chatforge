@@ -415,6 +415,7 @@ func (e *Engine) onMessage(s *session, evt *events.Message) {
 			}
 		}
 		e.db.LogReceived(groupJID, groupName, text, true, senderPhone, name, "whatsmeow")
+		e.db.Log("received", "group", fmt.Sprintf("[%s] %s → %s: %s", groupName, name, groupJID, text))
 		select {
 		case e.notifyCh <- groupJID:
 		default:
@@ -422,7 +423,7 @@ func (e *Engine) onMessage(s *session, evt *events.Message) {
 		e.dispatchWebhooks("received", senderPhone, name, text, "group")
 		e.log.Infof("group msg: %s → %s: %s", name, groupName, text)
 	} else {
-		e.db.LogReceived(senderPhone, name, text, false, "", "", "whatsmeow")
+		e.db.LogReceived(senderPhone, name, text, false, "", "", "whatsmeow"); e.db.Log("received", "private", fmt.Sprintf("%s (%s): %s", name, senderPhone, text))
 		select {
 		case e.notifyCh <- senderPhone:
 		default:
@@ -472,9 +473,9 @@ func (e *Engine) onMessage(s *session, evt *events.Message) {
 					if decKey == "" { decKey = aik.APIKey }
 					if aiReply, aiErr := aiservice.Reply(decKey, aik.Provider, aik.Model, aik.BaseURL, aik.SystemPrompt, text, e.knowledgeRows(), nil); aiErr == nil && aiReply != "" {
 						if err := e.sendVia(s, to, aiReply); err != nil {
-							e.db.LogSent(to.User, aiReply, "failed", "whatsmeow")
+							e.db.LogSent(to.User, aiReply, "failed", "whatsmeow"); e.db.Log("autoreply", "failed", fmt.Sprintf("FAILED -> %s: %s", to.User, aiReply))
 						} else {
-							e.db.LogSent(to.User, aiReply, "ai_all", "whatsmeow")
+							e.db.LogSent(to.User, aiReply, "ai_all", "whatsmeow"); e.db.Log("ai", "sent", fmt.Sprintf("AI reply -> %s: %s", to.User, aiReply))
 						}
 						return
 					}
@@ -489,7 +490,7 @@ skipAIAll:
 			if wmsg := e.db.GetSetting("welcome_message", ""); wmsg != "" {
 				rendered := msgtemplate.Render(wmsg, tv)
 				if err := e.sendVia(s, to, rendered); err == nil {
-					e.db.LogSent(to.User, rendered, "welcome", "whatsmeow")
+					e.db.LogSent(to.User, rendered, "welcome", "whatsmeow"); e.db.Log("welcome", "sent", fmt.Sprintf("welcome -> %s: %s", to.User, rendered))
 				}
 			}
 		}
@@ -523,7 +524,7 @@ skipAIAll:
 				if strings.TrimSpace(kw) != "" && strings.Contains(msgLower, strings.TrimSpace(kw)) {
 					handoffMsg := msgtemplate.Render(e.db.GetSetting("handoff_message", "Silakan hubungi admin kami."), tv)
 					e.sendVia(s, to, handoffMsg)
-					e.db.LogSent(to.User, handoffMsg, "handoff", "whatsmeow")
+					e.db.LogSent(to.User, handoffMsg, "handoff", "whatsmeow"); e.db.Log("handoff", "sent", fmt.Sprintf("handoff -> %s: %s", to.User, handoffMsg))
 					return
 				}
 			}
@@ -570,10 +571,10 @@ skipAIAll:
 		}
 
 		if err := e.sendVia(s, to, rendered); err != nil {
-			e.db.LogSent(to.User, rendered, "failed", "whatsmeow")
+			e.db.LogSent(to.User, rendered, "failed", "whatsmeow"); e.db.Log("autoreply", "failed", fmt.Sprintf("FAILED -> %s: %s", to.User, rendered))
 			return
 		}
-		e.db.LogSent(to.User, rendered, "autoreply", "whatsmeow")
+		e.db.LogSent(to.User, rendered, "autoreply", "whatsmeow"); e.db.Log("autoreply", "sent", fmt.Sprintf("auto-reply -> %s: %s", to.User, rendered))
 		return
 	}
 afterAI:
@@ -582,7 +583,7 @@ afterAI:
 		if fmsg := e.db.GetSetting("fallback_message", ""); fmsg != "" {
 			rendered := msgtemplate.Render(fmsg, tv)
 			if err := e.sendVia(s, to, rendered); err == nil {
-				e.db.LogSent(to.User, rendered, "fallback", "whatsmeow")
+				e.db.LogSent(to.User, rendered, "fallback", "whatsmeow"); e.db.Log("fallback", "sent", fmt.Sprintf("fallback -> %s: %s", to.User, rendered))
 			}
 		}
 	}
@@ -612,10 +613,10 @@ func (e *Engine) SendFrom(accountPhone, phone, message string) error {
 		jid = waTypes.NewJID(digits, waTypes.DefaultUserServer)
 	}
 	if err := e.sendVia(s, jid, message); err != nil {
-		e.db.LogSent(phone, message, "failed", "whatsmeow")
+		e.db.LogSent(phone, message, "failed", "whatsmeow"); e.db.Log("send", "failed", fmt.Sprintf("FAILED -> %s: %s", phone, message))
 		return err
 	}
-	e.db.LogSent(phone, message, "sent", "whatsmeow")
+	e.db.LogSent(phone, message, "sent", "whatsmeow"); e.db.Log("send", "sent", fmt.Sprintf("outgoing -> %s: %s", phone, message))
 	e.dispatchWebhooks("sent", phone, "", message, "private")
 	return nil
 }
