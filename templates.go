@@ -184,6 +184,18 @@ document.querySelectorAll(".msg-full").forEach(function(el){
   }
 });
 </script>
+<script>
+(function(){
+var active=document.querySelector('.navbar-vertical .nav-link.active');
+if(active){
+  var sidebar=document.querySelector('.navbar-vertical');
+  var st=sidebar.scrollTop, sh=sidebar.offsetHeight;
+  var at=active.offsetTop, ah=active.offsetHeight;
+  var center=at-(sh/2)+(ah/2);
+  if(center>0)sidebar.scrollTo({top:center,behavior:'smooth'});
+}
+})();
+</script>
 </body>
 </html>{{end}}
 
