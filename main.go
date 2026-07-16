@@ -716,6 +716,20 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 			return s[start:end]
 		},
 		"js": func(s string) template.JS { return template.JS(s) },
+		"permBadges": func(perms string) template.HTML {
+			if perms == "" { return "-" }
+			parts := strings.Split(perms, ",")
+			var buf strings.Builder
+			for _, p := range parts {
+				p = strings.TrimSpace(p)
+				if p == "" { continue }
+				c := "secondary"
+				if strings.HasPrefix(p, "manage_") { c = "primary" }
+				if strings.HasPrefix(p, "wa_") { c = "success" }
+				buf.WriteString(fmt.Sprintf(`<span class="badge badge-soft-%s me-1 mb-1">%s</span>`, c, p))
+			}
+			return template.HTML(buf.String())
+		},
 	}).Parse(templates))
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
