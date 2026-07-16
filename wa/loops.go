@@ -56,6 +56,16 @@ func (e *Engine) runCampaign(c store.Campaign) {
 		}
 	}
 	if sel == nil { sel = &SenderSelector{Mode: sendMode} }
+
+	// resume: skip already-sent numbers
+	alreadySent := map[string]bool{}
+	if c.SentTo != "" {
+		for _, p := range strings.Split(c.SentTo, ",") {
+			p = strings.TrimSpace(p)
+			if p != "" { alreadySent[p] = true }
+		}
+	}
+
 	// gather unique recipients from groups + direct numbers
 	seen := map[string]bool{}
 	var targets []store.Contact
@@ -64,7 +74,7 @@ func (e *Engine) runCampaign(c store.Campaign) {
 		if gid == "" { continue }
 		list, _ := e.db.ContactsByGroup(gid)
 		for _, ct := range list {
-			if !seen[ct.Phone] && ct.Phone != "" {
+			if !seen[ct.Phone] && ct.Phone != "" && !alreadySent[ct.Phone] {
 				seen[ct.Phone] = true
 				targets = append(targets, ct)
 			}
@@ -74,7 +84,7 @@ func (e *Engine) runCampaign(c store.Campaign) {
 	if c.Numbers != "" {
 		for _, n := range strings.Split(c.Numbers, ",") {
 			n = strings.TrimSpace(n)
-			if n == "" || seen[n] { continue }
+			if n == "" || seen[n] || alreadySent[n] { continue }
 			seen[n] = true
 			targets = append(targets, store.Contact{Phone: n})
 		}
