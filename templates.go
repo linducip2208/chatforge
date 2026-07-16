@@ -521,7 +521,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;m
 {{range .ConnectedAccounts}}<div class="d-flex align-items-center justify-content-between mb-2"><span><span class="status-dot" style="background:#00d97e"></span> +{{.Phone}}</span><a href="/send?to=+{{.Phone}}" class="badge bg-primary bg-opacity-10 text-primary text-decoration-none small py-1 px-2">Kirim</a></div>{{end}}
 {{else}}<span class="text-muted small">Tidak ada WA terkoneksi. <a href="/wa">{{T "dash_connect"}}</a></span>{{end}}
 </div></div>
-<div class="card"><div class="card-header"><h4 class="card-header-title"">{{T "dash_campaigns"}}</h4></div>
+<div class="card"><div class="card-header"><h4 class="card-header-title">{{T "dash_campaigns"}}</h4></div>
 <div class="card-body">
 <div class="d-flex justify-content-between mb-1"><span>{{T "dash_running"}}</span><span class="badge badge-soft-warning">{{.RunningCampaigns}}</span></div>
 <a href="/broadcast" class="btn btn-sm btn-white w-100">{{T "dash_manage_bc"}}</a>
@@ -943,33 +943,6 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
         {{range .Devices}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.DID}}</td><td>{{.Manufacturer}}</td><td><form method="post" action="/devices/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center">-</td></tr>{{end}}
       </tbody></table></div></div></div>
   </div>
-{{end}}
-
-{{if eq .Page "login"}}
-<h3>Masuk</h3>
-<p class="sub">Belum punya akun? <a href="/register">Daftar gratis</a></p>
-<form method="post" action="/login/post">
-  <div class="form-group mb-3"><label class="small fw-bold text-muted">Email</label><input type="email" name="email" class="form-control" placeholder="{{.AppEmail}}" required></div>
-  <div class="form-group mb-3"><label class="small fw-bold text-muted">Password</label><input type="password" name="password" class="form-control" placeholder="••••••••" required></div>
-  <button class="btn" type="submit">Masuk</button>
-</form>
-<div class="auth-divider"><span>atau</span></div>
-<div class="demo-box">
-  <div class="demo-title">🧪 Demo Login</div>
-  <div class="demo-row"><strong>Admin:</strong> {{.AppEmail}} / password</div>
-  <div class="demo-row"><strong>User:</strong> saas_005357@test.com / password</div>
-</div>
-{{end}}
-
-{{if eq .Page "register"}}
-<h3>Daftar</h3>
-<p class="sub">Sudah punya akun? <a href="/login">Masuk</a></p>
-<form method="post" action="/register/post">
-  <div class="form-group mb-3"><label class="small fw-bold text-muted">{{T "ar_nama"}}</label><input name class="form-control" placeholder="Nama Anda" required></div>
-  <div class="form-group mb-3"><label class="small fw-bold text-muted">Email</label><input type="email" name="email" class="form-control" placeholder="email@domain.com" required></div>
-  <div class="form-group mb-3"><label class="small fw-bold text-muted">Password</label><input type="password" name="password" class="form-control" placeholder="Min. 6 karakter" required></div>
-  <button class="btn" type="submit">Daftar</button>
-</form>
 {{end}}
 
 {{if eq .Page "hosts_whatsapp"}}
