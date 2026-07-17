@@ -698,7 +698,7 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 	d.AgentSignature = db.GetSetting("agent_signature", "")
 	d.BizHoursReply = db.GetSetting("biz_hours_reply", "Saat ini di luar jam operasional. Pesan Anda akan kami balas saat jam kerja.")
 	d.ForceOwnKey = db.GetSetting("force_own_key", "0") == "1"
-	d.Registrations = db.GetSetting("registrations", "0") == "1"
+	d.Registrations = db.GetSetting("registrations", "1") == "1"
 	d.AiTokenQuota = int64(db.GetUserAiQuota(uid))
 	d.AiTokenUsed = db.GetAiTokenUsage(uid)
 	d.UnreadCount = db.UnreadCount()
