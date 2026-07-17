@@ -126,16 +126,35 @@ Login: `admin@chatgo.test` / `password`
 ## 🏗️ Architecture
 
 ```
-chatforge.exe (single binary)
-├── wa/         — WhatsApp engine (whatsmeow)
-├── store/      — MySQL database layer
-├── aiservice/  — AI provider adapter (OpenAI-compatible)
-├── msgtemplate/— Spintax + variable engine
-├── i18n/       — Multi-language JSON loader
-├── secret/     — AES encryption for API keys
-├── lang/       — id.json + en.json
-└── web/        — Static assets (CSS, JS, images)
+chatforge (single Go binary)
+├── wa/           — WhatsApp engine (whatsmeow sessions, send, auto-reply, loops)
+├── store/        — MySQL database layer (CRUD, migrations, multi-tenant isolation)
+│   ├── store.go          — core (autoreplies, inbox, sent/received, sessions, settings)
+│   ├── store_admin.go    — users, roles, packages, AI keys, devices, permissions
+│   ├── store_extra.go    — contacts, groups, campaigns, scheduled, templates, tags
+│   ├── store_safety.go   — blacklist, CSAT, spam detection
+│   ├── store_drip.go     — drip campaigns, steps, enrollments
+│   ├── store_meta.go     — WhatsApp Cloud API accounts, templates
+│   ├── store_payment.go  — payment gateways, transactions
+│   ├── store_plus.go     — departments, recurring, notes, labels
+│   ├── store_final.go    — audit logs, inbox macros
+│   └── store_knowledge.go— knowledge base, AI trainings
+├── aiservice/    — AI provider adapter (OpenAI-compatible, BYOK)
+├── meta/         — WhatsApp Cloud API client (Meta Graph API v22)
+├── msgtemplate/  — Spintax + variable render engine
+├── i18n/         — Multi-language JSON loader
+├── secret/       — AES-256-GCM encryption for API keys & secrets
+├── payment/      — Payment gateway adapter (Midtrans, Xendit, Tripay, Duitku)
+├── lang/         — id.json + en.json translation files
+└── web/          — Static assets (CSS, JS, Font Awesome, Line Awesome, images)
 ```
+
+### Security Architecture
+- **Passwords** — bcrypt with auto-upgrade from legacy SHA-256
+- **API Keys** — SHA-256 hashed, shown once at creation
+- **Secrets** — AES-256-GCM encrypted (env key via `CHATGO_ENC_KEY`)
+- **Sessions** — HttpOnly + Secure + SameSite cookies
+- **Multi-tenant** — `user_id` on 15+ tables, ownership-validated CRUD, inbox filtered by WA session owner
 
 ---
 
