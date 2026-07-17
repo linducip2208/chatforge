@@ -80,9 +80,18 @@ func main() {
 	engine.StartLoops()
 
 	mux := http.NewServeMux()
-	mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("web/assets"))))
-	mux.Handle("/web/", http.StripPrefix("/web/", http.FileServer(http.Dir("web"))))
-	mux.Handle("/screens/", http.StripPrefix("/screens/", http.FileServer(http.Dir("public/marketing/screens"))))
+	noDirFS := func(dir string) http.Handler {
+		fs := http.FileServer(http.Dir(dir))
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasSuffix(r.URL.Path, "/") {
+				http.NotFound(w, r); return
+			}
+			fs.ServeHTTP(w, r)
+		})
+	}
+	mux.Handle("/assets/", http.StripPrefix("/assets/", noDirFS("web/assets")))
+	mux.Handle("/web/", http.StripPrefix("/web/", noDirFS("web")))
+	mux.Handle("/screens/", http.StripPrefix("/screens/", noDirFS("public/marketing/screens")))
 	mux.HandleFunc("/", handleHome)
 	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) { render(w, r, "login") })
 	mux.HandleFunc("/login/post", loginUser)
@@ -359,8 +368,10 @@ func main() {
 	if v := os.Getenv("CHATGO_ADDR"); v != "" {
 		addr = v
 	}
-	fmt.Printf("\n  %s running at http://%s\n\n", getEnv("APP_NAME", "chatgo"), addr)
-	log.Fatal(http.ListenAndServe(addr, mux))
+	fmt.Printf("\n  ChatGo running at http://%s\n\n", getEnv("APP_NAME", "chatgo"), addr)
+	var handler http.Handler = mux
+	handler = csrfMiddleware(handler)
+	log.Fatal(http.ListenAndServe(addr, handler))
 }
 
 type langInfo struct {
@@ -687,7 +698,7 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 	d.AgentSignature = db.GetSetting("agent_signature", "")
 	d.BizHoursReply = db.GetSetting("biz_hours_reply", "Saat ini di luar jam operasional. Pesan Anda akan kami balas saat jam kerja.")
 	d.ForceOwnKey = db.GetSetting("force_own_key", "0") == "1"
-	d.Registrations = db.GetSetting("registrations", "1") == "1"
+	d.Registrations = db.GetSetting("registrations", "0") == "1"
 	d.AiTokenQuota = int64(db.GetUserAiQuota(uid))
 	d.AiTokenUsed = db.GetAiTokenUsage(uid)
 	d.UnreadCount = db.UnreadCount()
@@ -1337,7 +1348,7 @@ func handleInboxEvents(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Origin", appURL())
 	ch := engine.NotifyChan()
 	ctx := r.Context()
 	for {

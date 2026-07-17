@@ -449,7 +449,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;c
 <div style="max-width:400px;margin:32px auto 0;background:#fff;border-radius:14px;padding:24px;box-shadow:0 4px 24px rgba(0,0,0,.08)">
 <form method="post" action="/login/post">
 <div style="margin-bottom:12px"><input type="email" name="email" class="form-control" placeholder="{{T "auth_email"}}" value="{{.AppEmail}}" style="border-radius:8px;padding:10px 14px;border:1px solid #ddd;width:100%;font-size:14px"></div>
-<div style="margin-bottom:12px"><input type="password" name="password" class="form-control" placeholder="{{T "auth_password"}}" value="password" style="border-radius:8px;padding:10px 14px;border:1px solid #ddd;width:100%;font-size:14px"></div>
+<div style="margin-bottom:12px"><input type="password" name="password" class="form-control" placeholder="{{T "auth_password"}}" style="border-radius:8px;padding:10px 14px;border:1px solid #ddd;width:100%;font-size:14px"></div>
 <button type="submit" style="width:100%;padding:10px;background:#4F46E5;color:#fff;border:none;border-radius:8px;font-weight:600;font-size:14px;cursor:pointer">{{T "auth_signin"}}</button>
 </form>
 <div style="text-align:center;margin-top:12px;font-size:12px;color:#999">{{T "landing_demo_label"}} <code style="background:#f0f0f0;padding:2px 6px;border-radius:4px">{{.AppEmail}}</code> / <code style="background:#f0f0f0;padding:2px 6px;border-radius:4px">password</code></div>
@@ -563,7 +563,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;m
 {{if .Flash}}<div class="alert-danger">{{.Flash}}</div>{{end}}
 <form method="post" action="/login/post">
 <div class="form-group"><label>{{T "auth_email"}}</label><input type="email" name="email" placeholder="{{.AppEmail}}" value="{{.AppEmail}}" required></div>
-<div class="form-group"><label>{{T "auth_password"}}</label><input type="password" name="password" placeholder="••••••••" value="password" required></div>
+<div class="form-group"><label>{{T "auth_password"}}</label><input type="password" name="password" placeholder="••••••••" required></div>
 <button type="submit" class="btn-submit">{{T "auth_signin"}}</button>
 </form>
 <div class="auth-divider"><span>{{T "auth_or"}}</span></div>

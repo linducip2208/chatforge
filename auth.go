@@ -8,6 +8,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -27,18 +29,42 @@ func sessCookie(name, value string, maxAge int) *http.Cookie {
 	return &http.Cookie{Name: name, Value: value, Path: "/", MaxAge: maxAge, HttpOnly: true, Secure: secure, SameSite: http.SameSiteLaxMode}
 }
 
+var loginMu sync.Mutex
+var loginAttempts = map[string]int{}
+var loginBlocked = map[string]time.Time{}
+
 func loginUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
+	ip := r.RemoteAddr
+	loginMu.Lock()
+	if blocked, ok := loginBlocked[ip]; ok && time.Since(blocked) < 15*time.Minute {
+		loginMu.Unlock()
+		http.Redirect(w, r, "/login?msg=Too+many+attempts.+Try+again+later.", http.StatusSeeOther)
+		return
+	}
+	loginMu.Unlock()
+
 	email := r.FormValue("email")
 	password := r.FormValue("password")
 	user, err := db.GetUserByEmail(email)
 	if err != nil || !checkPassword(password, user.Password) {
+		loginMu.Lock()
+		loginAttempts[ip]++
+		if loginAttempts[ip] >= 5 {
+			loginBlocked[ip] = time.Now()
+			delete(loginAttempts, ip)
+		}
+		loginMu.Unlock()
 		http.Redirect(w, r, "/login?msg=Invalid+credentials", http.StatusSeeOther)
 		return
 	}
+	loginMu.Lock()
+	delete(loginAttempts, ip)
+	loginMu.Unlock()
+
 	token := randToken()
 	saveSession(token, user.ID)
 	http.SetCookie(w, sessCookie("chatgo_sess", token, 86400*30))
@@ -147,6 +173,42 @@ func requireAdmin(next http.HandlerFunc) http.HandlerFunc {
 	})
 }
 
+func csrfGuard(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			origin := r.Header.Get("Origin")
+			referer := r.Header.Get("Referer")
+			appURL := os.Getenv("APP_URL")
+			if appURL == "" { appURL = "http://127.0.0.1:8080" }
+			if origin != "" && origin != appURL && !strings.HasPrefix(referer, appURL) {
+				http.Error(w, "Forbidden", 403)
+				return
+			}
+		}
+		next(w, r)
+	}
+}
+
+var apiRateMap = map[string]time.Time{}
+var apiRateMu sync.Mutex
+
+func apiRateLimit(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		key := r.Header.Get("X-API-Key")
+		if key == "" { key = r.RemoteAddr }
+		apiRateMu.Lock()
+		last, ok := apiRateMap[key]
+		if ok && time.Since(last) < 200*time.Millisecond {
+			apiRateMu.Unlock()
+			http.Error(w, `{"eror":true,"message":"rate limited"}`, 429)
+			return
+		}
+		apiRateMap[key] = time.Now()
+		apiRateMu.Unlock()
+		next(w, r)
+	}
+}
+
 func handleImpersonate(w http.ResponseWriter, r *http.Request) {
 	uid, _ := strconv.ParseInt(r.Header.Get("X-User-ID"), 10, 64)
 	targetID, _ := strconv.ParseInt(r.URL.Query().Get("id"), 10, 64)
@@ -171,6 +233,22 @@ func handleImpersonate(w http.ResponseWriter, r *http.Request) {
 	saveSession(token, target.ID)
 	http.SetCookie(w, sessCookie("chatgo_sess", token, 86400*30))
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func csrfMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			origin := r.Header.Get("Origin")
+			referer := r.Header.Get("Referer")
+			appURL := os.Getenv("APP_URL")
+			if appURL == "" { appURL = "http://127.0.0.1:8080" }
+			if origin != "" && origin != appURL && !strings.HasPrefix(referer, appURL) {
+				http.Error(w, "Forbidden", 403)
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func handleExitImpersonation(w http.ResponseWriter, r *http.Request) {

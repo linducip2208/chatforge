@@ -19,7 +19,7 @@ func ensureKey() {
 	once.Do(func() {
 		keyStr := os.Getenv("CHATGO_ENC_KEY")
 		if keyStr == "" {
-			keyStr = "chatgo-32bytekey-xxxxxxxxxxxxxx!!!"
+			keyStr = readOrCreateKeyFile()
 		}
 		k := []byte(keyStr)
 		if len(k) < 32 {
@@ -75,4 +75,20 @@ func Decrypt(encoded string) (string, error) {
 		return "", err
 	}
 	return string(plain), nil
+}
+
+func readOrCreateKeyFile() string {
+	keyFile := "storage/enc.key"
+	if data, err := os.ReadFile(keyFile); err == nil && len(data) >= 32 {
+		return string(data[:32])
+	}
+	key := make([]byte, 32)
+	if _, err := rand.Read(key); err != nil {
+		panic("secret: failed to generate encryption key: " + err.Error())
+	}
+	os.MkdirAll("storage", 0700)
+	if err := os.WriteFile(keyFile, key, 0600); err != nil {
+		panic("secret: failed to write encryption key: " + err.Error())
+	}
+	return string(key)
 }

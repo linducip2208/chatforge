@@ -14,18 +14,17 @@ import (
 // registerAdminRoutes wires every remaining Zender menu (SMS/Hosts/Android/AI/Admin/Docs).
 // Auto-reply core & WhatsApp engine untouched.
 func registerAdminRoutes(mux *http.ServeMux) {
-	// helper: wrap pageHandler with auth
 	ap := func(page string) http.HandlerFunc {
-		return authMiddleware(pageHandler(page))
+		return requireAdmin(authMiddleware(pageHandler(page)))
 	}
 	acp := func(fn func(*http.Request), redirect string) http.HandlerFunc {
-		return authMiddleware(crudPost(fn, redirect))
+		return requireAdmin(authMiddleware(crudPost(fn, redirect)))
 	}
 	acd := func(fn func(int64), redirect string) http.HandlerFunc {
-		return authMiddleware(crudDel(fn, redirect))
+		return requireAdmin(authMiddleware(crudDel(fn, redirect)))
 	}
 	a := func(fn http.HandlerFunc) http.HandlerFunc {
-		return authMiddleware(fn)
+		return requireAdmin(authMiddleware(fn))
 	}
 
 	// Hosts
