@@ -39,11 +39,14 @@ Need help with setup, installation, or custom development?
 
 ### 👥 SaaS Platform
 - **Multi-user** — admin + user roles with menu filtering
-- **Packages & subscriptions** — limit devices, tokens, features per plan
+- **Role-based permissions** — dynamic role system with per-feature access control
+- **Packages & subscriptions** — limit devices, contacts, drips, templates, AI keys, and more per plan
+- **Multi-tenant isolation** — user_id on all tables, inbox filtered per user, session ownership
 - **WA Server enforcement** — restrict accounts by package
 - **Dashboard analytics** — 7-day charts, user stats, active accounts
 - **Session persistence** — MySQL-backed, survives server restarts
 - **Force own key** — reseller can require sub-users to use their own API key
+- **Security** — bcrypt passwords, SHA-256 API keys, AES-256-GCM encrypted secrets, HttpOnly cookies
 
 ### 🔧 Developer
 - **REST API** — `POST /api/send`, `GET /api/status`, `/api/messages`, `/api/contacts`, `/api/devices`
@@ -51,7 +54,25 @@ Need help with setup, installation, or custom development?
 - **No Node.js** — uses [whatsmeow](https://github.com/tulir/whatsmeow) (pure Go)
 - **Multi-language** — English + Indonesian via `lang/*.json`
 - **Spintax** — `{Hello|Hi|Hey}` random per message
-- **.env config** — MySQL DSN + listen address
+- **.env config** — MySQL DSN, AES encryption key, app URL
+- **Auto-migration** — column-existence check before ALTER TABLE, safe restarts
+
+### 📋 Additional Features
+- **Drip Campaigns** — multi-step automated message sequences
+- **Recurring Campaigns** — auto-repeat broadcast on schedule
+- **A/B Testing** — split-test message variants
+- **Canned Responses** — quick reply shortcuts
+- **Contact Tags & Groups** — organize & segment contacts
+- **CSAT Surveys** — post-chat satisfaction rating
+- **Store & Orders** — product catalog with WhatsApp ordering
+- **Forms & Reminders** — interactive forms, payment reminders
+- **Web Widget** — embeddable chat widget
+- **Email → WA Gateway** — forward emails to WhatsApp
+- **Link Tracker** — URL shortener with click analytics
+- **File Manager** — upload & share media
+- **Blacklist** — block spam numbers
+- **Macros** — one-click multi-action workflows
+- **Auto Translate** — on-the-fly message translation via AI
 
 ---
 
@@ -179,11 +200,14 @@ Butuh bantuan setup, instalasi, atau custom development?
 
 ### 👥 SaaS Platform
 - **Multi-user** — admin + user roles dengan menu filtering
-- **Packages & subscriptions** — batasi device, token, fitur per paket
+- **Role-based permissions** — sistem role dinamis dengan kontrol akses per fitur
+- **Packages & subscriptions** — batasi device, kontak, drips, template, AI key, dan lainnya per paket
+- **Multi-tenant isolation** — user_id di semua tabel, inbox terfilter per user, kepemilikan session
 - **WA Server enforcement** — user hanya bisa pakai server yg diizinkan paketnya
 - **Dashboard analytics** — chart 7 hari, stats user, nomor WA aktif
 - **Session persistence** — MySQL-backed, survive restart server
 - **Force own key** — reseller bisa paksa sub-user pakai API key sendiri
+- **Security** — bcrypt passwords, SHA-256 API keys, AES-256-GCM encrypted secrets, HttpOnly cookies
 
 ### 🔧 Developer
 - **REST API** — `POST /api/send`, `GET /api/status`, `/api/messages`, `/api/contacts`, `/api/devices`
@@ -191,6 +215,24 @@ Butuh bantuan setup, instalasi, atau custom development?
 - **No Node.js** — pakai [whatsmeow](https://github.com/tulir/whatsmeow) (pure Go)
 - **Multi-language** — Indonesia + English via `lang/*.json`
 - **Spintax** — `{Halo|Hai|Hi}` random tiap kirim
+- **Auto-migration** — cek kolom sebelum ALTER TABLE, restart aman
+
+### 📋 Fitur Tambahan
+- **Drip Campaigns** — rangkaian pesan otomatis multi-step
+- **Recurring Campaigns** — broadcast ulang otomatis sesuai jadwal
+- **A/B Testing** — uji coba varian pesan
+- **Canned Responses** — shortcut balasan cepat
+- **Contact Tags & Groups** — atur & segmentasi kontak
+- **CSAT Surveys** — rating kepuasan setelah chat
+- **Store & Orders** — katalog produk dengan order via WhatsApp
+- **Forms & Reminders** — form interaktif, pengingat pembayaran
+- **Web Widget** — widget chat embed
+- **Email → WA Gateway** — teruskan email ke WhatsApp
+- **Link Tracker** — pemendek URL dengan analytics klik
+- **File Manager** — upload & bagikan media
+- **Blacklist** — blokir nomor spam
+- **Macros** — workflow multi-aksi satu klik
+- **Auto Translate** — terjemahan pesan otomatis via AI
 
 ## ⚠️ Disclaimer
 
