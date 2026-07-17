@@ -522,6 +522,14 @@ func (e *Engine) onMessage(s *session, evt *events.Message) {
 		}
 	}
 
+	// FAQ check first (no AI needed)
+	if reply, found := e.db.FindFAQAnswer(s.userID, text); found {
+		rendered := msgtemplate.Render(reply, msgtemplate.Vars{Phone: senderPhone, Name: name, Message: text})
+		e.sendVia(s, evt.Info.Chat, rendered)
+		e.db.LogSentForWA(s.Phone, evt.Info.Chat.User, rendered, "faq", "whatsmeow"); e.db.Log("faq", "sent", fmt.Sprintf("FAQ -> %s: %s", evt.Info.Chat.User, rendered))
+		return
+	}
+
 	// Store Bot: menu, category, product, order flow
 	to := evt.Info.Chat
 	if !evt.Info.IsGroup && to.Server == waTypes.HiddenUserServer && !evt.Info.SenderAlt.IsEmpty() {
@@ -716,6 +724,15 @@ skipAIAll:
 			}
 		}
 
+		if rule.MediaURL != "" {
+			mediaPath := strings.TrimPrefix(rule.MediaURL, "/")
+			if err := e.SendMedia(s.userID, s.Phone, senderPhone, rule.MediaType, mediaPath, rendered); err != nil {
+				e.db.LogSent(to.User, rendered, "failed", "whatsmeow"); e.db.Log("autoreply", "failed", fmt.Sprintf("FAILED media -> %s: %s", to.User, rendered))
+				return
+			}
+			e.db.LogSent(to.User, rendered, "autoreply_media", "whatsmeow"); e.db.Log("autoreply", "sent_media", fmt.Sprintf("media -> %s: %s", to.User, rule.MediaURL))
+			return
+		}
 		if err := e.sendVia(s, to, rendered); err != nil {
 			e.db.LogSent(to.User, rendered, "failed", "whatsmeow"); e.db.Log("autoreply", "failed", fmt.Sprintf("FAILED -> %s: %s", to.User, rendered))
 			return

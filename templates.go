@@ -118,9 +118,9 @@ const templates = `
             <a class="dropdown-item" href="/settings"><i class="la la-cog me-2"></i> {{T "nav_settings"}}</a>
             <div class="dropdown-divider"></div>
             {{if .IsImpersonating}}
-            <a class="dropdown-item text-warning" href="/exit-impersonation"><i class="la la-times-circle me-2"></i> Exit Impersonation</a>
+            <a class="dropdown-item text-warning" href="/exit-impersonation"><i class="la la-times-circle me-2"></i> {{T "nav_exit_impersonation"}}</a>
             {{else}}
-            <a class="dropdown-item text-danger" href="/logout"><i class="la la-sign-out me-2"></i> Logout</a>
+            <a class="dropdown-item text-danger" href="/logout"><i class="la la-sign-out me-2"></i> {{T "auth_logout"}}</a>
             {{end}}
           </div>
         </div>
@@ -177,7 +177,7 @@ document.querySelectorAll('.nav-tabs .nav-link').forEach(function(t){t.addEventL
 // truncate messages: show first 20 chars
 document.querySelectorAll(".msg-full").forEach(function(el){
   var text=el.textContent.trim();
-  if(text.length>20){ el.setAttribute("data-full",text); el.textContent=text.substring(0,20)+"..."; el.style.cursor="pointer"; el.title="Klik untuk lihat selengkapnya";
+  if(text.length>20){ el.setAttribute("data-full",text); el.textContent=text.substring(0,20)+"..."; el.style.cursor="pointer"; el.title='{{T "tooltip_click_expand"}}';
     el.addEventListener("click",function(){
       if(this.getAttribute("data-full")===this.textContent){ this.textContent=text.substring(0,20)+"..."; return; }
       this.textContent=this.getAttribute("data-full");
@@ -213,128 +213,128 @@ if(a){var t=a.offsetTop-s.offsetHeight/2;if(t>0)s.scrollTop=t}
     <a class="navbar-brand" href="/"><img src="{{.AppLogo}}" class="navbar-brand-img mx-auto" alt="{{.AppName}}" onerror="this.outerHTML='<span style=&quot;color:#fff;font-weight:800;font-size:20px&quot;>{{.AppName}}</span>'"></a>
     <div class="collapse navbar-collapse" id="sidebarCollapse">
 
-{{template "sgroup" dict "id" "dashboard" "icon" "la-chart-bar" "label" "Dashboard" "open" true}}
-  <li class="nav-item"><a class="nav-link {{if eq .Active "home"}}active{{end}}" href="/"><i class="la la-chart-bar la-lg"></i> Dashboard</a></li>
+{{template "sgroup" dict "id" "dashboard" "icon" "la-chart-bar" "label" (T "sg_dashboard") "open" true}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "home"}}active{{end}}" href="/"><i class="la la-chart-bar la-lg"></i> {{T "nav_dashboard"}}</a></li>
 {{template "egroup"}}
 
-{{template "sgroup" dict "id" "inbox" "icon" "la-comments" "label" "Inbox" "open" true}}
-  <li class="nav-item"><a class="nav-link {{if eq .Active "inbox"}}active{{end}}" href="/inbox"><i class="la la-inbox la-lg"></i> All Conversations{{if gt .UnreadCount 0}} <span class="badge badge-pill badge-danger ml-1">{{.UnreadCount}}</span>{{end}}</a></li>
+{{template "sgroup" dict "id" "inbox" "icon" "la-comments" "label" (T "sg_inbox") "open" true}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "inbox"}}active{{end}}" href="/inbox"><i class="la la-inbox la-lg"></i> {{T "nav_inbox"}}{{if gt .UnreadCount 0}} <span class="badge badge-pill badge-danger ml-1">{{.UnreadCount}}</span>{{end}}</a></li>
 {{template "egroup"}}
 
-{{template "sgroup" dict "id" "contacts" "icon" "la-address-book" "label" "Contacts"}}
-  <li class="nav-item"><a class="nav-link {{if eq .Active "contacts"}}active{{end}}" href="/contacts"><i class="la la-address-book la-lg"></i> All Contacts</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "groups"}}active{{end}}" href="/contacts/groups"><i class="la la-list la-lg"></i> Groups</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "tags"}}active{{end}}" href="/tags"><i class="la la-tags la-lg"></i> Tags</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "unsub"}}active{{end}}" href="/contacts/unsub"><i class="la la-unlink la-lg"></i> Unsubscribed</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "merge"}}active{{end}}" href="/merge"><i class="la la-code-branch la-lg"></i> Merge Duplicates</a></li>
+{{template "sgroup" dict "id" "contacts" "icon" "la-address-book" "label" (T "sg_contacts")}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "contacts"}}active{{end}}" href="/contacts"><i class="la la-address-book la-lg"></i> {{T "nav_contacts_all"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "groups"}}active{{end}}" href="/contacts/groups"><i class="la la-list la-lg"></i> {{T "nav_contacts_groups"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "tags"}}active{{end}}" href="/tags"><i class="la la-tags la-lg"></i> {{T "nav_tags"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "unsub"}}active{{end}}" href="/contacts/unsub"><i class="la la-unlink la-lg"></i> {{T "nav_contacts_unsub"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "merge"}}active{{end}}" href="/merge"><i class="la la-code-branch la-lg"></i> {{T "nav_merge"}}</a></li>
 {{template "egroup"}}
 
-{{template "sgroup" dict "id" "broadcast" "icon" "la-bullhorn" "label" "Broadcast & Campaigns"}}
-  <li class="nav-item"><a class="nav-link {{if eq .Active "broadcast"}}active{{end}}" href="/broadcast"><i class="la la-paper-plane la-lg"></i> Broadcast<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;padding:2px 5px;border-radius:3px">META</span></a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "drips"}}active{{end}}" href="/drips"><i class="la la-tint la-lg"></i> Drip Campaign</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "recurring"}}active{{end}}" href="/recurring"><i class="la la-redo-alt la-lg"></i> Recurring</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "scheduled"}}active{{end}}" href="/scheduled"><i class="la la-clock la-lg"></i> Scheduled</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "abtests"}}active{{end}}" href="/ab-tests"><i class="la la-balance-scale la-lg"></i> A/B Test</a></li>
+{{template "sgroup" dict "id" "broadcast" "icon" "la-bullhorn" "label" (T "sg_broadcast")}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "broadcast"}}active{{end}}" href="/broadcast"><i class="la la-paper-plane la-lg"></i> {{T "nav_broadcast"}}<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;padding:2px 5px;border-radius:3px">META</span></a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "drips"}}active{{end}}" href="/drips"><i class="la la-tint la-lg"></i> {{T "nav_drips"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "recurring"}}active{{end}}" href="/recurring"><i class="la la-redo-alt la-lg"></i> {{T "nav_recurring"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "scheduled"}}active{{end}}" href="/scheduled"><i class="la la-clock la-lg"></i> {{T "nav_scheduled"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "abtests"}}active{{end}}" href="/ab-tests"><i class="la la-balance-scale la-lg"></i> {{T "nav_abtest"}}</a></li>
 {{template "egroup"}}
 
-{{template "sgroup" dict "id" "channels" "icon" "la-plug" "label" "Channels"}}
-  <li class="nav-item"><a class="nav-link {{if eq .Active "wa"}}active{{end}}" href="/wa"><i class="la la-whatsapp la-lg"></i> WhatsApp (Unofficial)</a></li>
-  <li class="nav-item" style="padding-left:16px"><a class="nav-link {{if eq .Active "wa"}}active{{end}}" href="/wa"><i class="la la-qrcode la-lg"></i> Account & QR</a></li>
-  <li class="nav-item" style="padding-left:16px"><a class="nav-link {{if eq .Active "hosts_whatsapp"}}active{{end}}" href="/hosts/whatsapp"><i class="la la-server la-lg"></i> Devices</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_meta"}}active{{end}}" href="/admin/meta"><i class="la la-cloud la-lg"></i> WhatsApp Cloud API (Meta)<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;padding:2px 5px;border-radius:3px">META</span></a></li>
-  <li class="nav-item" style="padding-left:16px"><a class="nav-link {{if eq .Active "admin_metatemplates"}}active{{end}}" href="/admin/metatemplates"><i class="la la-file-alt la-lg"></i> Templates</a></li>
-  <li class="nav-item" style="padding-left:16px"><a class="nav-link {{if eq .Active "meta_webhook"}}active{{end}}" href="/meta/webhook"><i class="la la-link la-lg"></i> Webhook</a></li>
-  <li class="nav-item" style="padding-left:16px"><a class="nav-link {{if eq .Active "admin_meta"}}active{{end}}" href="/admin/meta"><i class="la la-cog la-lg"></i> API Config</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "emailwa"}}active{{end}}" href="/email-wa"><i class="la la-envelope la-lg"></i> Email &rarr; WA</a></li>
+{{template "sgroup" dict "id" "channels" "icon" "la-plug" "label" (T "sg_channels")}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "wa"}}active{{end}}" href="/wa"><i class="la la-whatsapp la-lg"></i> {{T "nav_wa_unofficial"}}</a></li>
+  <li class="nav-item" style="padding-left:16px"><a class="nav-link {{if eq .Active "wa"}}active{{end}}" href="/wa"><i class="la la-qrcode la-lg"></i> {{T "nav_account_qr"}}</a></li>
+  <li class="nav-item" style="padding-left:16px"><a class="nav-link {{if eq .Active "hosts_whatsapp"}}active{{end}}" href="/hosts/whatsapp"><i class="la la-server la-lg"></i> {{T "nav_devices"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_meta"}}active{{end}}" href="/admin/meta"><i class="la la-cloud la-lg"></i> {{T "nav_meta_api"}}<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;padding:2px 5px;border-radius:3px">META</span></a></li>
+  <li class="nav-item" style="padding-left:16px"><a class="nav-link {{if eq .Active "admin_metatemplates"}}active{{end}}" href="/admin/metatemplates"><i class="la la-file-alt la-lg"></i> {{T "nav_meta_templates"}}</a></li>
+  <li class="nav-item" style="padding-left:16px"><a class="nav-link {{if eq .Active "meta_webhook"}}active{{end}}" href="/meta/webhook"><i class="la la-link la-lg"></i> {{T "nav_meta_webhook"}}</a></li>
+  <li class="nav-item" style="padding-left:16px"><a class="nav-link {{if eq .Active "admin_meta"}}active{{end}}" href="/admin/meta"><i class="la la-cog la-lg"></i> {{T "nav_meta_config"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "emailwa"}}active{{end}}" href="/email-wa"><i class="la la-envelope la-lg"></i> {{T "nav_email_wa"}}</a></li>
 {{template "egroup"}}
 
-{{template "sgroup" dict "id" "logs" "icon" "la-envelope" "label" "Message Logs"}}
-  <li class="nav-item"><a class="nav-link {{if eq .Active "send"}}active{{end}}" href="/send"><i class="la la-share la-lg"></i> Send Message</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "sent"}}active{{end}}" href="/sent"><i class="la la-arrow-up la-lg"></i> Outgoing</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "received"}}active{{end}}" href="/received"><i class="la la-arrow-down la-lg"></i> Incoming</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "meta_logs"}}active{{end}}" href="/meta/logs"><i class="la la-clipboard-list la-lg"></i> Meta Logs<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;padding:2px 5px;border-radius:3px">META</span></a></li>
+{{template "sgroup" dict "id" "logs" "icon" "la-envelope" "label" (T "sg_logs")}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "send"}}active{{end}}" href="/send"><i class="la la-share la-lg"></i> {{T "nav_send"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "sent"}}active{{end}}" href="/sent"><i class="la la-arrow-up la-lg"></i> {{T "nav_sent"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "received"}}active{{end}}" href="/received"><i class="la la-arrow-down la-lg"></i> {{T "nav_received"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "meta_logs"}}active{{end}}" href="/meta/logs"><i class="la la-clipboard-list la-lg"></i> {{T "nav_meta_logs"}}<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;padding:2px 5px;border-radius:3px">META</span></a></li>
 {{template "egroup"}}
 
-{{template "sgroup" dict "id" "automation" "icon" "la-robot" "label" "Automation"}}
-  <li class="nav-item"><a class="nav-link {{if eq .Active "autoreply"}}active{{end}}" href="/autoreply"><i class="la la-reply la-lg"></i> Auto Reply</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "canned"}}active{{end}}" href="/canned"><i class="la la-comment-dots la-lg"></i> Canned Responses</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "macros"}}active{{end}}" href="/macros"><i class="la la-bolt la-lg"></i> Macros</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "forms"}}active{{end}}" href="/forms"><i class="la la-wpforms la-lg"></i> Forms</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "reminders"}}active{{end}}" href="/reminders"><i class="la la-bell la-lg"></i> Reminders</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "translate"}}active{{end}}" href="/translate-tool"><i class="la la-language la-lg"></i> Translate</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "widget"}}active{{end}}" href="/widget-info"><i class="la la-code la-lg"></i> Widget</a></li>
+{{template "sgroup" dict "id" "automation" "icon" "la-robot" "label" (T "sg_automation")}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "autoreply"}}active{{end}}" href="/autoreply"><i class="la la-reply la-lg"></i> {{T "nav_autoreply"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "canned"}}active{{end}}" href="/canned"><i class="la la-comment-dots la-lg"></i> {{T "nav_canned"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "macros"}}active{{end}}" href="/macros"><i class="la la-bolt la-lg"></i> {{T "nav_macros"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "forms"}}active{{end}}" href="/forms"><i class="la la-wpforms la-lg"></i> {{T "nav_forms"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "reminders"}}active{{end}}" href="/reminders"><i class="la la-bell la-lg"></i> {{T "nav_reminders"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "translate"}}active{{end}}" href="/translate-tool"><i class="la la-language la-lg"></i> {{T "nav_translate"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "widget"}}active{{end}}" href="/widget-info"><i class="la la-code la-lg"></i> {{T "nav_widget"}}</a></li>
 {{template "egroup"}}
 
-{{template "sgroup" dict "id" "commerce" "icon" "la-store" "label" "Commerce"}}
-  <li class="nav-item"><a class="nav-link {{if eq .Active "store"}}active{{end}}" href="/store"><i class="la la-store la-lg"></i> Store</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "orders"}}active{{end}}" href="/store/orders"><i class="la la-shopping-bag la-lg"></i> Orders</a></li>
+{{template "sgroup" dict "id" "commerce" "icon" "la-store" "label" (T "sg_commerce")}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "store"}}active{{end}}" href="/store"><i class="la la-store la-lg"></i> {{T "nav_store"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "orders"}}active{{end}}" href="/store/orders"><i class="la la-shopping-bag la-lg"></i> {{T "nav_orders"}}</a></li>
 {{template "egroup"}}
 
 {{if .IsAdmin}}
 <hr class="navbar-divider my-2">
-<div style="color:#6e84a3;font-size:11px;text-align:center;padding:4px;letter-spacing:1px">ADMIN</div>
+<div style="color:#6e84a3;font-size:11px;text-align:center;padding:4px;letter-spacing:1px">{{T "nav_admin_divider"}}</div>
 
-{{template "sgroup" dict "id" "admin_overview" "icon" "la-shield-alt" "label" "Overview"}}
-  <li class="nav-item"><a class="nav-link {{if eq .Active "admin"}}active{{end}}" href="/admin"><i class="la la-chart-bar la-lg"></i> Overview</a></li>
+{{template "sgroup" dict "id" "admin_overview" "icon" "la-shield-alt" "label" (T "sg_overview")}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin"}}active{{end}}" href="/admin"><i class="la la-chart-bar la-lg"></i> {{T "nav_admin_overview"}}</a></li>
 {{template "egroup"}}
 
-{{template "sgroup" dict "id" "admin_business" "icon" "la-building" "label" "Business"}}
-  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_users"}}active{{end}}" href="/admin/users"><i class="la la-users la-lg"></i> Users</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_roles"}}active{{end}}" href="/admin/roles"><i class="la la-user-shield la-lg"></i> Roles</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_packages"}}active{{end}}" href="/admin/packages"><i class="la la-box la-lg"></i> Packages</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_subscriptions"}}active{{end}}" href="/admin/subscriptions"><i class="la la-star la-lg"></i> Subscriptions</a></li>
+{{template "sgroup" dict "id" "admin_business" "icon" "la-building" "label" (T "sg_business")}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_users"}}active{{end}}" href="/admin/users"><i class="la la-users la-lg"></i> {{T "adm_users"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_roles"}}active{{end}}" href="/admin/roles"><i class="la la-user-shield la-lg"></i> {{T "adm_roles"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_packages"}}active{{end}}" href="/admin/packages"><i class="la la-box la-lg"></i> {{T "adm_packages"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_subscriptions"}}active{{end}}" href="/admin/subscriptions"><i class="la la-star la-lg"></i> {{T "adm_subscriptions"}}</a></li>
 {{template "egroup"}}
 
-{{template "sgroup" dict "id" "admin_finance" "icon" "la-money-bill" "label" "Finance"}}
-  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_vouchers"}}active{{end}}" href="/admin/vouchers"><i class="la la-ticket-alt la-lg"></i> Vouchers</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_transactions"}}active{{end}}" href="/admin/transactions"><i class="la la-receipt la-lg"></i> Transactions</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_paygateways"}}active{{end}}" href="/admin/gateways-pay"><i class="la la-credit-card la-lg"></i> Payment Gateways</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_transactions_pay"}}active{{end}}" href="/admin/transactions-pay"><i class="la la-file-invoice la-lg"></i> Payment Logs</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_payouts"}}active{{end}}" href="/admin/payouts"><i class="la la-hand-holding-usd la-lg"></i> Payouts</a></li>
+{{template "sgroup" dict "id" "admin_finance" "icon" "la-money-bill" "label" (T "sg_finance")}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_vouchers"}}active{{end}}" href="/admin/vouchers"><i class="la la-ticket-alt la-lg"></i> {{T "adm_vouchers"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_transactions"}}active{{end}}" href="/admin/transactions"><i class="la la-receipt la-lg"></i> {{T "adm_transactions"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_paygateways"}}active{{end}}" href="/admin/gateways-pay"><i class="la la-credit-card la-lg"></i> {{T "nav_paygateways"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_transactions_pay"}}active{{end}}" href="/admin/transactions-pay"><i class="la la-file-invoice la-lg"></i> {{T "nav_paylogs"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_payouts"}}active{{end}}" href="/admin/payouts"><i class="la la-hand-holding-usd la-lg"></i> {{T "adm_payouts"}}</a></li>
 {{template "egroup"}}
 
-{{template "sgroup" dict "id" "admin_system" "icon" "la-server" "label" "System"}}
-  <li class="nav-item"><a class="nav-link {{if eq .Active "backup"}}active{{end}}" href="/backup"><i class="la la-database la-lg"></i> Backup</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "audit"}}active{{end}}" href="/audit"><i class="la la-history la-lg"></i> Audit</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "logger"}}active{{end}}" href="/logger"><i class="la la-clipboard-list la-lg"></i> Log</a></li>
+{{template "sgroup" dict "id" "admin_system" "icon" "la-server" "label" (T "sg_system")}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "backup"}}active{{end}}" href="/backup"><i class="la la-database la-lg"></i> {{T "nav_backup"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "audit"}}active{{end}}" href="/audit"><i class="la la-history la-lg"></i> {{T "nav_audit"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "logger"}}active{{end}}" href="/logger"><i class="la la-clipboard-list la-lg"></i> {{T "nav_logger"}}</a></li>
 {{template "egroup"}}
 
-{{template "sgroup" dict "id" "admin_content" "icon" "la-file" "label" "Content"}}
-  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_pages"}}active{{end}}" href="/admin/pages"><i class="la la-copy la-lg"></i> Pages</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_marketing"}}active{{end}}" href="/admin/marketing"><i class="la la-bullhorn la-lg"></i> Marketing</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_languages"}}active{{end}}" href="/admin/languages"><i class="la la-language la-lg"></i> Languages</a></li>
+{{template "sgroup" dict "id" "admin_content" "icon" "la-file" "label" (T "sg_content")}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_pages"}}active{{end}}" href="/admin/pages"><i class="la la-copy la-lg"></i> {{T "adm_pages"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_marketing"}}active{{end}}" href="/admin/marketing"><i class="la la-bullhorn la-lg"></i> {{T "adm_marketing"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_languages"}}active{{end}}" href="/admin/languages"><i class="la la-language la-lg"></i> {{T "adm_languages"}}</a></li>
 {{template "egroup"}}
 
-{{template "sgroup" dict "id" "admin_infra" "icon" "la-network-wired" "label" "Infrastructure"}}
-  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_waservers"}}active{{end}}" href="/admin/waservers"><i class="la la-server la-lg"></i> WA Servers</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_gateways"}}active{{end}}" href="/admin/gateways"><i class="la la-code la-lg"></i> Gateways</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_shorteners"}}active{{end}}" href="/admin/shorteners"><i class="la la-link la-lg"></i> URL Shorteners</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_plugins"}}active{{end}}" href="/admin/plugins"><i class="la la-puzzle-piece la-lg"></i> Plugins</a></li>
+{{template "sgroup" dict "id" "admin_infra" "icon" "la-network-wired" "label" (T "sg_infra")}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_waservers"}}active{{end}}" href="/admin/waservers"><i class="la la-server la-lg"></i> {{T "adm_waservers"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_gateways"}}active{{end}}" href="/admin/gateways"><i class="la la-code la-lg"></i> {{T "adm_gateways"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_shorteners"}}active{{end}}" href="/admin/shorteners"><i class="la la-link la-lg"></i> {{T "adm_shorteners"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_plugins"}}active{{end}}" href="/admin/plugins"><i class="la la-puzzle-piece la-lg"></i> {{T "adm_plugins"}}</a></li>
 {{template "egroup"}}
 
-{{template "sgroup" dict "id" "reports" "icon" "la-chart-pie" "label" "Reports"}}
-  <li class="nav-item"><a class="nav-link {{if eq .Active "analytics"}}active{{end}}" href="/analytics"><i class="la la-chart-pie la-lg"></i> Analytics</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "meta_analytics"}}active{{end}}" href="/meta/analytics"><i class="la la-chart-bar la-lg"></i> Meta Stats<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;padding:2px 5px;border-radius:3px">META</span></a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "csat"}}active{{end}}" href="/csat"><i class="la la-star la-lg"></i> CSAT</a></li>
+{{template "sgroup" dict "id" "reports" "icon" "la-chart-pie" "label" (T "sg_reports")}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "analytics"}}active{{end}}" href="/analytics"><i class="la la-chart-pie la-lg"></i> {{T "nav_analytics"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "meta_analytics"}}active{{end}}" href="/meta/analytics"><i class="la la-chart-bar la-lg"></i> {{T "nav_meta_stats"}}<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;padding:2px 5px;border-radius:3px">META</span></a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "csat"}}active{{end}}" href="/csat"><i class="la la-star la-lg"></i> {{T "nav_csat"}}</a></li>
 {{template "egroup"}}
 
-{{template "sgroup" dict "id" "settings" "icon" "la-cog" "label" "Settings"}}
-  <li class="nav-item"><a class="nav-link {{if eq .Active "settings"}}active{{end}}" href="/settings"><i class="la la-cog la-lg"></i> General</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "templates"}}active{{end}}" href="/templates"><i class="la la-file-alt la-lg"></i> Templates</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "tracker"}}active{{end}}" href="/tracker"><i class="la la-link la-lg"></i> Links</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "blacklist"}}active{{end}}" href="/blacklist"><i class="la la-ban la-lg"></i> Blacklist</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "uploads"}}active{{end}}" href="/uploads"><i class="la la-folder-open la-lg"></i> Files</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "calendar"}}active{{end}}" href="/calendar"><i class="la la-calendar la-lg"></i> Calendar</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "customers"}}active{{end}}" href="/customers"><i class="la la-users la-lg"></i> Customers</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "apikeys"}}active{{end}}" href="/apikeys"><i class="la la-key la-lg"></i> API Keys</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "webhooks"}}active{{end}}" href="/webhooks"><i class="la la-code-branch la-lg"></i> Webhooks</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "logger"}}active{{end}}" href="/logger"><i class="la la-clipboard-list la-lg"></i> Log</a></li>
+{{template "sgroup" dict "id" "settings" "icon" "la-cog" "label" (T "sg_settings")}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "settings"}}active{{end}}" href="/settings"><i class="la la-cog la-lg"></i> {{T "nav_general"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "templates"}}active{{end}}" href="/templates"><i class="la la-file-alt la-lg"></i> {{T "nav_templates"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "tracker"}}active{{end}}" href="/tracker"><i class="la la-link la-lg"></i> {{T "nav_links"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "blacklist"}}active{{end}}" href="/blacklist"><i class="la la-ban la-lg"></i> {{T "nav_blacklist"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "uploads"}}active{{end}}" href="/uploads"><i class="la la-folder-open la-lg"></i> {{T "nav_files"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "calendar"}}active{{end}}" href="/calendar"><i class="la la-calendar la-lg"></i> {{T "nav_calendar"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "customers"}}active{{end}}" href="/customers"><i class="la la-users la-lg"></i> {{T "nav_customers"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "apikeys"}}active{{end}}" href="/apikeys"><i class="la la-key la-lg"></i> {{T "nav_apikeys"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "webhooks"}}active{{end}}" href="/webhooks"><i class="la la-code-branch la-lg"></i> {{T "nav_webhooks"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "logger"}}active{{end}}" href="/logger"><i class="la la-clipboard-list la-lg"></i> {{T "nav_logger"}}</a></li>
 {{template "egroup"}}
 {{end}}
 
 <ul class="navbar-nav mt-2">
-  <li class="nav-item"><a class="nav-link {{if eq .Active "subscribe"}}active{{end}}" href="/subscribe"><i class="la la-shopping-cart la-lg"></i> Upgrade</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "docs"}}active{{end}}" href="/docs"><i class="la la-book la-lg"></i> Documentation</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "subscribe"}}active{{end}}" href="/subscribe"><i class="la la-shopping-cart la-lg"></i> {{T "nav_upgrade"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "docs"}}active{{end}}" href="/docs"><i class="la la-book la-lg"></i> {{T "nav_docs"}}</a></li>
 </ul>
     </div>
   </div>
@@ -378,7 +378,7 @@ if(a.classList.contains('active')){h.classList.remove('collapsed');body.classLis
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{.AppName}} — WhatsApp Marketing Platform</title>
+<title>{{.AppName}} — {{T "landing_title"}}</title>
 <link rel="stylesheet" href="/assets/_assets/css/libs/line-awesome.min.css">
 <link rel="stylesheet" href="/assets/dashboard/css/libs/bootstrap.min.css">
 <style>
@@ -440,56 +440,56 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;c
 </nav>
 
 <section class="hero">
-<h1>{{if eq .LangCode "id"}}WhatsApp Marketing Jadi Mudah{{else}}WhatsApp Marketing Made Easy{{end}}</h1>
-<p>{{if eq .LangCode "id"}}{{.AppName}} adalah platform all-in-one untuk kirim broadcast, auto-reply AI, kelola multi-akun WhatsApp, dan live chat real-time — semua dalam satu dashboard.{{else}}{{.AppName}} is an all-in-one platform for sending broadcasts, AI auto-reply, managing multiple WhatsApp accounts, and real-time live chat — all in one dashboard.{{end}}</p>
+<h1>{{T "landing_hero_title"}}</h1>
+<p>{{T "landing_hero_desc"}}</p>
 <div class="cta-group">
-<a href="/register" class="btn-primary">{{if eq .LangCode "id"}}Coba Gratis{{else}}Try Free{{end}}</a>
-<a href="/docs" class="btn-outline">{{if eq .LangCode "id"}}Lihat Dokumentasi{{else}}View Documentation{{end}}</a>
+<a href="/register" class="btn-primary">{{T "landing_cta_free"}}</a>
+<a href="/docs" class="btn-outline">{{T "landing_cta_docs"}}</a>
 </div>
 <div style="max-width:400px;margin:32px auto 0;background:#fff;border-radius:14px;padding:24px;box-shadow:0 4px 24px rgba(0,0,0,.08)">
 <form method="post" action="/login/post">
-<div style="margin-bottom:12px"><input type="email" name="email" class="form-control" placeholder="Email" value="{{.AppEmail}}" style="border-radius:8px;padding:10px 14px;border:1px solid #ddd;width:100%;font-size:14px"></div>
-<div style="margin-bottom:12px"><input type="password" name="password" class="form-control" placeholder="Password" value="password" style="border-radius:8px;padding:10px 14px;border:1px solid #ddd;width:100%;font-size:14px"></div>
-<button type="submit" style="width:100%;padding:10px;background:#4F46E5;color:#fff;border:none;border-radius:8px;font-weight:600;font-size:14px;cursor:pointer">{{if eq .LangCode "id"}}Masuk{{else}}Sign In{{end}}</button>
+<div style="margin-bottom:12px"><input type="email" name="email" class="form-control" placeholder="{{T "auth_email"}}" value="{{.AppEmail}}" style="border-radius:8px;padding:10px 14px;border:1px solid #ddd;width:100%;font-size:14px"></div>
+<div style="margin-bottom:12px"><input type="password" name="password" class="form-control" placeholder="{{T "auth_password"}}" value="password" style="border-radius:8px;padding:10px 14px;border:1px solid #ddd;width:100%;font-size:14px"></div>
+<button type="submit" style="width:100%;padding:10px;background:#4F46E5;color:#fff;border:none;border-radius:8px;font-weight:600;font-size:14px;cursor:pointer">{{T "auth_signin"}}</button>
 </form>
-<div style="text-align:center;margin-top:12px;font-size:12px;color:#999">Demo: <code style="background:#f0f0f0;padding:2px 6px;border-radius:4px">{{.AppEmail}}</code> / <code style="background:#f0f0f0;padding:2px 6px;border-radius:4px">password</code></div>
+<div style="text-align:center;margin-top:12px;font-size:12px;color:#999">{{T "landing_demo_label"}} <code style="background:#f0f0f0;padding:2px 6px;border-radius:4px">{{.AppEmail}}</code> / <code style="background:#f0f0f0;padding:2px 6px;border-radius:4px">password</code></div>
 </div>
 </section>
 
 <section class="features">
-<h2>{{if eq .LangCode "id"}}Fitur Lengkap{{else}}Complete Features{{end}}</h2>
-<p class="subtitle">{{if eq .LangCode "id"}}Semua yang kamu butuhkan untuk WhatsApp marketing{{else}}Everything you need for WhatsApp marketing{{end}}</p>
+<h2>{{T "landing_features_title"}}</h2>
+<p class="subtitle">{{T "landing_features_subtitle"}}</p>
 <div class="feature-grid">
 <div class="feature-card"><i class="la la-comments"></i><h4>{{T "inbox_title"}}</h4><p>{{if eq .LangCode "id"}}Inbox real-time dengan SSE, reply langsung, group chat, filter private/group.{{else}}Real-time inbox with SSE, direct reply, group chat, private/group filter.{{end}}</p></div>
-<div class="feature-card"><i class="la la-robot"></i><h4>AI Auto Reply</h4><p>{{if eq .LangCode "id"}}Balas otomatis pakai AI (OpenAI/Gemini/Claude/DeepSeek) + knowledge base.{{else}}Auto reply with AI (OpenAI/Gemini/Claude/DeepSeek) + knowledge base.{{end}}</p></div>
-<div class="feature-card"><i class="la la-bullhorn"></i><h4>Broadcast</h4><p>{{if eq .LangCode "id"}}Kirim pesan massal ke grup kontak, round-robin multi-akun WA.{{else}}Send bulk messages to contact groups, round-robin multi-WA accounts.{{end}}</p></div>
-<div class="feature-card"><i class="la la-whatsapp"></i><h4>{{if eq .LangCode "id"}}Multi Akun{{else}}Multi Account{{end}}</h4><p>{{if eq .LangCode "id"}}Kelola banyak nomor WhatsApp sekaligus, scan QR pairing.{{else}}Manage multiple WhatsApp numbers at once, QR scan pairing.{{end}}</p></div>
-<div class="feature-card"><i class="la la-cloud"></i><h4>Meta Cloud API</h4><p>{{if eq .LangCode "id"}}Integrasi resmi WhatsApp Business API + template pesan.{{else}}Official WhatsApp Business API integration + message templates.{{end}}</p></div>
-<div class="feature-card"><i class="la la-clock"></i><h4>{{if eq .LangCode "id"}}Pesan Terjadwal{{else}}Scheduled Messages{{end}}</h4><p>{{if eq .LangCode "id"}}Jadwalkan pesan, repeat otomatis, pilih nomor pengirim.{{else}}Schedule messages, auto repeat, select sender number.{{end}}</p></div>
-<div class="feature-card"><i class="la la-paint-brush"></i><h4>Whitelabel</h4><p>{{if eq .LangCode "id"}}Ganti logo, nama, email — satu binary, banyak domain.{{else}}Replace logo, name, email — one binary, many domains.{{end}}</p></div>
-<div class="feature-card"><i class="la la-chart-bar"></i><h4>Dashboard Analytics</h4><p>{{if eq .LangCode "id"}}Chart aktivitas, statistik pesan, status koneksi real-time.{{else}}Activity charts, message statistics, real-time connection status.{{end}}</p></div>
+<div class="feature-card"><i class="la la-robot"></i><h4>{{T "landing_feat_ai_title"}}</h4><p>{{T "landing_feat_ai_desc"}}</p></div>
+<div class="feature-card"><i class="la la-bullhorn"></i><h4>{{T "landing_feat_broadcast_title"}}</h4><p>{{T "landing_feat_broadcast_desc"}}</p></div>
+<div class="feature-card"><i class="la la-whatsapp"></i><h4>{{T "landing_feat_multi_title"}}</h4><p>{{T "landing_feat_multi_desc"}}</p></div>
+<div class="feature-card"><i class="la la-cloud"></i><h4>{{T "landing_feat_meta_title"}}</h4><p>{{T "landing_feat_meta_desc"}}</p></div>
+<div class="feature-card"><i class="la la-clock"></i><h4>{{T "landing_feat_schedule_title"}}</h4><p>{{T "landing_feat_schedule_desc"}}</p></div>
+<div class="feature-card"><i class="la la-paint-brush"></i><h4>{{T "landing_feat_whitelabel_title"}}</h4><p>{{T "landing_feat_whitelabel_desc"}}</p></div>
+<div class="feature-card"><i class="la la-chart-bar"></i><h4>{{T "landing_feat_analytics_title"}}</h4><p>{{T "landing_feat_analytics_desc"}}</p></div>
 </div>
 </section>
 
 <section class="demo-section">
 <div class="container">
-<h2>{{if eq .LangCode "id"}}Akun Demo{{else}}Demo Account{{end}}</h2>
+<h2>{{T "landing_demo_title"}}</h2>
 <div class="demo-box" style="max-width:480px;margin:0 auto">
-<div class="demo-row"><strong>Admin:</strong> {{.AppEmail}} / password</div>
+<div class="demo-row"><strong>{{T "landing_demo_admin_label"}}</strong> {{.AppEmail}} / password</div>
 </div>
 <div style="text-align:center;margin-top:24px">
-<a href="/login" style="display:inline-block;padding:12px 28px;border-radius:10px;font-weight:600;text-decoration:none;background:#4F46E5;color:#fff">{{if eq .LangCode "id"}}Masuk ke Dashboard{{else}}Go to Dashboard{{end}}</a>
+<a href="/login" style="display:inline-block;padding:12px 28px;border-radius:10px;font-weight:600;text-decoration:none;background:#4F46E5;color:#fff">{{T "landing_go_dashboard"}}</a>
 </div>
 </div>
 </section>
 
 <section class="cta-banner">
-<h2>{{if eq .LangCode "id"}}Siap Tingkatkan WhatsApp Marketing Kamu?{{else}}Ready to Level Up Your WhatsApp Marketing?{{end}}</h2>
-<p>{{if eq .LangCode "id"}}Daftar sekarang — gratis. Tanpa kartu kredit.{{else}}Sign up now — free. No credit card.{{end}}</p>
-<a href="/register">{{if eq .LangCode "id"}}Daftar Gratis{{else}}Sign Up Free{{end}}</a>
+<h2>{{T "landing_cta_headline"}}</h2>
+<p>{{T "landing_cta_sub"}}</p>
+<a href="/register">{{T "landing_cta_signup"}}</a>
 </section>
 
-<footer class="footer">&copy; 2026 {{.AppName}}. Powered by ChatGo.</footer>
+<footer class="footer">&copy; 2026 {{.AppName}}. {{T "landing_footer"}}</footer>
 
 </body>
 </html>{{end}}
@@ -569,7 +569,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;m
 <div class="auth-divider"><span>{{T "auth_or"}}</span></div>
 <div class="demo-box">
 <div class="demo-title">{{T "auth_demo"}}</div>
-<div class="demo-row"><strong>Admin:</strong> {{.AppEmail}} / password</div>
+<div class="demo-row"><strong>{{T "landing_demo_admin_label"}}</strong> {{.AppEmail}} / password</div>
 </div>
 </div>
 {{end}}
@@ -641,20 +641,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;m
 </div>
 <div class="row mt-3">
 <div class="col-12 col-lg-6">
-<div class="card"><div class="card-header"><h4 class="card-header-title">{{T "dash_recent_in"}}</h4><a href="/received" class="btn btn-sm btn-white">All</a></div>
-<div class="table-responsive"><table class="table table-sm table-nowrap card-table mb-0"><thead><tr><th>From</th><th>Message</th><th>Time</th></tr></thead><tbody>
+<div class="card"><div class="card-header"><h4 class="card-header-title">{{T "dash_recent_in"}}</h4><a href="/received" class="btn btn-sm btn-white">{{T "btn_all"}}</a></div>
+<div class="table-responsive"><table class="table table-sm table-nowrap card-table mb-0"><thead><tr><th>{{T "col_from"}}</th><th>{{T "col_message"}}</th><th>{{T "col_time"}}</th></tr></thead><tbody>
 {{range .Received}}<tr><td><strong>{{if .Name}}{{.Name}}{{else}}+{{.Phone}}{{end}}</strong></td><td class="text-muted small" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{.Message}}</td><td class="text-muted small">{{.Created}}</td></tr>{{else}}<tr><td colspan="3" class="text-muted text-center">-</td></tr>{{end}}
 </tbody></table></div></div>
 </div>
 <div class="col-12 col-lg-6">
-<div class="card"><div class="card-header"><h4 class="card-header-title">{{T "dash_recent_out"}}</h4><a href="/sent" class="btn btn-sm btn-white">All</a></div>
-<div class="table-responsive"><table class="table table-sm table-nowrap card-table mb-0"><thead><tr><th>To</th><th>Message</th><th>Status</th></tr></thead><tbody>
+<div class="card"><div class="card-header"><h4 class="card-header-title">{{T "dash_recent_out"}}</h4><a href="/sent" class="btn btn-sm btn-white">{{T "btn_all"}}</a></div>
+<div class="table-responsive"><table class="table table-sm table-nowrap card-table mb-0"><thead><tr><th>{{T "col_to"}}</th><th>{{T "col_message"}}</th><th>{{T "col_status"}}</th></tr></thead><tbody>
 {{range .Sent}}<tr><td><strong>+{{.Phone}}</strong></td><td class="text-muted small" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{.Message}}</td><td><span class="badge badge-soft-success">{{.Status}}</span></td></tr>{{else}}<tr><td colspan="3" class="text-muted text-center">-</td></tr>{{end}}
 </tbody></table></div></div>
 </div>
 </div>
 <script>
-new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.ChartLabels}}],datasets:[{label:'Sent',data:[{{.ChartSent}}],borderColor:'#4F46E5',backgroundColor:'rgba(79,70,229,.1)',fill:true,tension:.3,pointRadius:2,pointHoverRadius:5},{label:'Received',data:[{{.ChartReceived}}],borderColor:'#10B981',backgroundColor:'rgba(16,185,129,.1)',fill:true,tension:.3,pointRadius:2,pointHoverRadius:5}]},options:{responsive:true,interaction:{intersect:false,mode:'index'},plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true,grid:{color:'rgba(0,0,0,.05)'}},x:{grid:{display:false}}}}})
+new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.ChartLabels}}],datasets:[{label:'{{T "chart_sent"}}',data:[{{.ChartSent}}],borderColor:'#4F46E5',backgroundColor:'rgba(79,70,229,.1)',fill:true,tension:.3,pointRadius:2,pointHoverRadius:5},{label:'{{T "chart_received"}}',data:[{{.ChartReceived}}],borderColor:'#10B981',backgroundColor:'rgba(16,185,129,.1)',fill:true,tension:.3,pointRadius:2,pointHoverRadius:5}]},options:{responsive:true,interaction:{intersect:false,mode:'index'},plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true,grid:{color:'rgba(0,0,0,.05)'}},x:{grid:{display:false}}}}})
 </script>
 {{end}}
 
@@ -676,9 +676,9 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
           {{range .Accounts}}
           <div class="d-flex align-items-center justify-content-between border rounded p-3 mb-2">
             <div>{{if .Phone}}<strong>+{{.Phone}}</strong>{{else}}<span class="text-muted">{{T "wa_pairing"}}</span>{{end}}<br>
-              {{if eq .Status "connected"}}<span class="badge badge-soft-success"><i class="la la-check-circle me-1"></i>Connected</span>
-              {{else if eq .Status "qr"}}<span class="badge badge-soft-warning"><i class="la la-qrcode me-1"></i>Scan QR</span>
-              {{else}}<span class="badge badge-soft-danger"><i class="la la-times-circle me-1"></i>Disconnected</span>{{end}}
+              {{if eq .Status "connected"}}<span class="badge badge-soft-success"><i class="la la-check-circle me-1"></i>{{T "wa_connected"}}</span>
+              {{else if eq .Status "qr"}}<span class="badge badge-soft-warning"><i class="la la-qrcode me-1"></i>{{T "wa_scanqr"}}</span>
+              {{else}}<span class="badge badge-soft-danger"><i class="la la-times-circle me-1"></i>{{T "wa_disconnected"}}</span>{{end}}
             </div>
             <form method="post" action="/wa/logout" onsubmit="return confirm('{{T "wa_logout_confirm"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger lift"><i class="la la-sign-out"></i></button></form>
           </div>
@@ -698,14 +698,27 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
         <div class="card-header"><h4 class="card-header-title">{{T "send_title"}}</h4></div>
         <div class="card-body">
           <form method="post" action="/send"><input type="hidden" name="is_text" value="1">
-            <div class="form-group"><label>Kirim Dari</label><select name="account_phone" class="form-control" required {{if not .HasConnected}}disabled{{end}}><option value="">-- Pilih Nomor Pengirim --</option>{{range .ConnectedAccounts}}{{if eq .Status "connected"}}<option value="+{{.Phone}}">+{{.Phone}}</option>{{end}}{{end}}</select>{{if not .HasConnected}}<small class="form-text text-muted">Hubungkan nomor WA dulu di halaman Devices</small>{{end}}</div>
+            <div class="form-group"><label>{{T "send_from"}}</label><select name="account_phone" class="form-control" required {{if not .HasConnected}}disabled{{end}}><option value="">{{T "send_select_sender"}}</option>{{range .ConnectedAccounts}}{{if eq .Status "connected"}}<option value="+{{.Phone}}">+{{.Phone}}</option>{{end}}{{end}}</select>{{if not .HasConnected}}<small class="form-text text-muted">{{T "send_connect_hint"}}</small>{{end}}</div>
             <div class="form-group"><label>{{T "send_to"}}</label><input name="phone" class="form-control" placeholder="628123456789" value="{{.SendTo}}" required><small class="form-text text-muted">{{T "send_to_hint"}}</small></div>
             <div class="form-group"><label>{{T "send_message"}}</label><textarea name="message" class="form-control" rows="4" placeholder="{{T "send_message_ph"}}" required></textarea></div>
-            <button class="btn btn-primary lift" {{if ne .Status "connected"}}disabled{{end}}><i class="la la-paper-plane me-1"></i> {{T "send_btn"}}</button>
-            {{if ne .Status "connected"}}<span class="text-muted ms-2">{{T "send_connect_first"}}</span>{{end}}
-          </form>
-        </div>
-      </div>
+             <button class="btn btn-primary lift" {{if ne .Status "connected"}}disabled{{end}}><i class="la la-paper-plane me-1"></i> {{T "send_btn"}}</button>
+             {{if ne .Status "connected"}}<span class="text-muted ms-2">{{T "send_connect_first"}}</span>{{end}}
+           </form>
+         </div>
+       </div>
+       <div class="card mt-3">
+         <div class="card-header"><h4 class="card-header-title"><i class="la la-paperclip me-1"></i> Kirim Media / Attachment</h4></div>
+         <div class="card-body">
+           <form method="post" action="/send/media" enctype="multipart/form-data">
+             <div class="form-group"><label>{{T "send_from"}}</label><select name="account_phone" class="form-control" required {{if not .HasConnected}}disabled{{end}}><option value="">{{T "send_select_sender"}}</option>{{range .ConnectedAccounts}}{{if eq .Status "connected"}}<option value="+{{.Phone}}">+{{.Phone}}</option>{{end}}{{end}}</select></div>
+             <div class="form-group"><label>{{T "send_to"}}</label><input name="phone" class="form-control" placeholder="628123456789" value="{{.SendTo}}" required></div>
+             <div class="form-group"><label>{{T "col_type"}}</label><select name="media_type" class="form-control"><option value="image">🖼️ Image</option><option value="video">🎬 Video</option><option value="document">📄 Document</option><option value="audio">🎵 Audio</option></select></div>
+             <div class="form-group"><label>{{T "col_file"}}</label><input type="file" name="media_file" class="form-control" required></div>
+             <div class="form-group"><label>{{T "send_message"}} <small class="text-muted">(caption)</small></label><input name="caption" class="form-control" placeholder="Teks caption (opsional)"></div>
+             <button class="btn btn-warning lift" {{if ne .Status "connected"}}disabled{{end}}><i class="la la-cloud-upload me-1"></i> Kirim Media</button>
+           </form>
+         </div>
+       </div>
     </div>
   </div>
 {{end}}
@@ -731,10 +744,43 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 {{end}}
 
 {{if eq .Page "autoreply"}}
+<style>
+.autoreply-tabs{display:flex;flex-wrap:wrap;border-bottom:2px solid #e0e0e0;margin-bottom:16px}
+.autoreply-tabs .at{background:none;border:none;padding:10px 16px;font-size:13px;font-weight:600;color:#6e788c;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap}
+.autoreply-tabs .at:hover{color:#152e4d}
+.autoreply-tabs .at.active{color:#2c7be5;border-bottom-color:#2c7be5}
+.at-panel{display:none}
+.at-panel.active{display:block}
+</style>
+<div class="autoreply-tabs">
+<button class="at active" onclick="var p=document.querySelectorAll('.at-panel');for(var i=0;i<p.length;i++)p[i].classList.remove('active');document.getElementById('at-welcome').classList.add('active');var b=this.parentElement.querySelectorAll('.at');for(var i=0;i<b.length;i++)b[i].classList.remove('active');this.classList.add('active')"><i class="la la-hand-sparkles me-1"></i>{{T "at_tab_welcome_fallback"}}</button>
+<button class="at" onclick="var p=document.querySelectorAll('.at-panel');for(var i=0;i<p.length;i++)p[i].classList.remove('active');document.getElementById('at-rules').classList.add('active');var b=this.parentElement.querySelectorAll('.at');for(var i=0;i<b.length;i++)b[i].classList.remove('active');this.classList.add('active')"><i class="la la-reply me-1"></i>{{T "nav_autoreply"}}</button>
+<button class="at" onclick="var p=document.querySelectorAll('.at-panel');for(var i=0;i<p.length;i++)p[i].classList.remove('active');document.getElementById('at-faq').classList.add('active');var b=this.parentElement.querySelectorAll('.at');for(var i=0;i<b.length;i++)b[i].classList.remove('active');this.classList.add('active')"><i class="la la-question-circle me-1"></i>{{T "ar_faq_tab"}}</button>
+<button class="at" onclick="var p=document.querySelectorAll('.at-panel');for(var i=0;i<p.length;i++)p[i].classList.remove('active');document.getElementById('at-kb').classList.add('active');var b=this.parentElement.querySelectorAll('.at');for(var i=0;i<b.length;i++)b[i].classList.remove('active');this.classList.add('active')"><i class="la la-book me-1"></i>{{T "nav_knowledge"}}</button>
+<button class="at" onclick="var p=document.querySelectorAll('.at-panel');for(var i=0;i<p.length;i++)p[i].classList.remove('active');document.getElementById('at-ai').classList.add('active');var b=this.parentElement.querySelectorAll('.at');for(var i=0;i<b.length;i++)b[i].classList.remove('active');this.classList.add('active')"><i class="la la-robot me-1"></i>{{T "at_tab_ai_setup"}}</button>
+</div>
+
+<div class="at-panel active" id="at-welcome">
+<form method="post" action="/settings">
+<div class="card"><div class="card-header"><h4 class="card-header-title">{{T "set_welcome_title"}}</h4><div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="welcome_enabled" {{if .WelcomeEnabled}}checked{{end}}></div></div><div class="card-body">
+<label>{{T "set_welcome_msg"}}</label>
+<textarea name="welcome_message" class="form-control" rows="2" placeholder="{{T "set_welcome_ph"}}">{{.WelcomeMessage}}</textarea>
+<small class="form-text text-muted">{{T "set_vars_hint"}}</small>
+</div></div>
+<div class="card"><div class="card-header"><h4 class="card-header-title">{{T "set_fallback_title"}}</h4><div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="fallback_enabled" {{if .FallbackEnabled}}checked{{end}}></div></div><div class="card-body">
+<label>{{T "set_fallback_msg"}}</label>
+<textarea name="fallback_message" class="form-control" rows="2" placeholder="{{T "set_fallback_ph"}}">{{.FallbackMessage}}</textarea>
+<small class="form-text text-muted">{{T "set_fallback_hint"}}</small>
+</div></div>
+<div class="text-end"><button class="btn btn-primary"><i class="la la-save me-1"></i> {{T "btn_save"}}</button></div>
+</form>
+</div>
+
+<div class="at-panel" id="at-rules">
 <div class="row">
 <div class="col-12 col-lg-5">
 <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "ar_add_title"}}</h4></div>
-<div class="card-body"><form method="post" action="/autoreply/add">
+<div class="card-body"><form method="post" action="/autoreply/add" enctype="multipart/form-data">
 <div class="form-group"><label>{{T "ar_matchtype"}}</label><select name="match" class="form-control" onchange="onMatchTypeChange(this.value)"><option value="contains">{{T "ar_contains"}}</option><option value="exact">{{T "ar_exact"}}</option><option value="starts_with">{{T "ar_starts"}}</option><option value="ai">{{T "ar_ai_type"}}</option></select></div>
 <div id="keywordGroup"><div class="form-group"><label>{{T "ar_keyword"}}</label><input name="keyword" class="form-control" placeholder="halo, hi, menu"></div></div>
 <div id="faqGroup" style="display:none"><div class="form-group"><label>{{T "ar_faq"}}</label><textarea name="faq" class="form-control" rows="5" placeholder="Apa produk?|Software WA marketing"></textarea></div></div>
@@ -743,15 +789,102 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 <div class="form-check"><input class="form-check-input" type="checkbox" name="use_ai" value="1" id="useAiCheck"><label class="form-check-label" for="useAiCheck">{{T "ar_use_ai"}}</label></div>
 <div class="form-group mt-2" id="aiKeyGroup" style="display:none"><label>{{T "ar_ai_key"}}</label><select name="ai_key_id" class="form-control">{{range .AiKeys}}<option value="{{.ID}}">{{.Name}} ({{.Provider}})</option>{{end}}</select></div>
 </div>
-<div class="form-group"><label>Nomor WA</label><div class="border rounded p-2" style="max-height:120px;overflow-y:auto">{{range .ConnectedAccounts}}{{if .Phone}}<div class="form-check form-check-inline small"><input class="form-check-input" type="checkbox" name="account_ids" value="+{{.Phone}}" id="a_{{.Phone}}"><label for="a_{{.Phone}}">+{{.Phone}}</label></div>{{end}}{{end}}</div></div>
-<div class="mb-2"><label class="field-label">Training Campaign</label><select name="training_id" class="form-control form-control-sm"><option value="0">-- Default --</option>{{range .AiTrainings}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select></div>
+<div class="form-group"><label>{{T "ar_wa_number"}}</label><div class="border rounded p-2" style="max-height:120px;overflow-y:auto">{{range .ConnectedAccounts}}{{if .Phone}}<div class="form-check form-check-inline small"><input class="form-check-input" type="checkbox" name="account_ids" value="+{{.Phone}}" id="a_{{.Phone}}"><label for="a_{{.Phone}}">+{{.Phone}}</label></div>{{end}}{{end}}</div></div>
+<div class="form-group"><label><i class="la la-paperclip me-1"></i> Media / File <small class="text-muted">(opsional)</small></label><input type="file" name="media_file" class="form-control" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx"></div>
+<div class="mb-2"><label class="field-label">{{T "ar_training_camp"}}</label><select name="training_id" class="form-control form-control-sm"><option value="0">{{T "ar_default_global"}}</option>{{range .AiTrainings}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select></div>
 <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
 </form></div></div></div>
 <div class="col-12 col-lg-7">
 <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "ar_list_title"}}</h4></div>
-<div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Keyword</th><th>Reply</th><th>Status</th><th></th></tr></thead><tbody>
-{{range .AutoReplies}}<tr><td>{{.ID}}</td><td><strong>{{.Keyword}}</strong></td><td>{{if .UseAI}}<span class="badge bg-warning bg-opacity-10 text-warning me-1 small">AI</span>{{end}}{{.Reply}}</td><td>{{if .IsActive}}<span class="badge bg-success bg-opacity-10 text-success small">ON</span>{{else}}<span class="badge bg-danger bg-opacity-10 text-danger small">OFF</span>{{end}}</td><td><a class="btn btn-sm btn-white px-2" href="/autoreply?edit={{.ID}}">??</a><form method="post" action="/autoreply/toggle" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-white px-2">{{if .IsActive}}OFF{{else}}ON{{end}}</button></form><form method="post" action="/autoreply/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm text-danger px-2">&times;</button></form></td></tr>{{else}}<tr><td colspan="5" class="text-muted py-3 text-center">Belum ada rule.</td></tr>{{end}}
+<div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "ar_keyword"}}</th><th>{{T "ar_reply_label"}}</th><th>{{T "col_status"}}</th><th></th></tr></thead><tbody>
+{{range .AutoReplies}}<tr><td>{{.ID}}</td><td><strong>{{.Keyword}}</strong></td><td>{{if .MediaURL}}<span class="badge bg-info bg-opacity-10 text-info me-1 small" title="{{.MediaType}}: {{.MediaURL}}">📎</span>{{end}}{{if .UseAI}}<span class="badge bg-warning bg-opacity-10 text-warning me-1 small">AI</span>{{end}}{{.Reply}}</td><td>{{if .IsActive}}<span class="badge bg-success bg-opacity-10 text-success small">{{T "ar_on"}}</span>{{else}}<span class="badge bg-danger bg-opacity-10 text-danger small">{{T "ar_off"}}</span>{{end}}</td><td><a class="btn btn-sm btn-white px-2" href="/autoreply?edit={{.ID}}">{{T "ar_edit"}}</a><form method="post" action="/autoreply/toggle" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-white px-2">{{if .IsActive}}{{T "ar_off"}}{{else}}{{T "ar_on"}}{{end}}</button></form><form method="post" action="/autoreply/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm text-danger px-2">&times;</button></form></td></tr>{{else}}<tr><td colspan="5" class="text-muted py-3 text-center">{{T "ar_empty"}}</td></tr>{{end}}
 </tbody></table></div></div></div></div>
+</div>
+
+<div class="at-panel" id="at-faq">
+<div class="row">
+<div class="col-12 col-lg-5"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "faq_add_title"}}</h4></div><div class="card-body">
+<form method="post" action="/faq/add"><div class="form-group"><label>{{T "col_question"}}</label><input name="question" class="form-control" placeholder="{{T "faq_question_ph"}}" required></div><div class="form-group"><label>{{T "col_answer"}}</label><textarea name="answer" class="form-control" rows="3" placeholder="{{T "faq_answer_ph"}}" required></textarea></div><button class="btn btn-primary"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button></form>
+<hr><h6>{{T "kb_import"}}</h6><form method="post" action="/faq/import" enctype="multipart/form-data"><div class="form-group"><label>{{T "faq_import_csv"}}</label><input type="file" name="file" class="form-control" accept=".csv" required></div><button class="btn btn-outline-primary btn-sm"><i class="la la-upload me-1"></i> {{T "btn_import"}}</button></form>
+</div></div></div>
+<div class="col-12 col-lg-7"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "faq_list_title"}} <small class="text-muted">— {{T "faq_subtitle"}}</small></h4></div>
+<div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_question"}}</th><th>{{T "col_answer"}}</th><th></th></tr></thead><tbody>
+{{range .FAQ}}<tr><td>{{.id}}</td><td>{{.question}}</td><td>{{.answer}}</td><td><form method="post" action="/faq/delete" style="display:inline"><input type="hidden" name="id" value="{{.id}}"><button class="btn btn-sm btn-danger">&times;</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">{{T "faq_empty"}}</td></tr>{{end}}</tbody></table></div></div></div></div>
+</div>
+
+<div class="at-panel" id="at-kb">
+<div class="row">
+<div class="col-12 col-lg-5">
+<div class="card"><div class="card-header"><h4 class="card-header-title">{{T "kb_add"}}</h4></div><div class="card-body">
+<form method="post" action="/knowledge/add">
+<div class="form-group"><label>{{T "kb_title"}}</label><input name="title" class="form-control" placeholder="{{T "ar_faq_tab"}}" required></div>
+<div class="form-group"><label>{{T "kb_question"}}</label><input name="question" class="form-control" placeholder="{{T "kb_question_dot"}}..." required></div>
+<div class="form-group"><label>{{T "kb_answer"}}</label><textarea name="answer" class="form-control" rows="3" placeholder="{{T "kb_answer_dot"}}..." required></textarea></div>
+<div class="form-group"><label>{{T "kb_category"}}</label><input name="category" class="form-control" placeholder="{{T "kb_placeholder_category"}}"></div>
+<button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
+</form>
+<hr class="my-3">
+<form method="post" action="/knowledge/import" enctype="multipart/form-data">
+<label class="text-muted small mb-2 d-block">{{T "kb_import"}}</label>
+<div class="input-group"><input type="text" name="title" class="form-control" placeholder="Judul (opsional)"><input type="file" name="file" class="form-control" accept=".csv,.txt" required><button class="btn btn-white">{{T "kb_upload"}}</button></div>
+<small class="form-text text-muted">{{T "kb_csv_hint"}} <a href="/web/sample-knowledge.csv" target="_blank">{{T "kb_sample"}}</a></small>
+</form>
+<hr class="my-3">
+<form method="post" action="/knowledge/url">
+<label class="text-muted small mb-2 d-block">{{T "kb_url"}}</label>
+<div class="input-group"><input type="text" name="title" class="form-control" placeholder="Judul (opsional)"><input type="url" name="url" class="form-control" placeholder="https://..." required><button class="btn btn-white">{{T "kb_train"}}</button></div>
+<small class="form-text text-muted">{{T "kb_url_hint"}}</small>
+</form>
+<hr class="my-3">
+<form method="post" action="/knowledge/pdf" enctype="multipart/form-data">
+<label class="text-muted small mb-2 d-block">📄 {{T "kb_upload_pdf"}}</label>
+<div class="input-group"><input type="text" name="title" class="form-control" placeholder="{{T "kb_placeholder_title"}}"><input type="file" name="file" class="form-control" accept=".pdf" required><button class="btn btn-white">{{T "kb_upload"}}</button></div>
+<small class="form-text text-muted">{{T "kb_pdf_hint"}}</small>
+</form>
+</div></div>
+</div>
+<div class="col-12 col-lg-7">
+<div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-robot text-warning me-1"></i> {{T "nav_knowledge"}}</h4></div>
+<p class="text-muted px-4 pt-2">{{T "kb_info"}}</p>
+<div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "kb_title"}}</th><th>{{T "col_status"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
+{{range .Knowledges}}<tr><td>{{.ID}}</td><td>{{.Title}}</td>
+<td>{{if .Active}}<span class="badge badge-soft-success">{{T "ar_active"}}</span>{{else}}<span class="badge badge-soft-danger">{{T "ar_off"}}</span>{{end}}</td>
+<td>
+<form method="post" action="/knowledge/toggle" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-white">{{if .Active}}{{T "ar_off"}}{{else}}{{T "ar_on"}}{{end}}</button></form>
+<form method="post" action="/knowledge/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form>
+</td>
+</tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
+</tbody></table></div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="at-panel" id="at-ai">
+<div class="row">
+<div class="col-12 col-lg-5"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "aik_add"}}</h4></div><div class="card-body">
+<form method="post" action="/ai/keys/add">
+<div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
+<div class="form-group"><label>{{T "col_provider"}}</label><select name="provider" class="form-control"><option value="openai">OpenAI</option><option value="geminiai">Gemini</option><option value="claudeai">Claude</option><option value="deepseekai">DeepSeek</option></select></div>
+<div class="form-group"><label>{{T "ar_ai_model"}}</label><input name="model" class="form-control" placeholder="gpt-4o"></div>
+<div class="form-group"><label>{{T "aik_api_key"}}</label><input name="apikey" class="form-control" required></div>
+<div class="form-group"><label>{{T "ar_system_prompt"}}</label><textarea name="system_prompt" class="form-control" rows="3"></textarea></div>
+<button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
+</form></div></div></div>
+<div class="col-12 col-lg-7"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "nav_ai_keys"}}</h4></div>
+<div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>Provider</th><th>Model</th><th>{{T "col_action"}}</th></tr></thead><tbody>
+{{range .AiKeys}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td><span class="badge badge-soft-secondary">{{.Provider}}</span></td><td>{{.Model}}</td><td><form method="post" action="/ai/keys/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center">-</td></tr>{{end}}
+</tbody></table></div></div></div>
+</div>
+<div class="row mt-3">
+<div class="col-12 col-lg-5"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "aip_add"}}</h4></div><div class="card-body">
+<form method="post" action="/ai/plugins/add"><div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div><div class="form-group"><label>{{T "ar_ai_endpoint"}}</label><input name="endpoint" class="form-control" placeholder="https://..."></div><button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button></form></div></div></div>
+<div class="col-12 col-lg-7"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "nav_ai_plugins"}}</h4></div>
+<div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>{{T "ar_ai_endpoint"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
+{{range .AiPlugins}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.Endpoint}}</td><td><form method="post" action="/ai/plugins/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
+</tbody></table></div></div></div>
+</div>
+</div>
 {{end}}
 {{if eq .Page "settings"}}
 <style>
@@ -770,7 +903,7 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 
 <form method="post" action="/settings" enctype="multipart/form-data">
 <div class="st-panel active" id="st-branding">
-<div class="card"><div class="card-header"><h4 class="card-header-title">Branding</h4></div>
+<div class="card"><div class="card-header"><h4 class="card-header-title">{{T "set_tab_branding"}}</h4></div>
 <div class="card-body">
 <div class="form-group"><label>{{T "set_app_name"}}</label><input name="app_name" class="form-control" value="{{.AppName}}"></div>
 <div class="form-group"><label>{{T "set_logo_upload"}}</label>
@@ -784,26 +917,6 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 
 <div class="st-panel" id="st-messaging">
 <div class="card">
-<div class="card-header"><h4 class="card-header-title">{{T "set_welcome_title"}}</h4>
-<div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="welcome_enabled" {{if .WelcomeEnabled}}checked{{end}}></div>
-</div>
-<div class="card-body">
-<label>{{T "set_welcome_msg"}}</label>
-<textarea name="welcome_message" class="form-control" rows="3" placeholder="{{T "set_welcome_ph"}}">{{.WelcomeMessage}}</textarea>
-<small class="form-text text-muted">{{T "set_vars_hint"}}</small>
-</div>
-</div>
-<div class="card">
-<div class="card-header"><h4 class="card-header-title">{{T "set_fallback_title"}}</h4>
-<div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="fallback_enabled" {{if .FallbackEnabled}}checked{{end}}></div>
-</div>
-<div class="card-body">
-<label>{{T "set_fallback_msg"}}</label>
-<textarea name="fallback_message" class="form-control" rows="3" placeholder="{{T "set_fallback_ph"}}">{{.FallbackMessage}}</textarea>
-<small class="form-text text-muted">{{T "set_fallback_hint"}}</small>
-</div>
-</div>
-<div class="card">
 <div class="card-header"><h4 class="card-header-title">{{T "set_group_title"}}</h4>
 <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="reply_in_group" {{if .ReplyInGroup}}checked{{end}}></div>
 </div>
@@ -811,20 +924,20 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 </div>
 
 <div class="card mt-3">
-<div class="card-header"><h4 class="card-header-title"><i class="la la-clock me-1"></i> Auto-Close Idle Chats</h4></div>
+<div class="card-header"><h4 class="card-header-title"><i class="la la-clock me-1"></i> {{T "set_autoclose_title"}}</h4></div>
 <div class="card-body">
 <div class="row">
-<div class="col-md-6"><div class="form-group"><label>Close After (hours, 0=disabled)</label><input type="number" name="auto_close_hours" class="form-control" value="{{.AutoCloseHours}}"></div></div>
-<div class="col-md-6"><div class="form-group"><label>Follow-up Message</label><input name="auto_close_message" class="form-control" placeholder="Chat ini ditutup otomatis." value="{{.AutoCloseMessage}}"></div></div>
+<div class="col-md-6"><div class="form-group"><label>{{T "set_autoclose_hours"}}</label><input type="number" name="auto_close_hours" class="form-control" value="{{.AutoCloseHours}}"></div></div>
+<div class="col-md-6"><div class="form-group"><label>{{T "set_autoclose_followup"}}</label><input name="auto_close_message" class="form-control" placeholder="{{T "set_autoclose_ph"}}" value="{{.AutoCloseMessage}}"></div></div>
 </div>
 </div></div>
 <div class="card-body">
 <div class="row">
-<div class="col-md-4"><div class="form-group"><label>Max Per Day (0=unlimited)</label><input type="number" name="rate_max_daily" class="form-control" value="{{.RateMaxDaily}}"></div></div>
-<div class="col-md-4"><div class="form-group"><label>Random Min (detik)</label><input type="number" name="rate_random_min" class="form-control" value="{{.RateRandomMin}}"></div></div>
-<div class="col-md-4"><div class="form-group"><label>Random Max (detik)</label><input type="number" name="rate_random_max" class="form-control" value="{{.RateRandomMax}}"></div></div>
+<div class="col-md-4"><div class="form-group"><label>{{T "set_rate_max_daily"}}</label><input type="number" name="rate_max_daily" class="form-control" value="{{.RateMaxDaily}}"></div></div>
+<div class="col-md-4"><div class="form-group"><label>{{T "set_rate_min"}}</label><input type="number" name="rate_random_min" class="form-control" value="{{.RateRandomMin}}"></div></div>
+<div class="col-md-4"><div class="form-group"><label>{{T "set_rate_max"}}</label><input type="number" name="rate_random_max" class="form-control" value="{{.RateRandomMax}}"></div></div>
 </div>
-<small class="form-text text-muted">Set 0 untuk unlimited. Random delay akan menggantikan interval tetap, dipilih acak antara min-max.</small>
+<small class="form-text text-muted">{{T "set_rate_hint"}}</small>
 </div></div>
 </div>
 </div>
@@ -834,8 +947,8 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 <div class="card-body">
 <div class="form-group"><label>{{T "set_registrations"}}</label>
 <select name="registrations" class="form-control"><option value="1" {{if .Registrations}}selected{{end}}>{{T "set_enabled"}}</option><option value="0" {{if not .Registrations}}selected{{end}}>{{T "set_disabled"}}</option></select></div>
-<div class="form-group"><label>{{T "set_listen_addr"}}</label><input class="form-control" value="0.0.0.0:8080" disabled><small class="form-text text-muted">Edit <code>CHATGO_ADDR</code> di <code>.env</code></small></div>
-<div class="form-group"><label>MySQL Connection</label><input class="form-control" value="***" disabled><small class="form-text text-muted">Edit <code>CHATGO_MYSQL</code> di <code>.env</code></small></div>
+<div class="form-group"><label>{{T "set_listen_addr"}}</label><input class="form-control" value="0.0.0.0:8080" disabled><small class="form-text text-muted">{{T "set_addr_hint"}}</small></div>
+<div class="form-group"><label>{{T "set_mysql_conn"}}</label><input class="form-control" value="***" disabled><small class="form-text text-muted">{{T "set_mysql_hint"}}</small></div>
 </div></div>
 </div>
 
@@ -850,33 +963,35 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
         <div class="card-body"><form method="post" action="/contacts/add">
           <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
           <div class="form-group"><label>{{T "col_from"}}</label><input name="phone" class="form-control" placeholder="628xxx" required></div>
-          <div class="form-group"><label>{{T "nav_contacts_groups"}}</label><select name="groups" class="form-control" multiple>{{range .Groups}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select></div>
-          <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
+           <div class="form-group"><label>{{T "nav_contacts_groups"}}</label><select name="groups" class="form-control" multiple>{{range .Groups}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select></div>
+           <div class="form-group"><label>{{T "nav_tags"}}</label><div class="border rounded p-2" style="max-height:100px;overflow-y:auto">{{range .Tags}}<div class="form-check form-check-inline small"><input class="form-check-input" type="checkbox" name="tag_ids" value="{{.ID}}" id="addtag_{{.ID}}"><label for="addtag_{{.ID}}">{{.Name}}</label></div>{{else}}<small class="text-muted">Belum ada tag</small>{{end}}</div></div>
+           <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
         </form></div>
       </div>
-      <div class="card mt-3"><div class="card-header"><h4 class="card-header-title"><i class="la la-upload me-1"></i> Import CSV</h4></div>
+      <div class="card mt-3"><div class="card-header"><h4 class="card-header-title"><i class="la la-upload me-1"></i> {{T "ct_import_csv"}}</h4></div>
         <div class="card-body"><form method="post" action="/contacts/import" enctype="multipart/form-data">
-          <div class="form-group"><label>Upload CSV</label><input type="file" name="file" class="form-control" accept=".csv" required></div>
-          <small class="form-text text-muted mb-2 d-block">Kolom: <code>name</code>, <code>phone</code>, <code>groups</code> (nama grup, koma). Group otomatis dibuat jika belum ada.</small>
-          <button class="btn btn-white lift"><i class="la la-cloud-upload me-1"></i> Import</button>
+          <div class="form-group"><label>{{T "ct_upload_csv"}}</label><input type="file" name="file" class="form-control" accept=".csv" required></div>
+          <small class="form-text text-muted mb-2 d-block">{{T "ct_import_hint"}}</small>
+          <button class="btn btn-white lift"><i class="la la-cloud-upload me-1"></i> {{T "btn_import"}}</button>
         </form></div>
       </div>
     </div>
     {{if .EditID}}
     <div class="col-12 col-lg-4">
-      <div class="card border-warning"><div class="card-header bg-warning bg-opacity-10"><h4 class="card-header-title"><i class="la la-edit me-1"></i> Edit</h4></div>
+      <div class="card border-warning"><div class="card-header bg-warning bg-opacity-10"><h4 class="card-header-title"><i class="la la-edit me-1"></i> {{T "ar_edit"}}</h4></div>
         <div class="card-body"><form method="post" action="/contacts/edit">
           <input type="hidden" name="id" value="{{.EditID}}">
           <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" value="{{.EditName}}" required></div>
           <div class="form-group"><label>{{T "col_from"}}</label><input name="phone" class="form-control" value="{{.EditPhone}}" required></div>
-          <div class="form-group"><label>{{T "nav_contacts_groups"}}</label><select name="groups" class="form-control" multiple>{{range .Groups}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select></div>
-          <button class="btn btn-primary lift"><i class="la la-save me-1"></i> {{T "set_save"}}</button> <a href="/contacts" class="btn btn-white ms-2">{{T "ar_cancel"}}</a>
+           <div class="form-group"><label>{{T "nav_contacts_groups"}}</label><select name="groups" class="form-control" multiple>{{range .Groups}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select></div>
+           <div class="form-group"><label>{{T "nav_tags"}}</label><div class="border rounded p-2" style="max-height:100px;overflow-y:auto">{{range .Tags}}<div class="form-check form-check-inline small"><input class="form-check-input" type="checkbox" name="tag_ids" value="{{.ID}}" id="tag_{{.ID}}"><label for="tag_{{.ID}}">{{.Name}}</label></div>{{else}}<small class="text-muted">Belum ada tag</small>{{end}}</div></div>
+           <button class="btn btn-primary lift"><i class="la la-save me-1"></i> {{T "set_save"}}</button> <a href="/contacts" class="btn btn-white ms-2">{{T "ar_cancel"}}</a>
         </form></div>
       </div>
     </div>
     {{end}}
     <div class="col-12 col-lg-8">
-      <div class="card"><div class="card-header d-flex justify-content-between align-items-center"><h4 class="card-header-title mb-0">{{T "nav_contacts_saved"}}</h4><div><a href="/contacts/export" class="btn btn-sm btn-white me-1"><i class="la la-download me-1"></i> Export CSV</a><button class="btn btn-sm btn-danger" onclick="bulkDeleteContacts()"><i class="la la-trash me-1"></i> Delete</button></div></div>
+      <div class="card"><div class="card-header d-flex justify-content-between align-items-center"><h4 class="card-header-title mb-0">{{T "nav_contacts_saved"}}</h4><div><a href="/contacts/export" class="btn btn-sm btn-white me-1"><i class="la la-download me-1"></i> {{T "ct_export_csv"}}</a><button class="btn btn-sm btn-danger" onclick="bulkDeleteContacts()"><i class="la la-trash me-1"></i> {{T "ar_delete"}}</button></div></div>
         <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th style="width:30px"><input type="checkbox" onchange="toggleAll(this)"></th><th>#</th><th>{{T "col_name"}}</th><th>{{T "col_from"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
           {{range .Contacts}}<tr><td><input type="checkbox" name="cid" value="{{.ID}}" class="contact-check"></td><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.Phone}}</td><td>
             <a class="btn btn-sm btn-white" href="/contacts?edit={{.ID}}"><i class="la la-edit"></i></a>
@@ -889,8 +1004,8 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
     function toggleAll(el) { document.querySelectorAll('.contact-check').forEach(c => c.checked = el.checked) }
     function bulkDeleteContacts() {
       var ids = []; document.querySelectorAll('.contact-check:checked').forEach(c => ids.push(c.value));
-      if (ids.length === 0) { alert('Pilih kontak dulu'); return; }
-      if (!confirm('Hapus ' + ids.length + ' kontak?')) return;
+      if (ids.length === 0) { alert('{{T "ct_alert_select"}}'); return; }
+      if (!confirm('{{T "ct_confirm_bulk_delete"}}'.replace('%d', ids.length))) return;
       var f = document.createElement('form'); f.method = 'POST'; f.action = '/contacts/bulk-delete';
       ids.forEach(function(id) { var i = document.createElement('input'); i.type = 'hidden'; i.name = 'ids'; i.value = id; f.appendChild(i) });
       document.body.appendChild(f); f.submit();
@@ -923,17 +1038,17 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 {{if eq .Page "tags"}}
   <div class="row">
     <div class="col-12 col-lg-4">
-      <div class="card"><div class="card-header"><h4 class="card-header-title">Tambah Tag</h4></div>
+      <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "tag_add"}}</h4></div>
         <div class="card-body"><form method="post" action="/tags/add">
           <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" placeholder="VIP" required></div>
-          <div class="form-group"><label>Warna</label><input type="color" name="color" class="form-control form-control-color" value="#2c7be5" style="height:40px;padding:4px"></div>
+          <div class="form-group"><label>{{T "tag_color"}}</label><input type="color" name="color" class="form-control form-control-color" value="#2c7be5" style="height:40px;padding:4px"></div>
           <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
         </form></div>
       </div>
     </div>
     <div class="col-12 col-lg-8">
-      <div class="card"><div class="card-header"><h4 class="card-header-title">Tags</h4></div>
-        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Warna</th><th>{{T "col_name"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
+      <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "tag_list"}}</h4></div>
+        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "tag_color"}}</th><th>{{T "col_name"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
           {{range .Tags}}<tr><td>{{.ID}}</td><td><span style="display:inline-block;width:20px;height:20px;border-radius:4px;background:{{.Color}}"></span></td><td>{{.Name}}</td><td><form method="post" action="/tags/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
         </tbody></table></div>
       </div>
@@ -968,15 +1083,15 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
         <div class="card-body"><form method="post" action="/broadcast" enctype="multipart/form-data">
           <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
            <div class="form-group"><label>{{T "bc_groups"}}</label><select name="groups" class="form-control" multiple>{{range .Groups}}<option value="{{.ID}}">{{.Name}} ({{.Count}})</option>{{end}}</select></div>
-           {{if .Tags}}<div class="form-group"><label>Tags <small class="text-muted">— filter by tag</small></label><select name="tags" class="form-control" multiple>{{range .Tags}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select><small class="form-text text-muted">Pilih tag untuk kirim hanya ke kontak dengan tag tsb.</small></div>{{end}}
-           <div class="form-group"><label>Nomor Langsung <small class="text-muted">— satu per baris</small></label><textarea name="numbers" class="form-control" rows="4" placeholder="628123456789&#10;628987654321&#10;..."></textarea><small class="form-text text-muted">Tempel nomor langsung (tanpa grup). <form method="post" action="/validate" style="display:inline" target="_blank"><input type="hidden" name="numbers" value="" id="validateInput"><button type="button" class="btn btn-sm btn-outline-warning" onclick="document.getElementById('validateInput').value=document.querySelector('textarea[name=numbers]').value;this.form.submit()">Validate</button></form></small></div>
-           <div class="form-group"><label><i class="la la-image me-1"></i> Media <small class="text-muted">— opsional</small></label><input type="file" name="media_file" class="form-control" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx"><small class="form-text text-muted">Upload gambar/video/dokumen untuk dikirim bersama pesan.</small></div>
-           <div class="form-group"><label>{{T "bc_account"}}</label><div class="border rounded p-2" style="max-height:160px;overflow-y:auto">{{range .ConnectedAccounts}}{{if .Phone}}<div class="form-check"><input class="form-check-input" type="checkbox" name="account_ids" value="+{{.Phone}}" id="bc_{{.Phone}}"><label class="form-check-label small" for="bc_{{.Phone}}">+{{.Phone}}</label></div>{{end}}{{end}}{{if not .HasConnected}}<small class="text-muted">Belum ada nomor terkoneksi</small>{{end}}</div><small class="form-text text-muted">Biarkan kosong = semua nomor terhubung. Checklist = hanya nomor itu.</small></div>
-           <div class="form-group"><label>Mode Pengiriman</label><div class="border rounded p-2"><div class="form-check"><input class="form-check-input" type="radio" name="send_mode" value="round_robin" id="mode_rr" checked><label class="form-check-label" for="mode_rr"><strong>Round Robin</strong> <small class="text-muted">— kirim bergantian merata ke tiap nomor</small></label></div><div class="form-check mt-1"><input class="form-check-input" type="radio" name="send_mode" value="random" id="mode_rand"><label class="form-check-label" for="mode_rand"><strong>Random</strong> <small class="text-muted">— kirim acak ke nomor manapun</small></label></div></div></div>
+           {{if .Tags}}<div class="form-group"><label>{{T "bc_tags"}} <small class="text-muted">— {{T "bc_tags_hint"}}</small></label><select name="tags" class="form-control" multiple>{{range .Tags}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select><small class="form-text text-muted">{{T "bc_tags_desc"}}</small></div>{{end}}
+           <div class="form-group"><label>{{T "bc_direct_numbers"}} <small class="text-muted">— {{T "bc_direct_numbers_hint"}}</small></label><textarea name="numbers" class="form-control" rows="4" placeholder="628123456789&#10;628987654321&#10;..."></textarea><small class="form-text text-muted">{{T "bc_direct_numbers_desc"}} <form method="post" action="/validate" style="display:inline" target="_blank"><input type="hidden" name="numbers" value="" id="validateInput"><button type="button" class="btn btn-sm btn-outline-warning" onclick="document.getElementById('validateInput').value=document.querySelector('textarea[name=numbers]').value;this.form.submit()">{{T "bc_validate_btn"}}</button></form></small></div>
+           <div class="form-group"><label><i class="la la-image me-1"></i> {{T "bc_media"}} <small class="text-muted">— {{T "bc_media_hint"}}</small></label><input type="file" name="media_file" class="form-control" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx"><small class="form-text text-muted">{{T "bc_media_desc"}}</small></div>
+           <div class="form-group"><label>{{T "bc_account"}}</label><div class="border rounded p-2" style="max-height:160px;overflow-y:auto">{{range .ConnectedAccounts}}{{if .Phone}}<div class="form-check"><input class="form-check-input" type="checkbox" name="account_ids" value="+{{.Phone}}" id="bc_{{.Phone}}"><label class="form-check-label small" for="bc_{{.Phone}}">+{{.Phone}}</label></div>{{end}}{{end}}{{if not .HasConnected}}<small class="text-muted">{{T "bc_no_connected"}}</small>{{end}}</div><small class="form-text text-muted">{{T "bc_account_hint"}}</small></div>
+           <div class="form-group"><label>{{T "bc_send_mode"}}</label><div class="border rounded p-2"><div class="form-check"><input class="form-check-input" type="radio" name="send_mode" value="round_robin" id="mode_rr" checked><label class="form-check-label" for="mode_rr"><strong>{{T "bc_mode_rr"}}</strong> <small class="text-muted">— kirim bergantian merata ke tiap nomor</small></label></div><div class="form-check mt-1"><input class="form-check-input" type="radio" name="send_mode" value="random" id="mode_rand"><label class="form-check-label" for="mode_rand"><strong>{{T "bc_mode_random"}}</strong> <small class="text-muted">— kirim acak ke nomor manapun</small></label></div></div></div>
            <div class="form-group"><label>Interval (detik) <small class="text-muted">jeda antar pesan</small></label><input name="interval" type="number" class="form-control" value="300" min="30" placeholder="300-400"></div>
            {{if .MetaAccounts}}
-           <div class="form-group"><label><i class="la la-cloud me-1"></i> Meta API <small class="text-muted">— kirim lewat Cloud API</small></label><select name="meta_account_id" class="form-control" onchange="toggleMetaTemplate(this)"><option value="0">-- Tidak pakai Meta --</option>{{range .MetaAccounts}}<option value="{{.ID}}">{{.Name}} ({{.PhoneNumberID}})</option>{{end}}</select></div>
-            <div class="form-group" id="metaTemplateGroup" style="display:none"><label>Meta Template <small class="text-muted">— opsional</small></label><select name="meta_template" class="form-control"><option value="">-- Plain text --</option>{{range .MetaTemplates}}<option value="{{.Name}}">[Meta] {{.Name}} ({{.Language}})</option>{{end}}</select><small class="form-text text-muted">Jika dipilih, template akan dipakai. Variabel dari pesan akan masuk ke parameter.</small></div>
+           <div class="form-group"><label><i class="la la-cloud me-1"></i> {{T "bc_meta_api"}} <small class="text-muted">— kirim lewat Cloud API</small></label><select name="meta_account_id" class="form-control" onchange="toggleMetaTemplate(this)"><option value="0">{{T "bc_meta_none"}}</option>{{range .MetaAccounts}}<option value="{{.ID}}">{{.Name}} ({{.PhoneNumberID}})</option>{{end}}</select></div>
+            <div class="form-group" id="metaTemplateGroup" style="display:none"><label>{{T "bc_meta_template"}} <small class="text-muted">— opsional</small></label><select name="meta_template" class="form-control"><option value="">{{T "bc_meta_plain"}}</option>{{range .MetaTemplates}}<option value="{{.Name}}">[Meta] {{.Name}} ({{.Language}})</option>{{end}}</select><small class="form-text text-muted">Jika dipilih, template akan dipakai. Variabel dari pesan akan masuk ke parameter.</small></div>
            <script>function toggleMetaTemplate(el){document.getElementById('metaTemplateGroup').style.display=el.value!=='0'?'block':'none'}</script>
            {{end}}
           <div class="form-group"><label>{{T "col_message"}}</label><textarea name="message" class="form-control" rows="3" required></textarea><small class="form-text text-muted">{{T "set_vars_hint"}}</small></div>
@@ -987,11 +1102,11 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
     <div class="col-12 col-lg-7">
       <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "nav_broadcast"}}</h4></div>
         <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>{{T "bc_progress"}}</th><th>{{T "col_status"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
-           {{range .Campaigns}}<tr><td>{{.ID}}</td><td>{{.Name}}{{if .MetaAccountID}} <span class="badge badge-soft-primary" style="font-size:9px">Meta</span>{{end}}</td><td><a href="/broadcast/detail?id={{.ID}}" title="Lihat detail nomor terkirim">{{.Sent}}/{{.Total}}</a></td><td>{{if eq .Status "running"}}<span class="badge badge-soft-primary">running</span>{{else if eq .Status "paused"}}<span class="badge badge-soft-warning">paused</span>{{else if eq .Status "done"}}<span class="badge badge-soft-success">done</span>{{else}}<span class="badge badge-soft-secondary">{{.Status}}</span>{{end}}</td><td class="text-nowrap">
-             {{if eq .Status "running"}}<form method="post" action="/broadcast/pause" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-warning" title="Pause"><i class="la la-pause"></i></button></form>{{end}}
-             {{if eq .Status "paused"}}<form method="post" action="/broadcast/pause" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-success" title="Resume"><i class="la la-play"></i></button></form>{{end}}
-             {{if eq .Status "done"}}<form method="post" action="/broadcast/retry" style="display:inline" onsubmit="return confirm('Jalankan ulang campaign ini?')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-info" title="Retry"><i class="la la-redo"></i></button></form>{{end}}
-             {{if eq .Status "stopped"}}<form method="post" action="/broadcast/retry" style="display:inline" onsubmit="return confirm('Jalankan ulang campaign ini?')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-info" title="Retry"><i class="la la-redo"></i></button></form>{{end}}
+           {{range .Campaigns}}<tr><td>{{.ID}}</td><td>{{.Name}}{{if .MetaAccountID}} <span class="badge badge-soft-primary" style="font-size:9px">Meta</span>{{end}}</td><td>{{.Sent}}/{{.Total}}</td><td>{{if eq .Status "running"}}<span class="badge badge-soft-primary">{{T "bc_status_running"}}</span>{{else if eq .Status "paused"}}<span class="badge badge-soft-warning">{{T "bc_status_paused"}}</span>{{else if eq .Status "done"}}<span class="badge badge-soft-success">{{T "bc_status_done"}}</span>{{else}}<span class="badge badge-soft-secondary">{{.Status}}</span>{{end}}</td><td class="text-nowrap">
+             {{if eq .Status "running"}}<form method="post" action="/broadcast/pause" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-warning" title="{{T "bc_pause"}}"><i class="la la-pause"></i></button></form>{{end}}
+             {{if eq .Status "paused"}}<form method="post" action="/broadcast/pause" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-success" title="{{T "bc_resume"}}"><i class="la la-play"></i></button></form>{{end}}
+             {{if eq .Status "done"}}<form method="post" action="/broadcast/retry" style="display:inline" onsubmit="return confirm('{{T "bc_retry_confirm"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-info" title="{{T "bc_retry"}}"><i class="la la-redo"></i></button></form>{{end}}
+             {{if eq .Status "stopped"}}<form method="post" action="/broadcast/retry" style="display:inline" onsubmit="return confirm('{{T "bc_retry_confirm"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-info" title="{{T "bc_retry"}}"><i class="la la-redo"></i></button></form>{{end}}
              <form method="post" action="/broadcast/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger"><i class="la la-trash"></i></button></form>
            </td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center">-</td></tr>{{end}}
         </tbody></table></div>
@@ -1003,9 +1118,9 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 {{if eq .Page "drips"}}
   <div class="row">
     <div class="col-12 col-lg-4">
-      <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> New Drip</h4></div>
+      <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> {{T "drip_add"}}</h4></div>
         <div class="card-body"><form method="post" action="/drips/add">
-          <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" placeholder="Welcome Series" required></div>
+          <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" placeholder="{{T "drip_name_ph"}}" required></div>
           <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
         </form></div>
       </div>
@@ -1014,25 +1129,25 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
       {{range .Drips}}
       <div class="card mb-3">
         <div class="card-header d-flex justify-content-between align-items-center">
-          <div><h4 class="card-header-title mb-0">{{.Name}}</h4><small class="text-muted">{{len .Steps}} steps &middot; {{if eq .Status "active"}}<span class="text-success">Active</span>{{else}}<span class="text-muted">Inactive</span>{{end}}</small></div>
+          <div><h4 class="card-header-title mb-0">{{.Name}}</h4><small class="text-muted">{{len .Steps}} {{T "drip_steps"}} &middot; {{if eq .Status "active"}}<span class="text-success">{{T "drip_active"}}</span>{{else}}<span class="text-muted">{{T "drip_inactive"}}</span>{{end}}</small></div>
           <div>
-            <form method="post" action="/drips/toggle" style="display:inline"><input type="hidden" name="id" value="{{.ID}}">{{if eq .Status "active"}}<button class="btn btn-sm btn-warning">Pause</button>{{else}}<button class="btn btn-sm btn-success">Resume</button>{{end}}</form>
+            <form method="post" action="/drips/toggle" style="display:inline"><input type="hidden" name="id" value="{{.ID}}">{{if eq .Status "active"}}<button class="btn btn-sm btn-warning">{{T "drip_pause"}}</button>{{else}}<button class="btn btn-sm btn-success">{{T "drip_resume"}}</button>{{end}}</form>
             <form method="post" action="/drips/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger"><i class="la la-trash"></i></button></form>
           </div>
         </div>
-        <div class="table-responsive"><table class="table table-sm card-table mb-0"><thead><tr><th>#</th><th>Delay</th><th>{{T "col_message"}}</th><th></th></tr></thead><tbody>
-          {{range $i, $s := .Steps}}<tr><td>{{add $i 1}}</td><td>{{if eq $i 0}}Instant{{else}}{{$s.DelayMinutes}} min{{end}}</td><td>{{$s.Message}}</td><td><form method="post" action="/drips/step/delete" style="display:inline"><input type="hidden" name="id" value="{{$s.ID}}"><button class="btn btn-sm btn-danger"><i class="la la-times"></i></button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">No steps yet</td></tr>{{end}}
+        <div class="table-responsive"><table class="table table-sm card-table mb-0"><thead><tr><th>#</th><th>{{T "col_delay"}}</th><th>{{T "col_message"}}</th><th></th></tr></thead><tbody>
+          {{range $i, $s := .Steps}}<tr><td>{{add $i 1}}</td><td>{{if eq $i 0}}{{T "drip_instant"}}{{else}}{{$s.DelayMinutes}} {{T "drip_min"}}{{end}}</td><td>{{$s.Message}}</td><td><form method="post" action="/drips/step/delete" style="display:inline"><input type="hidden" name="id" value="{{$s.ID}}"><button class="btn btn-sm btn-danger"><i class="la la-times"></i></button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">{{T "drip_no_steps"}}</td></tr>{{end}}
         </tbody></table></div>
         <div class="card-body border-top"><form method="post" action="/drips/step/add" class="row g-2">
           <input type="hidden" name="drip_id" value="{{.ID}}">
           <input type="hidden" name="sort_order" value="{{len .Steps}}">
-          <div class="col-md-2"><input type="number" name="delay" class="form-control form-control-sm" placeholder="Min" value="0"></div>
-          <div class="col-md-7"><input type="text" name="message" class="form-control form-control-sm" placeholder="Pesan..." required></div>
-          <div class="col-md-3"><button class="btn btn-sm btn-primary w-100"><i class="la la-plus"></i> Add Step</button></div>
+          <div class="col-md-2"><input type="number" name="delay" class="form-control form-control-sm" placeholder="{{T "drip_delay_ph"}}" value="0"></div>
+          <div class="col-md-7"><input type="text" name="message" class="form-control form-control-sm" placeholder="{{T "drip_msg_ph"}}" required></div>
+          <div class="col-md-3"><button class="btn btn-sm btn-primary w-100"><i class="la la-plus"></i> {{T "drip_add_step"}}</button></div>
         </form></div>
       </div>
       {{else}}
-      <div class="card"><div class="card-body text-center text-muted py-5">Belum ada drip campaign. Buat yang pertama!</div></div>
+      <div class="card"><div class="card-body text-center text-muted py-5">{{T "drip_empty"}}</div></div>
       {{end}}
     </div>
   </div>
@@ -1065,18 +1180,18 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 {{if eq .Page "canned"}}
   <div class="row">
     <div class="col-12 col-lg-5">
-      <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> Add Canned Response</h4></div>
+      <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> {{T "canned_add"}}</h4></div>
         <div class="card-body"><form method="post" action="/canned/add">
-          <div class="form-group"><label>Shortcut <small class="text-muted">— ketik di inbox</small></label><input name="shortcut" class="form-control" placeholder="/salam"></div>
-          <div class="form-group"><label>Judul</label><input name="name" class="form-control" placeholder="Salam Pembuka" required></div>
+          <div class="form-group"><label>{{T "canned_shortcut"}} <small class="text-muted">{{T "canned_shortcut_hint"}}</small></label><input name="shortcut" class="form-control" placeholder="/salam"></div>
+          <div class="form-group"><label>{{T "canned_title"}}</label><input name="name" class="form-control" placeholder="Salam Pembuka" required></div>
           <div class="form-group"><label>{{T "col_message"}}</label><textarea name="message" class="form-control" rows="3" required></textarea></div>
           <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
         </form></div>
       </div>
     </div>
     <div class="col-12 col-lg-7">
-      <div class="card"><div class="card-header"><h4 class="card-header-title">Canned Responses</h4></div>
-        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>Shortcut</th><th>Nama</th><th>{{T "col_message"}}</th><th></th></tr></thead><tbody>
+      <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "canned_list"}}</h4></div>
+        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>{{T "col_shortcut"}}</th><th>{{T "col_name"}}</th><th>{{T "col_message"}}</th><th></th></tr></thead><tbody>
           {{range .Canned}}<tr><td><code>{{.Shortcut}}</code></td><td>{{.Name}}</td><td style="max-width:250px">{{.Message}}</td><td><form method="post" action="/canned/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
         </tbody></table></div>
       </div>
@@ -1085,54 +1200,54 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 {{end}}
 
 {{if eq .Page "tracker"}}
-  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-link me-1"></i> Link Clicks</h4></div>
-    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>URL</th><th>Campaign</th><th>Phone</th><th>Clicked</th><th>{{T "col_time"}}</th></tr></thead><tbody>
-      {{range .LClicks}}<tr><td>{{.ID}}</td><td style="max-width:300px;word-break:break-all"><a href="/track/{{.Token}}" target="_blank">{{.URL}}</a></td><td>{{if .CampaignID}}#{{.CampaignID}}{{else}}-{{end}}</td><td>{{.Phone}}</td><td>{{if .Clicked}}<span class="badge badge-soft-success">Yes</span>{{else}}<span class="badge badge-soft-secondary">No</span>{{end}}</td><td class="text-muted small">{{.Created}}</td></tr>{{else}}<tr><td colspan="6" class="text-muted text-center py-4">Belum ada link yang di-track.</td></tr>{{end}}
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-link me-1"></i> {{T "tracker_title"}}</h4></div>
+    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_url"}}</th><th>{{T "col_campaign"}}</th><th>{{T "col_phone"}}</th><th>{{T "col_clicked"}}</th><th>{{T "col_time"}}</th></tr></thead><tbody>
+      {{range .LClicks}}<tr><td>{{.ID}}</td><td style="max-width:300px;word-break:break-all"><a href="/track/{{.Token}}" target="_blank">{{.URL}}</a></td><td>{{if .CampaignID}}#{{.CampaignID}}{{else}}-{{end}}</td><td>{{.Phone}}</td><td>{{if .Clicked}}<span class="badge badge-soft-success">{{T "tracker_yes"}}</span>{{else}}<span class="badge badge-soft-secondary">{{T "tracker_no"}}</span>{{end}}</td><td class="text-muted small">{{.Created}}</td></tr>{{else}}<tr><td colspan="6" class="text-muted text-center py-4">{{T "tracker_empty"}}</td></tr>{{end}}
     </tbody></table></div>
   </div>
 {{end}}
 
 {{if eq .Page "abtests"}}
-  <div class="card"><div class="card-header d-flex justify-content-between"><h4 class="card-header-title"><i class="la la-balance-scale me-1"></i> A/B Test Results</h4><button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#abModal"><i class="la la-plus"></i> New Test</button></div>
-    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Campaign</th><th>Variant A</th><th>Variant B</th><th>A Sent</th><th>B Sent</th></tr></thead><tbody>
-      {{range .ABTests}}<tr><td>{{.ID}}</td><td>#{{.CampaignID}}</td><td style="max-width:200px">{{.VariantA}}</td><td style="max-width:200px">{{.VariantB}}</td><td>{{.ASent}}</td><td>{{.BSent}}</td></tr>{{else}}<tr><td colspan="6" class="text-muted text-center py-4">Belum ada A/B test.</td></tr>{{end}}
+  <div class="card"><div class="card-header d-flex justify-content-between"><h4 class="card-header-title"><i class="la la-balance-scale me-1"></i> {{T "ab_title"}}</h4><button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#abModal"><i class="la la-plus"></i> {{T "ab_add"}}</button></div>
+    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "ab_col_campaign"}}</th><th>{{T "ab_col_var_a"}}</th><th>{{T "ab_col_var_b"}}</th><th>{{T "ab_col_a_sent"}}</th><th>{{T "ab_col_b_sent"}}</th></tr></thead><tbody>
+      {{range .ABTests}}<tr><td>{{.ID}}</td><td>#{{.CampaignID}}</td><td style="max-width:200px">{{.VariantA}}</td><td style="max-width:200px">{{.VariantB}}</td><td>{{.ASent}}</td><td>{{.BSent}}</td></tr>{{else}}<tr><td colspan="6" class="text-muted text-center py-4">{{T "ab_empty"}}</td></tr>{{end}}
     </tbody></table></div>
   </div>
   <div class="modal fade" id="abModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="post" action="/ab-tests/add">
-    <div class="modal-header"><h5>New A/B Test</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-header"><h5>{{T "ab_modal_title"}}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
     <div class="modal-body">
-      <div class="form-group"><label>Campaign ID</label><input type="number" name="campaign_id" class="form-control" required></div>
-      <div class="form-group"><label>Variant A</label><textarea name="variant_a" class="form-control" rows="2" required></textarea></div>
-      <div class="form-group"><label>Variant B</label><textarea name="variant_b" class="form-control" rows="2" required></textarea></div>
+      <div class="form-group"><label>{{T "ab_campaign_id"}}</label><input type="number" name="campaign_id" class="form-control" required></div>
+      <div class="form-group"><label>{{T "ab_var_a"}}</label><textarea name="variant_a" class="form-control" rows="2" required></textarea></div>
+      <div class="form-group"><label>{{T "ab_var_b"}}</label><textarea name="variant_b" class="form-control" rows="2" required></textarea></div>
     </div>
-    <div class="modal-footer"><button class="btn btn-primary">Create</button></div>
+    <div class="modal-footer"><button class="btn btn-primary">{{T "ab_create"}}</button></div>
   </form></div></div></div>
 {{end}}
 
 {{if eq .Page "store"}}
   <div class="row">
     <div class="col-12 col-lg-4">
-      <div class="card mb-3"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> Add Product</h4></div>
+      <div class="card mb-3"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> {{T "store_add_product"}}</h4></div>
         <div class="card-body"><form method="post" action="/store/add">
-          <div class="form-group"><label>Nama</label><input name="name" class="form-control" required></div>
-          <div class="form-group"><label>Deskripsi</label><textarea name="desc" class="form-control" rows="2"></textarea></div>
-          <div class="form-group"><label>Harga</label><input name="price" type="number" step="0.01" class="form-control" required></div>
-          <div class="form-group"><label>Gambar URL</label><input name="image_url" class="form-control"></div>
-          <div class="form-group"><label>Kategori</label><select name="category" class="form-control">{{range .Categories}}<option value="{{.Name}}">{{.Name}}</option>{{end}}</select></div>
-          <div class="form-group"><label>Stok</label><input name="stock" type="number" class="form-control" value="0"></div>
-          <button class="btn btn-primary"><i class="la la-plus"></i> Add</button>
+          <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
+          <div class="form-group"><label>{{T "store_desc"}}</label><textarea name="desc" class="form-control" rows="2"></textarea></div>
+          <div class="form-group"><label>{{T "store_price"}}</label><input name="price" type="number" step="0.01" class="form-control" required></div>
+          <div class="form-group"><label>{{T "store_image"}}</label><input name="image_url" class="form-control"></div>
+          <div class="form-group"><label>{{T "store_category"}}</label><select name="category" class="form-control">{{range .Categories}}<option value="{{.Name}}">{{.Name}}</option>{{end}}</select></div>
+          <div class="form-group"><label>{{T "store_stock"}}</label><input name="stock" type="number" class="form-control" value="0"></div>
+          <button class="btn btn-primary"><i class="la la-plus"></i> {{T "ar_add_btn"}}</button>
         </form></div>
       </div>
-      <div class="card"><div class="card-header"><h4 class="card-header-title">Kategori</h4></div>
-        <div class="card-body"><form method="post" action="/store/category/add"><div class="input-group"><input name="name" class="form-control" placeholder="Nama kategori"><button class="btn btn-primary">Add</button></div></form>
+      <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "store_categories"}}</h4></div>
+        <div class="card-body"><form method="post" action="/store/category/add"><div class="input-group"><input name="name" class="form-control" placeholder="{{T "store_cat_name_ph"}}"><button class="btn btn-primary">{{T "ar_add_btn"}}</button></div></form>
           <div class="mt-2">{{range .Categories}}<span class="badge badge-soft-primary me-1 mb-1">{{.Name}} <form method="post" action="/store/category/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button style="background:none;border:none;color:inherit;cursor:pointer;font-size:10px">&times;</button></form></span>{{end}}</div>
         </div>
       </div>
     </div>
     <div class="col-12 col-lg-8">
-      <div class="card"><div class="card-header"><h4 class="card-header-title">Products</h4></div>
-        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Image</th><th>Nama</th><th>Price</th><th>Category</th><th>Stock</th><th></th></tr></thead><tbody>
-          {{range .Products}}<tr><td>{{.ID}}</td><td>{{if .ImageURL}}<img src="{{.ImageURL}}" style="width:40px;height:40px;object-fit:cover;border-radius:6px">{{else}}-{{end}}</td><td>{{.Name}}</td><td>{{.Price}}</td><td>{{.Category}}</td><td>{{.Stock}}</td><td><form method="post" action="/store/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">Del</button></form></td></tr>{{else}}<tr><td colspan="7" class="text-muted text-center">-</td></tr>{{end}}
+      <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "store_products"}}</h4></div>
+        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "store_col_image"}}</th><th>{{T "col_name"}}</th><th>{{T "store_col_price"}}</th><th>{{T "store_col_category"}}</th><th>{{T "store_col_stock"}}</th><th></th></tr></thead><tbody>
+          {{range .Products}}<tr><td>{{.ID}}</td><td>{{if .ImageURL}}<img src="{{.ImageURL}}" style="width:40px;height:40px;object-fit:cover;border-radius:6px">{{else}}-{{end}}</td><td>{{.Name}}</td><td>{{.Price}}</td><td>{{.Category}}</td><td>{{.Stock}}</td><td><form method="post" action="/store/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="7" class="text-muted text-center">-</td></tr>{{end}}
         </tbody></table></div>
       </div>
     </div>
@@ -1140,10 +1255,10 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 {{end}}
 
 {{if eq .Page "orders"}}
-  <div class="card"><div class="card-header"><h4 class="card-header-title">Orders</h4></div>
-    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Phone</th><th>Name</th><th>Product</th><th>Qty</th><th>Total</th><th>Status</th><th></th></tr></thead><tbody>
+  <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "orders_title"}}</h4></div>
+    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_phone"}}</th><th>{{T "col_name"}}</th><th>{{T "col_product"}}</th><th>{{T "col_qty"}}</th><th>{{T "col_total"}}</th><th>{{T "col_status"}}</th><th></th></tr></thead><tbody>
       {{range .Orders}}<tr><td>{{.ID}}</td><td>{{.Phone}}</td><td>{{.Name}}</td><td>#{{.ProductID}}</td><td>{{.Quantity}}</td><td>{{.Total}}</td><td><span class="badge badge-soft-{{if eq .Status "new"}}warning{{else if eq .Status "paid"}}success{{else}}secondary{{end}}">{{.Status}}</span></td><td>
-        <form method="post" action="/store/orders/update" style="display:inline" class="d-flex gap-1"><input type="hidden" name="id" value="{{.ID}}"><select name="status" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()"><option value="new" selected>New</option><option value="confirmed">Confirmed</option><option value="paid">Paid</option><option value="shipped">Shipped</option><option value="cancelled">Cancelled</option></select></form>
+        <form method="post" action="/store/orders/update" style="display:inline" class="d-flex gap-1"><input type="hidden" name="id" value="{{.ID}}"><select name="status" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()"><option value="new" selected>{{T "order_new"}}</option><option value="confirmed">{{T "order_confirmed"}}</option><option value="paid">{{T "order_paid"}}</option><option value="shipped">{{T "order_shipped"}}</option><option value="cancelled">{{T "order_cancelled"}}</option></select></form>
       </td></tr>{{else}}<tr><td colspan="8" class="text-muted text-center">-</td></tr>{{end}}
     </tbody></table></div>
   </div>
@@ -1152,18 +1267,18 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 {{if eq .Page "forms"}}
   <div class="row">
     <div class="col-12 col-lg-4">
-      <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> Create Form</h4></div>
+       <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> {{T "form_add"}}</h4></div>
         <div class="card-body"><form method="post" action="/forms/add">
-          <div class="form-group"><label>Nama Form</label><input name="name" class="form-control" required></div>
-          <div class="form-group"><label>Fields (JSON)</label><textarea name="fields" class="form-control" rows="6" placeholder='[{"label":"Nama","type":"text"},{"label":"Email","type":"text"},{"label":"Rating","type":"number"}]'></textarea><small class="form-text text-muted">Array of {label, type}. Type: text, number, email, textarea.</small></div>
-          <button class="btn btn-primary"><i class="la la-plus"></i> Create</button>
+          <div class="form-group"><label>{{T "form_name"}}</label><input name="name" class="form-control" required></div>
+          <div class="form-group"><label>{{T "form_fields"}}</label><textarea name="fields" class="form-control" rows="6" placeholder='[{"label":"Nama","type":"text"},{"label":"Email","type":"text"},{"label":"Rating","type":"number"}]'></textarea><small class="form-text text-muted">{{T "form_fields_hint"}}</small></div>
+          <button class="btn btn-primary"><i class="la la-plus"></i> {{T "form_create"}}</button>
         </form></div>
       </div>
     </div>
     <div class="col-12 col-lg-8">
-      <div class="card"><div class="card-header"><h4 class="card-header-title">Forms</h4></div>
-        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Name</th><th>Fields</th><th></th></tr></thead><tbody>
-          {{range .Forms}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td><code>{{.Fields}}</code></td><td><a href="/forms/submissions?form_id={{.ID}}" class="btn btn-sm btn-white">Data</a> <form method="post" action="/forms/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">Del</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
+      <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "form_list"}}</h4></div>
+        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>{{T "col_fields"}}</th><th></th></tr></thead><tbody>
+          {{range .Forms}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td><code>{{.Fields}}</code></td><td><a href="/forms/submissions?form_id={{.ID}}" class="btn btn-sm btn-white">{{T "form_data_btn"}}</a> <form method="post" action="/forms/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
         </tbody></table></div>
       </div>
     </div>
@@ -1171,10 +1286,10 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 {{end}}
 
 {{if eq .Page "submissions"}}
-  <div class="card"><div class="card-header d-flex justify-content-between"><h4 class="card-header-title">Form Submissions</h4>
-    <select class="form-select form-select-sm" style="width:auto" onchange="window.location='?form_id='+this.value"><option value="">Pilih Form</option>{{range .Forms}}<option value="{{.ID}}" {{if eq .ID $.QueryFormID}}selected{{end}}>{{.Name}}</option>{{end}}</select>
+  <div class="card"><div class="card-header d-flex justify-content-between"><h4 class="card-header-title">{{T "form_submissions"}}</h4>
+    <select class="form-select form-select-sm" style="width:auto" onchange="window.location='?form_id='+this.value"><option value="">{{T "form_select"}}</option>{{range .Forms}}<option value="{{.ID}}" {{if eq .ID $.QueryFormID}}selected{{end}}>{{.Name}}</option>{{end}}</select>
   </div>
-    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Phone</th><th>Data</th><th>{{T "col_time"}}</th></tr></thead><tbody>
+    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_phone"}}</th><th>{{T "col_data"}}</th><th>{{T "col_time"}}</th></tr></thead><tbody>
       {{range .Submissions}}<tr><td>{{.ID}}</td><td>{{.Phone}}</td><td><code>{{.Data}}</code></td><td class="text-muted small">{{.Created}}</td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
     </tbody></table></div>
   </div>
@@ -1183,20 +1298,20 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 {{if eq .Page "reminders"}}
   <div class="row">
     <div class="col-12 col-lg-4">
-      <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> Add Reminder</h4></div>
+      <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> {{T "rem_add"}}</h4></div>
         <div class="card-body"><form method="post" action="/reminders/add">
-          <div class="form-group"><label>Nama</label><input name="name" class="form-control"></div>
-          <div class="form-group"><label>Phone</label><input name="phone" class="form-control" required></div>
-          <div class="form-group"><label>Amount</label><input name="amount" type="number" step="0.01" class="form-control" required></div>
-          <div class="form-group"><label>Due Date</label><input type="date" name="due_date" class="form-control" required></div>
-          <div class="form-group"><label>Pesan</label><textarea name="message" class="form-control" rows="2">Pengingat: tagihan sebesar {amount} jatuh tempo {date}.</textarea></div>
-          <button class="btn btn-primary"><i class="la la-plus"></i> Add</button>
+          <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control"></div>
+          <div class="form-group"><label>{{T "col_phone"}}</label><input name="phone" class="form-control" required></div>
+          <div class="form-group"><label>{{T "col_amount"}}</label><input name="amount" type="number" step="0.01" class="form-control" required></div>
+          <div class="form-group"><label>{{T "col_due"}}</label><input type="date" name="due_date" class="form-control" required></div>
+          <div class="form-group"><label>{{T "col_message"}}</label><textarea name="message" class="form-control" rows="2">{{T "rem_default_msg"}}</textarea></div>
+          <button class="btn btn-primary"><i class="la la-plus"></i> {{T "ar_add_btn"}}</button>
         </form></div>
       </div>
     </div>
     <div class="col-12 col-lg-8">
-      <div class="card"><div class="card-header"><h4 class="card-header-title">Payment Reminders</h4></div>
-        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Phone</th><th>Name</th><th>Amount</th><th>Due</th><th>Status</th></tr></thead><tbody>
+      <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "rem_list"}}</h4></div>
+        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_phone"}}</th><th>{{T "col_name"}}</th><th>{{T "col_amount"}}</th><th>{{T "col_due"}}</th><th>Status</th></tr></thead><tbody>
           {{range .Reminders}}<tr><td>{{.ID}}</td><td>{{.Phone}}</td><td>{{.Name}}</td><td>{{.Amount}}</td><td>{{.DueDate}}</td><td>{{.Status}}</td></tr>{{else}}<tr><td colspan="6" class="text-muted text-center">-</td></tr>{{end}}
         </tbody></table></div>
       </div>
@@ -1205,15 +1320,15 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 {{end}}
 
 {{if eq .Page "analytics"}}
-  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-chart-pie me-1"></i> Agent Performance (30 Hari)</h4></div>
-    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>Agent</th><th>Chats</th><th>Replies</th><th>Avg Response (s)</th></tr></thead><tbody>
-      {{range .AgentMetrics}}<tr><td>{{.AgentName}}</td><td>{{.Chats}}</td><td>{{.Replied}}</td><td>{{printf "%.0f" .AvgTime}}</td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center py-4">No data yet.</td></tr>{{end}}
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-chart-pie me-1"></i> {{T "analytics_agent_title"}}</h4></div>
+    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>{{T "col_agent"}}</th><th>{{T "col_chats"}}</th><th>{{T "col_replies"}}</th><th>{{T "col_avg_resp"}}</th></tr></thead><tbody>
+      {{range .AgentMetrics}}<tr><td>{{.AgentName}}</td><td>{{.Chats}}</td><td>{{.Replied}}</td><td>{{printf "%.0f" .AvgTime}}</td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center py-4">{{T "analytics_no_data"}}</td></tr>{{end}}
     </tbody></table></div>
   </div>
-  <div class="card mt-3"><div class="card-header"><h4 class="card-header-title"><i class="la la-star me-1"></i> CSAT Score</h4></div>
+  <div class="card mt-3"><div class="card-header"><h4 class="card-header-title"><i class="la la-star me-1"></i> {{T "analytics_csat_title"}}</h4></div>
     <div class="card-body text-center">
       <div class="display-3 fw-bold text-warning">{{printf "%.1f" .CSATAvg}} ⭐</div>
-      <p class="text-muted">dari {{.CSATCount}} penilaian (30 hari)</p>
+      <p class="text-muted">{{T "analytics_csat_from" .CSATCount}}</p>
     </div>
   </div>
 {{end}}
@@ -1221,18 +1336,18 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 {{if eq .Page "depts"}}
   <div class="row">
     <div class="col-12 col-lg-4">
-      <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> Add Department</h4></div>
+      <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> {{T "dept_add"}}</h4></div>
         <div class="card-body"><form method="post" action="/depts/add">
-          <div class="form-group"><label>Name</label><input name="name" class="form-control" placeholder="Sales" required></div>
-          <div class="form-group"><label>Agents</label><select name="agents" class="form-control" multiple>{{range .Users}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select></div>
-          <button class="btn btn-primary"><i class="la la-plus"></i> Add</button>
+          <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" placeholder="{{T "dept_name_ph"}}" required></div>
+          <div class="form-group"><label>{{T "dept_agents"}}</label><select name="agents" class="form-control" multiple>{{range .Users}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select></div>
+          <button class="btn btn-primary"><i class="la la-plus"></i> {{T "ar_add_btn"}}</button>
         </form></div>
       </div>
     </div>
     <div class="col-12 col-lg-8">
-      <div class="card"><div class="card-header"><h4 class="card-header-title">Departments</h4></div>
-        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Name</th><th>Agents</th><th></th></tr></thead><tbody>
-          {{range .Depts}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.Agents}}</td><td><form method="post" action="/depts/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">Del</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
+      <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "dept_list"}}</h4></div>
+        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>{{T "dept_agents"}}</th><th></th></tr></thead><tbody>
+          {{range .Depts}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.Agents}}</td><td><form method="post" action="/depts/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
         </tbody></table></div>
       </div>
     </div>
@@ -1242,25 +1357,25 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 {{if eq .Page "recurring"}}
   <div class="row">
     <div class="col-12 col-lg-4">
-      <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> New Recurring</h4></div>
+      <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> {{T "rec_add"}}</h4></div>
         <div class="card-body"><form method="post" action="/recurring/add">
-          <div class="form-group"><label>Name</label><input name="name" class="form-control" required></div>
-          <div class="form-group"><label>Groups</label><select name="groups" class="form-control" multiple>{{range .Groups}}<option value="{{.ID}}">{{.Name}} ({{.Count}})</option>{{end}}</select></div>
-          <div class="form-group"><label>Message</label><textarea name="message" class="form-control" rows="3" required></textarea></div>
+          <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
+          <div class="form-group"><label>{{T "nav_contacts_groups"}}</label><select name="groups" class="form-control" multiple>{{range .Groups}}<option value="{{.ID}}">{{.Name}} ({{.Count}})</option>{{end}}</select></div>
+          <div class="form-group"><label>{{T "col_message"}}</label><textarea name="message" class="form-control" rows="3" required></textarea></div>
           <div class="row">
-            <div class="col-6"><label>Day</label><select name="day_of_week" class="form-control"><option value="0">Daily</option><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="7">Sunday</option></select></div>
-            <div class="col-6"><label>Hour (0-23)</label><input type="number" name="hour" class="form-control" value="9" min="0" max="23"></div>
+            <div class="col-6"><label>{{T "rec_day"}}</label><select name="day_of_week" class="form-control"><option value="0">{{T "rec_daily"}}</option><option value="1">{{T "rec_mon"}}</option><option value="2">{{T "rec_tue"}}</option><option value="3">{{T "rec_wed"}}</option><option value="4">{{T "rec_thu"}}</option><option value="5">{{T "rec_fri"}}</option><option value="6">{{T "rec_sat"}}</option><option value="7">{{T "rec_sun"}}</option></select></div>
+            <div class="col-6"><label>{{T "rec_hour"}}</label><input type="number" name="hour" class="form-control" value="9" min="0" max="23"></div>
           </div>
-          <button class="btn btn-primary mt-2"><i class="la la-plus"></i> Create</button>
+          <button class="btn btn-primary mt-2"><i class="la la-plus"></i> {{T "rec_create"}}</button>
         </form></div>
       </div>
     </div>
     <div class="col-12 col-lg-8">
-      <div class="card"><div class="card-header"><h4 class="card-header-title">Recurring Campaigns</h4></div>
-        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Name</th><th>Groups</th><th>Schedule</th><th>Status</th><th></th></tr></thead><tbody>
-          {{range .Recurrings}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.Groups}}</td><td>{{if eq .DayOfWeek 0}}Daily{{else}}Day {{.DayOfWeek}}{{end}} @ {{.Hour}}:00</td><td>{{.Status}}</td><td>
-            <form method="post" action="/recurring/toggle" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-white">{{if eq .Status "active"}}Pause{{else}}Activate{{end}}</button></form>
-            <form method="post" action="/recurring/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">Del</button></form>
+      <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "rec_list"}}</h4></div>
+        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>{{T "nav_contacts_groups"}}</th><th>{{T "col_schedule"}}</th><th>{{T "col_status"}}</th><th></th></tr></thead><tbody>
+          {{range .Recurrings}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.Groups}}</td><td>{{if eq .DayOfWeek 0}}{{T "rec_daily"}}{{else}}Day {{.DayOfWeek}}{{end}} @ {{.Hour}}:00</td><td>{{.Status}}</td><td>
+            <form method="post" action="/recurring/toggle" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-white">{{if eq .Status "active"}}{{T "rec_pause"}}{{else}}{{T "rec_activate"}}{{end}}</button></form>
+            <form method="post" action="/recurring/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form>
           </td></tr>{{else}}<tr><td colspan="6" class="text-muted text-center">-</td></tr>{{end}}
         </tbody></table></div>
       </div>
@@ -1269,9 +1384,9 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 {{end}}
 
 {{if eq .Page "uploads"}}
-  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-folder-open me-1"></i> Uploaded Files</h4></div>
-    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>File</th><th>URL</th></tr></thead><tbody>
-      {{range $i, $f := .Files}}<tr><td>{{add $i 1}}</td><td>{{$f}}</td><td><code>/public/uploads/{{$f}}</code></td></tr>{{else}}<tr><td colspan="3" class="text-muted text-center py-4">No files uploaded yet.</td></tr>{{end}}
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-folder-open me-1"></i> {{T "uploads_title"}}</h4></div>
+    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_file"}}</th><th>{{T "col_url"}}</th></tr></thead><tbody>
+      {{range $i, $f := .Files}}<tr><td>{{add $i 1}}</td><td>{{$f}}</td><td><code>/public/uploads/{{$f}}</code></td></tr>{{else}}<tr><td colspan="3" class="text-muted text-center py-4">{{T "uploads_empty"}}</td></tr>{{end}}
     </tbody></table></div>
   </div>
 {{end}}
@@ -1279,24 +1394,24 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 {{if eq .Page "blacklist"}}
   <div class="row">
     <div class="col-12 col-lg-4">
-      <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> Add to Blacklist</h4></div>
+      <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i>{{T "bl_add"}}</h4></div>
         <div class="card-body"><form method="post" action="/blacklist/add">
-          <div class="form-group"><label>Phone</label><input name="phone" class="form-control" placeholder="628xxx" required></div>
-          <div class="form-group"><label>Reason</label><input name="reason" class="form-control" placeholder="spam / abuse"></div>
-          <button class="btn btn-danger"><i class="la la-ban me-1"></i> Block</button>
+          <div class="form-group"><label>{{T "col_phone"}}</label><input name="phone" class="form-control" placeholder="628xxx" required></div>
+          <div class="form-group"><label>{{T "col_reason"}}</label><input name="reason" class="form-control" placeholder="{{T "bl_reason_ph"}}"></div>
+          <button class="btn btn-danger"><i class="la la-ban me-1"></i>{{T "bl_block"}}</button>
         </form></div>
       </div>
-      <div class="card mt-3"><div class="card-header"><h4 class="card-header-title">Validate Numbers</h4></div>
+      <div class="card mt-3"><div class="card-header"><h4 class="card-header-title">{{T "bl_validate"}}</h4></div>
         <div class="card-body"><form method="post" action="/validate">
           <textarea name="numbers" class="form-control" rows="6" placeholder="628xxx&#10;628xxx" required></textarea>
-          <button class="btn btn-primary mt-2"><i class="la la-check me-1"></i> Validate</button>
+          <button class="btn btn-primary mt-2"><i class="la la-check me-1"></i>{{T "bl_validate_btn"}}</button>
         </form></div>
       </div>
     </div>
     <div class="col-12 col-lg-8">
-      <div class="card"><div class="card-header"><h4 class="card-header-title">Blocked Numbers</h4></div>
-        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Phone</th><th>Reason</th><th>{{T "col_time"}}</th><th></th></tr></thead><tbody>
-          {{range .Blacklist}}<tr><td>{{.ID}}</td><td>{{.Phone}}</td><td>{{.Reason}}</td><td class="text-muted small">{{.Created}}</td><td><form method="post" action="/blacklist/remove"><input type="hidden" name="phone" value="{{.Phone}}"><button class="btn btn-sm btn-success">Unblock</button></form></td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center py-4">Blacklist kosong.</td></tr>{{end}}
+      <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "bl_list"}}</h4></div>
+        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_phone"}}</th><th>{{T "col_reason"}}</th><th>{{T "col_time"}}</th><th></th></tr></thead><tbody>
+          {{range .Blacklist}}<tr><td>{{.ID}}</td><td>{{.Phone}}</td><td>{{.Reason}}</td><td class="text-muted small">{{.Created}}</td><td><form method="post" action="/blacklist/remove"><input type="hidden" name="phone" value="{{.Phone}}"><button class="btn btn-sm btn-success">{{T "bl_unblock"}}</button></form></td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center py-4">{{T "bl_empty"}}</td></tr>{{end}}
         </tbody></table></div>
       </div>
     </div>
@@ -1306,40 +1421,40 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 {{if eq .Page "csat"}}
   <div class="row">
     <div class="col-12 col-md-4">
-      <div class="card text-center"><div class="card-body"><h1 class="display-3 fw-bold text-warning">{{printf "%.1f" .CSATAvg}}</h1><p>Average Rating (30d)</p></div></div>
+      <div class="card text-center"><div class="card-body"><h1 class="display-3 fw-bold text-warning">{{printf "%.1f" .CSATAvg}}</h1><p>{{T "csat_avg_rating"}}</p></div></div>
     </div>
     <div class="col-12 col-md-4">
-      <div class="card text-center"><div class="card-body"><h1 class="display-3 fw-bold text-primary">{{.CSATCount}}</h1><p>Total Responses</p></div></div>
+      <div class="card text-center"><div class="card-body"><h1 class="display-3 fw-bold text-primary">{{.CSATCount}}</h1><p>{{T "csat_total_resp"}}</p></div></div>
     </div>
     <div class="col-12 col-md-4">
-      <div class="card text-center"><div class="card-body"><h1 class="display-3 fw-bold text-success">{{printf "%.0f" (mult .CSATAvg 20)}}%</h1><p>Satisfaction Score</p></div></div>
+      <div class="card text-center"><div class="card-body"><h1 class="display-3 fw-bold text-success">{{printf "%.0f" (mult .CSATAvg 20)}}%</h1><p>{{T "csat_score"}}</p></div></div>
     </div>
   </div>
 {{end}}
 
 {{if eq .Page "customers"}}
-  <div class="card"><div class="card-header d-flex justify-content-between"><h4 class="card-header-title">Customer Directory</h4><input type="text" id="custSearch" class="form-control form-control-sm" placeholder="Search phone..." style="width:250px" oninput="var q=this.value.toLowerCase();document.querySelectorAll('.cust-row').forEach(r=>r.style.display=r.textContent.toLowerCase().includes(q)?'':'none')"></div>
-    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>Phone</th><th>Name</th><th>Orders</th><th>Last Active</th><th></th></tr></thead><tbody>
-      {{range .Contacts}}<tr class="cust-row"><td>{{.Phone}}</td><td>{{.Name}}</td><td>-</td><td>-</td><td><a href="/inbox/chat?phone={{.Phone}}" class="btn btn-sm btn-primary">Chat</a></td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center">-</td></tr>{{end}}
+  <div class="card"><div class="card-header d-flex justify-content-between"><h4 class="card-header-title">{{T "cust_title"}}</h4><input type="text" id="custSearch" class="form-control form-control-sm" placeholder="{{T "cust_search_ph"}}" style="width:250px" oninput="var q=this.value.toLowerCase();document.querySelectorAll('.cust-row').forEach(r=>r.style.display=r.textContent.toLowerCase().includes(q)?'':'none')"></div>
+    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>{{T "col_phone"}}</th><th>{{T "col_name"}}</th><th>{{T "col_orders"}}</th><th>{{T "col_last_active"}}</th><th></th></tr></thead><tbody>
+      {{range .Contacts}}<tr class="cust-row"><td>{{.Phone}}</td><td>{{.Name}}</td><td>-</td><td>-</td><td><a href="/inbox/chat?phone={{.Phone}}" class="btn btn-sm btn-primary">{{T "cust_chat_btn"}}</a></td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center">-</td></tr>{{end}}
     </tbody></table></div>
   </div>
 {{end}}
 
 {{if eq .Page "calendar"}}
-  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-calendar me-1"></i> Campaign Calendar</h4></div>
-    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>Date</th><th>Title</th><th>Type</th></tr></thead><tbody>
-      {{range .CalEvents}}<tr><td>{{.Date}}</td><td>{{.Title}}</td><td><span class="badge badge-soft-{{if eq .Type "Campaign"}}primary{{else if eq .Type "Recurring"}}success{{else}}warning{{end}}">{{.Type}}</span></td></tr>{{else}}<tr><td colspan="3" class="text-muted text-center py-4">No scheduled events.</td></tr>{{end}}
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-calendar me-1"></i>{{T "cal_title"}}</h4></div>
+    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>{{T "col_date"}}</th><th>{{T "col_title"}}</th><th>{{T "col_type"}}</th></tr></thead><tbody>
+      {{range .CalEvents}}<tr><td>{{.Date}}</td><td>{{.Title}}</td><td><span class="badge badge-soft-{{if eq .Type "Campaign"}}primary{{else if eq .Type "Recurring"}}success{{else}}warning{{end}}">{{if eq .Type "Campaign"}}{{T "cal_campaign"}}{{else if eq .Type "Recurring"}}{{T "cal_recurring"}}{{else}}{{.Type}}{{end}}</span></td></tr>{{else}}<tr><td colspan="3" class="text-muted text-center py-4">{{T "cal_empty"}}</td></tr>{{end}}
     </tbody></table></div>
   </div>
 {{end}}
 
 {{if eq .Page "backup"}}
-  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-database me-1"></i> Database Backup</h4></div>
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-database me-1"></i>{{T "backup_title"}}</h4></div>
     <div class="card-body text-center py-5">
       <form method="post" action="/backup">
-        <button class="btn btn-primary btn-lg"><i class="la la-download me-1"></i> Backup Database Now</button>
+        <button class="btn btn-primary btn-lg"><i class="la la-download me-1"></i>{{T "backup_btn"}}</button>
       </form>
-      <p class="text-muted mt-2">Backup akan disimpan ke <code>public/backups/</code></p>
+      <p class="text-muted mt-2">{{T "backup_hint"}}</p>
     </div>
   </div>
 {{end}}
@@ -1347,18 +1462,18 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 {{if eq .Page "macros"}}
   <div class="row">
     <div class="col-12 col-lg-4">
-      <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> Add Macro</h4></div>
+      <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i>{{T "macro_add"}}</h4></div>
         <div class="card-body"><form method="post" action="/macros/add">
-          <div class="form-group"><label>Name</label><input name="name" class="form-control" placeholder="Quick Resolve" required></div>
-          <div class="form-group"><label>Actions</label><textarea name="actions" class="form-control" rows="4" placeholder="assign:1;tag:resolved;reply:Terima kasih!;close" required></textarea><small class="form-text text-muted">Format: action:value;action:value. Actions: assign, tag, reply, close</small></div>
-          <button class="btn btn-primary"><i class="la la-plus"></i> Create</button>
+          <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" placeholder="{{T "macro_name_ph"}}" required></div>
+          <div class="form-group"><label>{{T "macro_actions"}}</label><textarea name="actions" class="form-control" rows="4" placeholder="assign:1;tag:resolved;reply:Terima kasih!;close" required></textarea><small class="form-text text-muted">{{T "macro_hint"}}</small></div>
+          <button class="btn btn-primary"><i class="la la-plus"></i>{{T "macro_create"}}</button>
         </form></div>
       </div>
     </div>
     <div class="col-12 col-lg-8">
-      <div class="card"><div class="card-header"><h4 class="card-header-title">Macros</h4></div>
-        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Name</th><th>Actions</th><th></th></tr></thead><tbody>
-          {{range .Macros}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td><code>{{.Actions}}</code></td><td><form method="post" action="/macros/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">Del</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
+      <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "macro_list"}}</h4></div>
+        <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>{{T "macro_actions"}}</th><th></th></tr></thead><tbody>
+          {{range .Macros}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td><code>{{.Actions}}</code></td><td><form method="post" action="/macros/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
         </tbody></table></div>
       </div>
     </div>
@@ -1366,134 +1481,147 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 {{end}}
 
 {{if eq .Page "merge"}}
-  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-code-branch me-1"></i> Duplicate Contacts</h4></div>
-    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>Phone</th><th>Count</th><th>Names</th><th>IDs</th><th></th></tr></thead><tbody>
-      {{range .Duplicates}}<tr><td>{{index . "phone"}}</td><td>{{index . "cnt"}}</td><td>{{index . "names"}}</td><td>{{index . "ids"}}</td><td><form method="post" action="/merge/execute"><input type="hidden" name="keep_id" value="{{index (split (index . "ids") ",") 0}}">{{range $i, $id := split (index . "ids") ","}}{{if gt $i 0}}<input type="hidden" name="merge_ids" value="{{$id}}">{{end}}{{end}}<button class="btn btn-sm btn-warning">Merge</button></form></td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center py-4">No duplicates found.</td></tr>{{end}}
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-code-branch me-1"></i>{{T "merge_title"}}</h4></div>
+    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>{{T "col_phone"}}</th><th>{{T "col_count"}}</th><th>{{T "col_names"}}</th><th>{{T "col_ids"}}</th><th></th></tr></thead><tbody>
+      {{range .Duplicates}}<tr><td>{{index . "phone"}}</td><td>{{index . "cnt"}}</td><td>{{index . "names"}}</td><td>{{index . "ids"}}</td><td><form method="post" action="/merge/execute"><input type="hidden" name="keep_id" value="{{index (split (index . "ids") ",") 0}}">{{range $i, $id := split (index . "ids") ","}}{{if gt $i 0}}<input type="hidden" name="merge_ids" value="{{$id}}">{{end}}{{end}}<button class="btn btn-sm btn-warning">{{T "merge_btn"}}</button></form></td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center py-4">{{T "merge_empty"}}</td></tr>{{end}}
     </tbody></table></div>
   </div>
 {{end}}
 
 {{if eq .Page "audit"}}
-  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-history me-1"></i> Audit Log</h4></div>
-    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>User</th><th>Action</th><th>Detail</th><th>IP</th><th>{{T "col_time"}}</th></tr></thead><tbody>
-      {{range .AuditLogs}}<tr><td>{{.ID}}</td><td>#{{.UserID}}</td><td>{{.Action}}</td><td>{{.Detail}}</td><td>{{.IP}}</td><td class="text-muted small">{{.Created}}</td></tr>{{else}}<tr><td colspan="6" class="text-muted text-center py-4">No audit entries yet.</td></tr>{{end}}
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-history me-1"></i>{{T "audit_title"}}</h4></div>
+    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_user"}}</th><th>{{T "col_action"}}</th><th>{{T "col_detail"}}</th><th>{{T "col_ip"}}</th><th>{{T "col_time"}}</th></tr></thead><tbody>
+      {{range .AuditLogs}}<tr><td>{{.ID}}</td><td>#{{.UserID}}</td><td>{{.Action}}</td><td>{{.Detail}}</td><td>{{.IP}}</td><td class="text-muted small">{{.Created}}</td></tr>{{else}}<tr><td colspan="6" class="text-muted text-center py-4">{{T "audit_empty"}}</td></tr>{{end}}
     </tbody></table></div>
   </div>
 {{end}}
 
 {{if eq .Page "translatetool"}}
-  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-language me-1"></i> Auto Translate</h4></div>
+  <div class="card mb-4"><div class="card-header"><h4 class="card-header-title"><i class="la la-language me-1"></i> {{T "tr_title"}}</h4></div>
     <div class="card-body">
+      <div class="alert alert-warning mb-3"><i class="la la-info-circle me-1"></i> <strong>{{T "tr_ai_required"}}</strong> &mdash; {{T "tr_ai_required_desc"}} <a href="/autoreply" class="alert-link">{{T "tr_ai_configure"}}</a></div>
       <div class="row">
-        <div class="col-md-5"><div class="form-group"><label>Source Text</label><textarea id="srcText" class="form-control" rows="5" placeholder="Masukkan teks..."></textarea></div></div>
-        <div class="col-md-2 d-flex align-items-end pb-3"><button onclick="doTranslate()" class="btn btn-primary w-100"><i class="la la-sync me-1"></i> Translate</button></div>
-        <div class="col-md-5"><div class="form-group"><label>Result <select id="langTo" class="form-select form-select-sm" style="width:auto;display:inline"><option value="id">ID</option><option value="en">EN</option><option value="es">ES</option><option value="fr">FR</option><option value="de">DE</option><option value="zh">ZH</option><option value="ja">JA</option><option value="ko">KO</option><option value="ar">AR</option></select></label><textarea id="resText" class="form-control" rows="5" readonly></textarea></div>
+        <div class="col-md-5"><div class="form-group"><label>{{T "tr_source"}}</label><textarea id="srcText" class="form-control" rows="5" placeholder="{{T "tr_source_ph"}}"></textarea></div></div>
+        <div class="col-md-2 d-flex align-items-end pb-3"><button onclick="doTranslate()" id="trBtn" class="btn btn-primary w-100"><i class="la la-sync me-1"></i> {{T "tr_btn"}}</button></div>
+        <div class="col-md-5"><div class="form-group"><label>{{T "tr_result"}} <select id="langTo" class="form-select form-select-sm" style="width:auto;display:inline"><option value="id">ID</option><option value="en">EN</option><option value="es">ES</option><option value="fr">FR</option><option value="de">DE</option><option value="zh">ZH</option><option value="ja">JA</option><option value="ko">KO</option><option value="ar">AR</option></select></label><textarea id="resText" class="form-control" rows="5" readonly></textarea><div id="trError" class="text-danger small mt-1 d-none"></div></div>
       </div>
     </div>
   </div>
   <script>
   function doTranslate(){
-    var t=document.getElementById('srcText').value;
+    var t=document.getElementById('srcText').value.trim();
+    if(!t) return;
     var to=document.getElementById('langTo').value;
+    var btn=document.getElementById('trBtn');
+    var err=document.getElementById('trError');
+    err.classList.add('d-none');
+    btn.disabled=true;
+    btn.innerHTML='<span class="spinner-border spinner-border-sm me-1"></span> {{T "tr_btn"}}';
     fetch('/translate',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'text='+encodeURIComponent(t)+'&to='+to})
-    .then(r=>r.text()).then(r=>document.getElementById('resText').value=r);
+    .then(function(r){if(!r.ok)throw new Error('Server error');return r.text()})
+    .then(function(r){
+      if(r===t){err.textContent='{{T "tr_no_ai"}}';err.classList.remove('d-none')}
+      document.getElementById('resText').value=r;
+    })
+    .catch(function(e){err.textContent=e.message;err.classList.remove('d-none')})
+    .finally(function(){btn.disabled=false;btn.innerHTML='<i class="la la-sync me-1"></i> {{T "tr_btn"}}'});
   }
   </script>
 {{end}}
 
 {{if eq .Page "widgetinfo"}}
-  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-code me-1"></i> Web Chat Widget</h4></div>
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-code me-1"></i> {{T "widget_title"}}</h4></div>
     <div class="card-body">
-      <p>Sisipkan script ini di HTML website kamu untuk menampilkan chat widget.</p>
+      <p>{{T "widget_desc"}}</p>
       <pre class="bg-light p-3 rounded"><code>&lt;script src="{{.AppURL}}/widget.js"&gt;&lt;/script&gt;</code></pre>
-      <p class="text-muted small">Widget akan muncul di pojok kanan bawah website. Pengunjung bisa chat langsung ke WhatsApp kamu.</p>
-      <p class="text-muted small"><strong>Webhook Email:</strong> POST ke <code>{{.AppURL}}/email-webhook</code> dengan field <code>from</code>, <code>subject</code>, <code>text</code> untuk forward email ke WA inbox.</p>
+      <p class="text-muted small">{{T "widget_pos_desc"}}</p>
+      <p class="text-muted small">{{T "widget_webhook_desc"}} <code>{{.AppURL}}/email-webhook</code></p>
     </div>
   </div>
 {{end}}
 
 {{if eq .Page "emailwa"}}
-  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-envelope me-1"></i> Email → WhatsApp Gateway</h4></div>
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-envelope me-1"></i> {{T "emailwa_title"}}</h4></div>
     <div class="card-body">
-      <p>Forward email ke WhatsApp inbox via webhook.</p>
-      <h5 class="mt-3">Setup</h5>
+      <p>{{T "emailwa_desc"}}</p>
+      <h5 class="mt-3">{{T "emailwa_setup"}}</h5>
       <pre class="bg-light p-3 rounded"><code>POST {{.AppURL}}/email-webhook
 Content-Type: application/x-www-form-urlencoded
 
 from=sender@email.com&subject=Judul Email&text=Isi email</code></pre>
-      <p class="text-muted small">Bisa diintegrasikan dengan Zapier, Make, n8n, atau custom webhook dari email provider.</p>
+      <p class="text-muted small">{{T "emailwa_integration"}}</p>
     </div>
   </div>
 {{end}}
 
 {{if eq .Page "meta_send"}}
-  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-paper-plane me-1"></i> Send via Meta Cloud API</h4></div>
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-paper-plane me-1"></i> {{T "meta_send_title"}}</h4></div>
     <div class="card-body"><form method="post" action="/meta/send">
       <div class="row">
-        <div class="col-md-4"><select name="account_id" class="form-control" required><option value="">Pilih Meta Account</option>{{range .MetaAccounts}}<option value="{{.ID}}">{{.Name}} ({{.PhoneNumberID}})</option>{{end}}</select></div>
+        <div class="col-md-4"><select name="account_id" class="form-control" required><option value="">{{T "meta_select_account"}}</option>{{range .MetaAccounts}}<option value="{{.ID}}">{{.Name}} ({{.PhoneNumberID}})</option>{{end}}</select></div>
         <div class="col-md-4"><input name="phone" class="form-control" placeholder="628123456789" required></div>
-        <div class="col-md-4"><button class="btn btn-primary w-100"><i class="la la-paper-plane"></i> Send</button></div>
+        <div class="col-md-4"><button class="btn btn-primary w-100"><i class="la la-paper-plane"></i> {{T "send_btn"}}</button></div>
       </div>
-      <textarea name="message" class="form-control mt-2" rows="4" placeholder="Tulis pesan..." required></textarea>
+      <textarea name="message" class="form-control mt-2" rows="4" placeholder="{{T "meta_msg_ph"}}" required></textarea>
     </form></div>
   </div>
 {{end}}
 
 {{if eq .Page "meta_campaigns"}}
-  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-bullhorn me-1"></i> Campaign via Meta Cloud API</h4></div>
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-bullhorn me-1"></i> {{T "meta_camp_title"}}</h4></div>
     <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Name</th><th>Groups</th><th>Progress</th><th>Status</th></tr></thead><tbody>
-      {{range .Campaigns}}{{if .MetaAccountID}}<tr><td>{{.ID}}</td><td>{{.Name}}<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:9px">META</span></td><td>{{.Groups}}</td><td>{{.Sent}}/{{.Total}}</td><td>{{.Status}}</td></tr>{{end}}{{else}}<tr><td colspan="5" class="text-muted text-center py-4">Belum ada campaign via Meta.</td></tr>{{end}}
+      {{range .Campaigns}}{{if .MetaAccountID}}<tr><td>{{.ID}}</td><td>{{.Name}}<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:9px">META</span></td><td>{{.Groups}}</td><td>{{.Sent}}/{{.Total}}</td><td>{{.Status}}</td></tr>{{end}}{{else}}<tr><td colspan="5" class="text-muted text-center py-4">{{T "meta_camp_empty"}}</td></tr>{{end}}
     </tbody></table></div>
   </div>
 {{end}}
 
 {{if eq .Page "meta_inbox"}}
-  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-comments me-1"></i> Meta Live Chat</h4></div>
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-comments me-1"></i> {{T "meta_inbox_title"}}</h4></div>
     <div class="card-body text-center py-5">
-      <p class="text-muted">Meta Cloud API menerima pesan real-time via webhook.</p>
+      <p class="text-muted">{{T "meta_inbox_desc"}}</p>
       <p>Webhook URL: <code>{{.AppURL}}/webhook/meta</code></p>
-      <p class="small text-muted">Copy URL ini ke Facebook Developer Console → Webhook Configuration</p>
-      <a href="/inbox" class="btn btn-primary">Lihat Inbox</a>
+      <p class="small text-muted">{{T "meta_inbox_url_hint"}}</p>
+      <a href="/inbox" class="btn btn-primary">{{T "meta_inbox_btn"}}</a>
     </div>
   </div>
 {{end}}
 
 {{if eq .Page "meta_logs"}}
-  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-clipboard-list me-1"></i> Meta Webhook Activity</h4></div>
-    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Type</th><th>Reason</th><th>Content</th></tr></thead><tbody>
-      {{range .Logs}}{{if eq .Type "meta"}}<tr><td>{{.ID}}</td><td>{{.Type}}</td><td>{{.Reason}}</td><td>{{.Content}}</td></tr>{{end}}{{else}}<tr><td colspan="4" class="text-muted text-center">No Meta activity.</td></tr>{{end}}
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-clipboard-list me-1"></i> {{T "meta_logs_title"}}</h4></div>
+    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_type"}}</th><th>{{T "col_reason"}}</th><th>{{T "col_content"}}</th></tr></thead><tbody>
+      {{range .Logs}}{{if eq .Type "meta"}}<tr><td>{{.ID}}</td><td>{{.Type}}</td><td>{{.Reason}}</td><td>{{.Content}}</td></tr>{{end}}{{else}}<tr><td colspan="4" class="text-muted text-center">{{T "meta_logs_empty"}}</td></tr>{{end}}
     </tbody></table></div>
   </div>
 {{end}}
 
 {{if eq .Page "meta_analytics"}}
-  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-chart-bar me-1"></i> Meta Cloud API Stats</h4></div>
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-chart-bar me-1"></i> {{T "meta_stats_title"}}</h4></div>
     <div class="card-body">
       <div class="row text-center">
-        <div class="col-4"><div class="display-4 fw-bold text-primary">{{.CountSent}}</div><small class="text-muted">Sent</small></div>
-        <div class="col-4"><div class="display-4 fw-bold text-success">{{.CountReceived}}</div><small class="text-muted">Received</small></div>
-        <div class="col-4"><div class="display-4 fw-bold text-info">{{len .MetaAccounts}}</div><small class="text-muted">Accounts</small></div>
+        <div class="col-4"><div class="display-4 fw-bold text-primary">{{.CountSent}}</div><small class="text-muted">{{T "meta_stats_sent"}}</small></div>
+        <div class="col-4"><div class="display-4 fw-bold text-success">{{.CountReceived}}</div><small class="text-muted">{{T "meta_stats_recv"}}</small></div>
+        <div class="col-4"><div class="display-4 fw-bold text-info">{{len .MetaAccounts}}</div><small class="text-muted">{{T "meta_stats_accts"}}</small></div>
       </div>
     </div>
   </div>
 {{end}}
 
 {{if eq .Page "meta_webhook"}}
-  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-link me-1"></i> Meta Webhook Configuration</h4></div>
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-link me-1"></i> {{T "meta_webhook_title"}}</h4></div>
     <div class="card-body">
       <p><strong>Webhook URL:</strong> <code>{{.AppURL}}/webhook/meta</code></p>
-      <p class="text-muted">Masukkan URL ini di Facebook Developer Console:</p>
+      <p class="text-muted">{{T "meta_webhook_desc"}}</p>
       <ol class="small">
-        <li>Buka <a href="https://developers.facebook.com" target="_blank">developers.facebook.com</a></li>
-        <li>Pilih App → WhatsApp → Configuration</li>
-        <li>Edit Webhook Callback URL → paste URL di atas</li>
-        <li>Verify Token = token dari form Meta Account</li>
+        <li>{{T "meta_webhook_step1"}} <a href="https://developers.facebook.com" target="_blank">developers.facebook.com</a></li>
+        <li>{{T "meta_webhook_step2"}}</li>
+        <li>{{T "meta_webhook_step3"}}</li>
+        <li>{{T "meta_webhook_step4"}}</li>
         <li>Subscribe ke field <code>messages</code></li>
       </ol>
       <hr>
-      <h5>Meta Accounts Terdaftar</h5>
-      <table class="table table-sm"><thead><tr><th>Name</th><th>Phone ID</th><th>Verify Token</th></tr></thead><tbody>
-        {{range .MetaAccounts}}<tr><td>{{.Name}}</td><td><code>{{.PhoneNumberID}}</code></td><td><code>{{.VerifyToken}}</code></td></tr>{{else}}<tr><td colspan="3" class="text-muted">Belum ada Meta account.</td></tr>{{end}}
+      <h5>{{T "meta_accts_registered"}}</h5>
+      <table class="table table-sm"><thead><tr><th>{{T "col_name"}}</th><th>{{T "meta_phone_col"}}</th><th>{{T "meta_verify_token"}}</th></tr></thead><tbody>
+        {{range .MetaAccounts}}<tr><td>{{.Name}}</td><td><code>{{.PhoneNumberID}}</code></td><td><code>{{.VerifyToken}}</code></td></tr>{{else}}<tr><td colspan="3" class="text-muted">{{T "meta_accts_empty"}}</td></tr>{{end}}
       </tbody></table>
     </div>
   </div>
@@ -1501,7 +1629,7 @@ from=sender@email.com&subject=Judul Email&text=Isi email</code></pre>
 
 {{if eq .Page "subscribe"}}
   <div class="row">
-    <div class="col-12"><h2 class="mb-4">Pilih Paket Langganan</h2></div>
+    <div class="col-12"><h2 class="mb-4">{{T "sub_choose"}}</h2></div>
     {{range .Packages}}
     {{$pkgID := .ID}}
     <div class="col-12 col-md-6 col-lg-4 mb-4">
@@ -1510,24 +1638,24 @@ from=sender@email.com&subject=Judul Email&text=Isi email</code></pre>
           <h4 class="fw-bold">{{.Name}}</h4>
           <div class="display-4 fw-bold text-primary my-3">{{.Price}}</div>
           <p class="text-muted small">
-            <strong>Limits:</strong> Send:{{.SendLimit}} WA:{{.WaAccountLimit}} Dev:{{.DeviceLimit}} Contact:{{.ContactLimit}}<br>
-            <strong>Features:</strong> {{.Services}}
+            <strong>{{T "sub_limits_label"}}</strong> Send:{{.SendLimit}} WA:{{.WaAccountLimit}} Dev:{{.DeviceLimit}} Contact:{{.ContactLimit}}<br>
+            <strong>{{T "sub_features_label"}}</strong> {{.Services}}
           </p>
           {{range $.PaymentGateways}}
           {{if eq .Status "active"}}
           <form method="post" action="/subscribe/checkout" class="mt-2">
             <input type="hidden" name="package_id" value="{{$pkgID}}">
             <input type="hidden" name="gateway_id" value="{{.ID}}">
-            <button class="btn btn-primary w-100"><i class="la la-credit-card me-1"></i> Bayar via {{.Name}}</button>
+            <button class="btn btn-primary w-100"><i class="la la-credit-card me-1"></i> {{T "sub_pay_via"}} {{.Name}}</button>
           </form>
           {{end}}
           {{end}}
-          {{if not $.PaymentGateways}}<p class="text-muted small mt-2">Belum ada gateway pembayaran.</p>{{end}}
+          {{if not $.PaymentGateways}}<p class="text-muted small mt-2">{{T "sub_no_gateway"}}</p>{{end}}
         </div>
       </div>
     </div>
     {{else}}
-    <div class="col-12 text-center py-5 text-muted">Belum ada paket tersedia.</div>
+    <div class="col-12 text-center py-5 text-muted">{{T "sub_no_packages"}}</div>
     {{end}}
   </div>
 {{end}}
@@ -1535,25 +1663,25 @@ from=sender@email.com&subject=Judul Email&text=Isi email</code></pre>
 {{if eq .Page "admin_paygateways"}}
   <div class="row">
     <div class="col-12 col-lg-5">
-      <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> Add Gateway</h4></div>
+      <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-plus me-1"></i> {{T "paygw_add"}}</h4></div>
         <div class="card-body"><form method="post" action="/admin/gateways-pay/add">
-          <div class="form-group"><label>Provider</label><select name="provider" class="form-control"><option value="midtrans">Midtrans (ID)</option><option value="xendit">Xendit (ID)</option><option value="paypal">PayPal (Intl)</option><option value="stripe">Stripe (Intl)</option></select></div>
-          <div class="form-group"><label>Nama</label><input name="name" class="form-control" placeholder="My Gateway"></div>
-          <div class="form-group"><label>API Key</label><input name="api_key" class="form-control"></div>
-          <div class="form-group"><label>API Secret</label><input name="api_secret" class="form-control"></div>
-          <div class="form-group"><label>Webhook Secret</label><input name="webhook_secret" class="form-control"></div>
-          <div class="form-group"><label>Currency</label><select name="currency" class="form-control"><option value="IDR">IDR</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="SGD">SGD</option></select></div>
-          <div class="form-group"><label>Base URL (optional)</label><input name="base_url" class="form-control" placeholder="Kosongkan untuk default"></div>
-          <button class="btn btn-primary"><i class="la la-plus me-1"></i> Add</button>
+          <div class="form-group"><label>{{T "col_provider"}}</label><select name="provider" class="form-control"><option value="midtrans">Midtrans (ID)</option><option value="xendit">Xendit (ID)</option><option value="paypal">PayPal (Intl)</option><option value="stripe">Stripe (Intl)</option></select></div>
+          <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" placeholder="My Gateway"></div>
+          <div class="form-group"><label>{{T "paygw_apikey"}}</label><input name="api_key" class="form-control"></div>
+          <div class="form-group"><label>{{T "paygw_apisecret"}}</label><input name="api_secret" class="form-control"></div>
+          <div class="form-group"><label>{{T "paygw_webhooksecret"}}</label><input name="webhook_secret" class="form-control"></div>
+          <div class="form-group"><label>{{T "paygw_currency"}}</label><select name="currency" class="form-control"><option value="IDR">IDR</option><option value="USD">USD</option><option value="EUR">EUR</option><option value="SGD">SGD</option></select></div>
+          <div class="form-group"><label>{{T "paygw_baseurl"}}</label><input name="base_url" class="form-control" placeholder="Kosongkan untuk default"></div>
+          <button class="btn btn-primary"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
         </form></div>
       </div>
     </div>
     <div class="col-12 col-lg-7">
-      <div class="card"><div class="card-header"><h4 class="card-header-title">Payment Gateways</h4></div>
+      <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "paygw_list"}}</h4></div>
         <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Name</th><th>Provider</th><th>Currency</th><th>Status</th><th></th></tr></thead><tbody>
-          {{range .PaymentGateways}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.Provider}}</td><td>{{.Currency}}</td><td>{{if eq .Status "active"}}<span class="badge badge-soft-success">Active</span>{{else}}<span class="badge badge-soft-secondary">Inactive</span>{{end}}</td><td>
-            <form method="post" action="/admin/gateways-pay/toggle" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-white">{{if eq .Status "active"}}Disable{{else}}Enable{{end}}</button></form>
-            <form method="post" action="/admin/gateways-pay/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">Del</button></form>
+          {{range .PaymentGateways}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.Provider}}</td><td>{{.Currency}}</td><td>{{if eq .Status "active"}}<span class="badge badge-soft-success">{{T "paygw_active"}}</span>{{else}}<span class="badge badge-soft-secondary">{{T "paygw_inactive"}}</span>{{end}}</td><td>
+            <form method="post" action="/admin/gateways-pay/toggle" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-white">{{if eq .Status "active"}}{{T "paygw_disable"}}{{else}}{{T "paygw_enable"}}{{end}}</button></form>
+            <form method="post" action="/admin/gateways-pay/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form>
           </td></tr>{{else}}<tr><td colspan="6" class="text-muted text-center">-</td></tr>{{end}}
         </tbody></table></div>
       </div>
@@ -1562,9 +1690,9 @@ from=sender@email.com&subject=Judul Email&text=Isi email</code></pre>
 {{end}}
 
 {{if eq .Page "admin_transactions_pay"}}
-  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-receipt me-1"></i> Payment Transactions</h4></div>
-    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Invoice</th><th>User</th><th>Package</th><th>Amount</th><th>Status</th><th>{{T "col_time"}}</th></tr></thead><tbody>
-      {{range .Txs}}<tr><td>{{.ID}}</td><td><code>{{.InvoiceID}}</code></td><td>#{{.UserID}}</td><td>#{{.PackageID}}</td><td>{{.Amount}} {{.Currency}}</td><td>{{if eq .Status "paid"}}<span class="badge badge-soft-success">Paid</span>{{else if eq .Status "failed"}}<span class="badge badge-soft-danger">Failed</span>{{else}}<span class="badge badge-soft-warning">{{.Status}}</span>{{end}}</td><td class="text-muted small">{{.Created}}</td></tr>{{else}}<tr><td colspan="7" class="text-muted text-center py-4">No transactions yet.</td></tr>{{end}}
+  <div class="card"><div class="card-header"><h4 class="card-header-title"><i class="la la-receipt me-1"></i> {{T "paytx_title"}}</h4></div>
+    <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_invoice"}}</th><th>{{T "col_user"}}</th><th>{{T "col_package"}}</th><th>{{T "col_amount"}}</th><th>{{T "col_status"}}</th><th>{{T "col_time"}}</th></tr></thead><tbody>
+      {{range .Txs}}<tr><td>{{.ID}}</td><td><code>{{.InvoiceID}}</code></td><td>#{{.UserID}}</td><td>#{{.PackageID}}</td><td>{{.Amount}} {{.Currency}}</td><td>{{if eq .Status "paid"}}<span class="badge badge-soft-success">{{T "paytx_paid"}}</span>{{else if eq .Status "failed"}}<span class="badge badge-soft-danger">{{T "paytx_failed"}}</span>{{else}}<span class="badge badge-soft-warning">{{.Status}}</span>{{end}}</td><td class="text-muted small">{{.Created}}</td></tr>{{else}}<tr><td colspan="7" class="text-muted text-center py-4">{{T "paytx_empty"}}</td></tr>{{end}}
     </tbody></table></div>
   </div>
 {{end}}
@@ -1687,7 +1815,7 @@ from=sender@email.com&subject=Judul Email&text=Isi email</code></pre>
 {{if eq .Page "ussd"}}
   <div class="row">
     <div class="col-12 col-lg-4"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "ussd_add"}}</h4></div><div class="card-body">
-      <form method="post" action="/ussd/add"><div class="form-group"><label>{{T "ussd_code"}}</label><input name="code" class="form-control" placeholder="*123#" required></div><button class="btn btn-primary lift"><i class="la la-satellite-dish me-1"></i> {{T "ar_add_btn"}}</button>{{if .EditID}}<a href="/admin/waservers" class="btn btn-white btn-sm ms-2">Batal</a>{{end}}</form></div></div></div>
+      <form method="post" action="/ussd/add"><div class="form-group"><label>{{T "ussd_code"}}</label><input name="code" class="form-control" placeholder="*123#" required></div><button class="btn btn-primary lift"><i class="la la-satellite-dish me-1"></i> {{T "ar_add_btn"}}</button>{{if .EditID}}<a href="/admin/waservers" class="btn btn-white btn-sm ms-2">{{T "btn_cancel"}}</a>{{end}}</form></div></div></div>
     <div class="col-12 col-lg-8"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "nav_ussd"}}</h4></div>
       <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "ussd_code"}}</th><th>{{T "ussd_response"}}</th><th>{{T "col_status"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
         {{range .Ussds}}<tr><td>{{.ID}}</td><td>{{.Code}}</td><td>{{.Response}}</td><td><span class="badge badge-soft-warning">{{.Status}}</span></td><td><form method="post" action="/ussd/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center">-</td></tr>{{end}}
@@ -1702,12 +1830,12 @@ from=sender@email.com&subject=Judul Email&text=Isi email</code></pre>
         <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
         <div class="form-group"><label>Provider</label><select name="provider" class="form-control"><option value="openai">OpenAI</option><option value="geminiai">Gemini</option><option value="claudeai">Claude</option><option value="deepseekai">DeepSeek</option></select></div>
         <div class="form-group"><label>Model</label><input name="model" class="form-control" placeholder="gpt-4o"></div>
-        <div class="form-group"><label>API Key</label><input name="apikey" class="form-control" required></div>
+        <div class="form-group"><label>{{T "aik_api_key"}}</label><input name="apikey" class="form-control" required></div>
         <div class="form-group"><label>Prompt</label><textarea name="system_prompt" class="form-control" rows="3"></textarea></div>
         <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
       </form></div></div></div>
     <div class="col-12 col-lg-7"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "nav_ai_keys"}}</h4></div>
-      <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>Provider</th><th>Model</th><th>{{T "col_action"}}</th></tr></thead><tbody>
+<div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>{{T "col_provider"}}</th><th>{{T "ar_ai_model"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
         {{range .AiKeys}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td><span class="badge badge-soft-secondary">{{.Provider}}</span></td><td>{{.Model}}</td><td><form method="post" action="/ai/keys/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center">-</td></tr>{{end}}
       </tbody></table></div></div></div>
   </div>
@@ -1716,7 +1844,7 @@ from=sender@email.com&subject=Judul Email&text=Isi email</code></pre>
 {{if eq .Page "ai_plugins"}}
   <div class="row">
     <div class="col-12 col-lg-5"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "aip_add"}}</h4></div><div class="card-body">
-      <form method="post" action="/ai/plugins/add"><div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div><div class="form-group"><label>Endpoint</label><input name="endpoint" class="form-control" placeholder="https://..."></div><button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>{{if .EditID}}<a href="/admin/waservers" class="btn btn-white btn-sm ms-2">Batal</a>{{end}}</form></div></div></div>
+      <form method="post" action="/ai/plugins/add"><div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div><div class="form-group"><label>Endpoint</label><input name="endpoint" class="form-control" placeholder="https://..."></div><button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>{{if .EditID}}<a href="/admin/waservers" class="btn btn-white btn-sm ms-2">{{T "btn_cancel"}}</a>{{end}}</form></div></div></div>
     <div class="col-12 col-lg-7"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "nav_ai_plugins"}}</h4></div>
       <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>Endpoint</th><th>{{T "col_action"}}</th></tr></thead><tbody>
         {{range .AiPlugins}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.Endpoint}}</td><td><form method="post" action="/ai/plugins/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
@@ -1728,7 +1856,7 @@ from=sender@email.com&subject=Judul Email&text=Isi email</code></pre>
 <div class="row">
 <div class="col-6 col-xl-3">
 <div class="card"><div class="card-body"><div class="row align-items-center">
-<div class="col"><h6 class="text-uppercase text-muted mb-2 small">Total Users</h6><span class="h2 mb-0">{{.TotalUsers}}</span></div>
+<div class="col"><h6 class="text-uppercase text-muted mb-2 small">{{T "admin_stat_users"}}</h6><span class="h2 mb-0">{{.TotalUsers}}</span></div>
 <div class="col-auto"><span class="h2 la la-users la-lg text-primary mb-0"></span></div>
 </div></div></div>
 </div>
@@ -1740,7 +1868,7 @@ from=sender@email.com&subject=Judul Email&text=Isi email</code></pre>
 </div>
 <div class="col-6 col-xl-3">
 <div class="card"><div class="card-body"><div class="row align-items-center">
-<div class="col"><h6 class="text-uppercase text-muted mb-2 small">Campaigns</h6><span class="h2 mb-0">{{.RunningCampaigns}}</span></div>
+<div class="col"><h6 class="text-uppercase text-muted mb-2 small">{{T "admin_stat_campaigns"}}</h6><span class="h2 mb-0">{{.RunningCampaigns}}</span></div>
 <div class="col-auto"><span class="h2 la la-bullhorn la-lg text-warning mb-0"></span></div>
 </div></div></div>
 </div>
@@ -1752,17 +1880,17 @@ from=sender@email.com&subject=Judul Email&text=Isi email</code></pre>
 </div>
 </div>
 <div class="row mt-3">
-<div class="col-12"><div class="card"><div class="card-header"><h4 class="card-header-title">System Overview</h4></div>
+<div class="col-12"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "admin_overview_title"}}</h4></div>
 <div class="card-body"><canvas id="adminChart" height="80"></canvas></div></div></div>
 </div>
 <div class="row mt-3">
-<div class="col-6 col-xl-3"><a href="/admin/users" class="card text-decoration-none"><div class="card-body text-center py-4"><i class="la la-users la-2x text-primary mb-2 d-block"></i><strong>Users</strong><br><small class="text-muted">Manage Users</small></div></a></div>
-<div class="col-6 col-xl-3"><a href="/admin/packages" class="card text-decoration-none"><div class="card-body text-center py-4"><i class="la la-box la-2x text-success mb-2 d-block"></i><strong>Packages</strong><br><small class="text-muted">Manage Packages</small></div></a></div>
-<div class="col-6 col-xl-3"><a href="/admin/waservers" class="card text-decoration-none"><div class="card-body text-center py-4"><i class="la la-server la-2x text-warning mb-2 d-block"></i><strong>WA Servers</strong><br><small class="text-muted">Manage Servers</small></div></a></div>
-<div class="col-6 col-xl-3"><a href="/admin/subscriptions" class="card text-decoration-none"><div class="card-body text-center py-4"><i class="la la-star la-2x text-danger mb-2 d-block"></i><strong>Subscriptions</strong><br><small class="text-muted">Manage Subs</small></div></a></div>
+<div class="col-6 col-xl-3"><a href="/admin/users" class="card text-decoration-none"><div class="card-body text-center py-4"><i class="la la-users la-2x text-primary mb-2 d-block"></i><strong>{{T "admin_card_users"}}</strong><br><small class="text-muted">{{T "admin_card_users_desc"}}</small></div></a></div>
+<div class="col-6 col-xl-3"><a href="/admin/packages" class="card text-decoration-none"><div class="card-body text-center py-4"><i class="la la-box la-2x text-success mb-2 d-block"></i><strong>{{T "admin_card_packages"}}</strong><br><small class="text-muted">{{T "admin_card_packages_desc"}}</small></div></a></div>
+<div class="col-6 col-xl-3"><a href="/admin/waservers" class="card text-decoration-none"><div class="card-body text-center py-4"><i class="la la-server la-2x text-warning mb-2 d-block"></i><strong>{{T "admin_card_servers"}}</strong><br><small class="text-muted">{{T "admin_card_servers_desc"}}</small></div></a></div>
+<div class="col-6 col-xl-3"><a href="/admin/subscriptions" class="card text-decoration-none"><div class="card-body text-center py-4"><i class="la la-star la-2x text-danger mb-2 d-block"></i><strong>{{T "admin_card_subs"}}</strong><br><small class="text-muted">{{T "admin_card_subs_desc"}}</small></div></a></div>
 </div>
 <script>
-new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.ChartLabels}}],datasets:[{label:'Sent',data:[{{.ChartSent}}],borderColor:'#4F46E5',backgroundColor:'rgba(79,70,229,.1)',fill:true,tension:.3,pointRadius:2},{label:'Received',data:[{{.ChartReceived}}],borderColor:'#10B981',backgroundColor:'rgba(16,185,129,.1)',fill:true,tension:.3,pointRadius:2}]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}})
+new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.ChartLabels}}],datasets:[{label:'{{T "chart_sent"}}',data:[{{.ChartSent}}],borderColor:'#4F46E5',backgroundColor:'rgba(79,70,229,.1)',fill:true,tension:.3,pointRadius:2},{label:'{{T "chart_received"}}',data:[{{.ChartReceived}}],borderColor:'#10B981',backgroundColor:'rgba(16,185,129,.1)',fill:true,tension:.3,pointRadius:2}]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}})
 </script>
 {{end}}
 
@@ -1772,12 +1900,12 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
 <div id="addUserForm" style="display:none;border-bottom:1px solid #eee;padding:16px"><form method="post" action="/admin/users/add">
 <div class="row">
 <div class="col-md-6"><div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div></div>
-<div class="col-md-6"><div class="form-group"><label>Email</label><input name="email" type="email" class="form-control" required></div></div>
-<div class="col-md-6"><div class="form-group"><label>Password</label><input name="password" type="password" class="form-control"></div></div>
+<div class="col-md-6"><div class="form-group"><label>{{T "auth_email"}}</label><input name="email" type="email" class="form-control" required></div></div>
+<div class="col-md-6"><div class="form-group"><label>{{T "auth_password"}}</label><input name="password" type="password" class="form-control"></div></div>
 <div class="col-md-6"><div class="form-group"><label>{{T "usr_role"}}</label><select name="role" class="form-control">{{range .Roles}}<option value="{{.Name}}">{{.Name}}</option>{{end}}</select></div></div>
 <div class="col-12"><button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button></div>
 </div></form></div>
-<div class="table-responsive"><table class="table table-sm card-table mb-0"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>Email</th><th>{{T "usr_role"}}</th><th>Registered</th><th>{{T "col_action"}}</th></tr></thead><tbody>
+<div class="table-responsive"><table class="table table-sm card-table mb-0"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>{{T "auth_email"}}</th><th>{{T "usr_role"}}</th><th>{{T "col_registered"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
 {{range .Users}}<tr>
 <td>{{.ID}}</td>
 <td>{{.Name}}</td>
@@ -1786,22 +1914,22 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
 <td class="text-muted small">{{.Created}}</td>
 <td class="text-nowrap">
 <a class="btn btn-sm btn-white" href="/admin/users?edit={{.ID}}"><i class="la la-edit"></i></a>
-<a class="btn btn-sm btn-warning" href="/admin/users/impersonate?id={{.ID}}" title="Impersonate"><i class="la la-user-circle"></i></a>
+<a class="btn btn-sm btn-warning" href="/admin/users/impersonate?id={{.ID}}" title="{{T "usr_impersonate"}}"><i class="la la-user-circle"></i></a>
 <form method="post" action="/admin/users/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger"><i class="la la-trash"></i></button></form>
 </td>
 </tr>{{else}}<tr><td colspan="7" class="text-muted text-center py-4">-</td></tr>{{end}}
 </tbody></table></div></div></div>
 {{if .EditID}}
-<div class="col-12 mt-3"><div class="card border-warning"><div class="card-header bg-warning bg-opacity-10"><h4 class="card-header-title"><i class="la la-edit me-1"></i> Edit User #{{.EditID}}</h4></div>
+<div class="col-12 mt-3"><div class="card border-warning"><div class="card-header bg-warning bg-opacity-10"><h4 class="card-header-title"><i class="la la-edit me-1"></i> {{T "usr_edit_title"}} #{{.EditID}}</h4></div>
 <div class="card-body"><form method="post" action="/admin/users/edit">
 <input type="hidden" name="id" value="{{.EditID}}">
 <div class="row">
 <div class="col-md-6"><div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" value="{{.EditName}}" required></div></div>
-<div class="col-md-6"><div class="form-group"><label>Email</label><input name="email" type="email" class="form-control" value="{{.EditPhone}}"></div></div>
-<div class="col-md-6"><div class="form-group"><label>Password (biarkan kosong)</label><input name="password" type="password" class="form-control" placeholder="••••••"></div></div>
+<div class="col-md-6"><div class="form-group"><label>{{T "auth_email"}}</label><input name="email" type="email" class="form-control" value="{{.EditPhone}}"></div></div>
+<div class="col-md-6"><div class="form-group"><label>{{T "usr_password_keep"}}</label><input name="password" type="password" class="form-control" placeholder="••••••"></div></div>
 <div class="col-md-6"><div class="form-group"><label>{{T "usr_role"}}</label><select name="role" class="form-control">{{range .Roles}}<option value="{{.Name}}" {{if eq .Name $.EditRole}}selected{{end}}>{{.Name}}</option>{{end}}</select></div></div>
 </div>
-<button class="btn btn-warning lift"><i class="la la-save me-1"></i> Update</button> <a href="/admin/users" class="btn btn-white ms-2">{{T "btn_cancel"}}</a>
+<button class="btn btn-warning lift"><i class="la la-save me-1"></i> {{T "usr_update"}}</button> <a href="/admin/users" class="btn btn-white ms-2">{{T "btn_cancel"}}</a>
 </form></div></div></div>
 {{end}}
 </div>
@@ -1810,11 +1938,11 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
 {{if eq .Page "admin_roles"}}
   <div class="row">
     {{if .EditID}}
-    <div class="col-12 col-lg-4"><div class="card border-warning"><div class="card-header bg-warning bg-opacity-10"><h4 class="card-header-title"><i class="la la-edit me-1"></i> Edit Role #{{.EditID}}</h4></div><div class="card-body"><form method="post" action="/admin/roles/edit"><input type="hidden" name="id" value="{{.EditID}}"><div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" value="{{.EditName}}" required></div><div class="form-group"><label>{{T "role_perms"}}</label><select name="permissions" class="form-control" multiple size="18" style="overflow-y:auto;min-height:360px"><option value="manage_users">Users</option><option value="manage_roles">Roles</option><option value="manage_packages">Packages</option><option value="manage_vouchers">Vouchers</option><option value="manage_subscriptions">Subscriptions</option><option value="manage_transactions">Transactions</option><option value="manage_payouts">Payouts</option><option value="manage_pages">Pages</option><option value="manage_marketing">Marketing</option><option value="manage_languages">Languages</option><option value="manage_waservers">WA Servers</option><option value="manage_gateways">Gateways</option><option value="manage_shorteners">Shorteners</option><option value="manage_plugins">Plugins</option><option value="manage_meta">Meta API</option><option value="manage_metatemplates">Meta Templates</option><option value="wa_send">Send Message</option><option value="wa_broadcast">Broadcast</option><option value="wa_scheduled">Scheduled</option><option value="wa_sent">Sent Messages</option><option value="wa_received">Received Messages</option><option value="wa_inbox">Live Chat</option><option value="wa_status">WA Status</option><option value="wa_autoreply">Auto Reply</option><option value="wa_ai_keys">AI Keys</option><option value="wa_ai_plugins">AI Plugins</option><option value="wa_knowledge">Knowledge Base</option><option value="wa_contacts">Contacts</option><option value="wa_groups">Contact Groups</option><option value="wa_unsub">Unsubscribed</option><option value="wa_templates">Templates</option><option value="wa_apikeys">API Keys</option><option value="wa_webhooks">Webhooks</option><option value="wa_logger">Logger</option><option value="wa_settings">Settings</option><option value="wa_docs">Documentation</option><option value="wa_hosts">Hosts</option><option value="wa_ussd">USSD</option><option value="wa_impersonate">Impersonate</option><option value="wa_drips">Drip Campaign</option><option value="wa_tags">Tags</option><option value="wa_canned">Canned Responses</option><option value="wa_recurring">Recurring Campaigns</option><option value="wa_store">Store Products</option><option value="wa_orders">Orders</option><option value="wa_forms">Forms</option><option value="wa_reminders">Payment Reminders</option><option value="wa_analytics">Analytics</option><option value="wa_blacklist">Blacklist</option><option value="wa_csat">CSAT Survey</option><option value="wa_depts">Departments</option><option value="wa_customers">Customer Directory</option><option value="wa_calendar">Calendar</option><option value="wa_macros">Inbox Macros</option><option value="wa_files">File Manager</option><option value="wa_merge">Contact Merge</option><option value="wa_translate">Auto Translate</option><option value="wa_audit">Audit Log</option><option value="wa_backup">Backup</option><option value="wa_subscribe">Pricing/Subscribe</option><option value="manage_paygateways">Payment Gateways</option><option value="manage_paytx">Payment Transactions</option></select></div><button class="btn btn-warning lift"><i class="la la-save me-1"></i> Update</button> <a href="/admin/roles" class="btn btn-white ms-2">{{T "ar_cancel"}}</a></form><script>document.addEventListener('DOMContentLoaded',function(){var s=document.querySelector('form[action=\"/admin/roles/edit\"] select[name=\"permissions\"]');if(s){var v='{{.EditContent}}';v.split(',').forEach(function(p){var o=s.querySelector('option[value=\"'+p.replace(/^\\s+|\\s+$/g,'')+'\"]');if(o)o.selected=true})}})</script></div></div></div>
+    <div class="col-12 col-lg-4"><div class="card border-warning"><div class="card-header bg-warning bg-opacity-10"><h4 class="card-header-title"><i class="la la-edit me-1"></i> {{T "role_edit_title"}} #{{.EditID}}</h4></div><div class="card-body"><form method="post" action="/admin/roles/edit"><input type="hidden" name="id" value="{{.EditID}}"><div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" value="{{.EditName}}" required></div><div class="form-group"><label>{{T "role_perms"}}</label><select name="permissions" class="form-control" multiple size="18" style="overflow-y:auto;min-height:360px"><option value="manage_users"{{T "perm_manage_users"}}</option><option value="manage_roles"{{T "perm_manage_roles"}}</option><option value="manage_packages"{{T "perm_manage_packages"}}</option><option value="manage_vouchers"{{T "perm_manage_vouchers"}}</option><option value="manage_subscriptions"{{T "perm_manage_subscriptions"}}</option><option value="manage_transactions"{{T "perm_manage_transactions"}}</option><option value="manage_payouts"{{T "perm_manage_payouts"}}</option><option value="manage_pages"{{T "perm_manage_pages"}}</option><option value="manage_marketing"{{T "perm_manage_marketing"}}</option><option value="manage_languages"{{T "perm_manage_languages"}}</option><option value="manage_waservers"{{T "perm_manage_waservers"}}</option><option value="manage_gateways"{{T "perm_manage_gateways"}}</option><option value="manage_shorteners"{{T "perm_manage_shorteners"}}</option><option value="manage_plugins"{{T "perm_manage_plugins"}}</option><option value="manage_meta"{{T "perm_manage_meta"}}</option><option value="manage_metatemplates"{{T "perm_manage_metatemplates"}}</option><option value="wa_send"{{T "perm_wa_send"}}</option><option value="wa_broadcast"{{T "perm_wa_broadcast"}}</option><option value="wa_scheduled"{{T "perm_wa_scheduled"}}</option><option value="wa_sent"{{T "perm_wa_sent"}}</option><option value="wa_received"{{T "perm_wa_received"}}</option><option value="wa_inbox"{{T "perm_wa_inbox"}}</option><option value="wa_status"{{T "perm_wa_status"}}</option><option value="wa_autoreply"{{T "perm_wa_autoreply"}}</option><option value="wa_ai_keys"{{T "perm_wa_ai_keys"}}</option><option value="wa_ai_plugins"{{T "perm_wa_ai_plugins"}}</option><option value="wa_knowledge"{{T "perm_wa_knowledge"}}</option><option value="wa_contacts"{{T "perm_wa_contacts"}}</option><option value="wa_groups"{{T "perm_wa_groups"}}</option><option value="wa_unsub"{{T "perm_wa_unsub"}}</option><option value="wa_templates"{{T "perm_wa_templates"}}</option><option value="wa_apikeys"{{T "perm_wa_apikeys"}}</option><option value="wa_webhooks"{{T "perm_wa_webhooks"}}</option><option value="wa_logger"{{T "perm_wa_logger"}}</option><option value="wa_settings"{{T "perm_wa_settings"}}</option><option value="wa_docs"{{T "perm_wa_docs"}}</option><option value="wa_hosts"{{T "perm_wa_hosts"}}</option><option value="wa_ussd"{{T "perm_wa_ussd"}}</option><option value="wa_impersonate"{{T "perm_wa_impersonate"}}</option><option value="wa_drips"{{T "perm_wa_drips"}}</option><option value="wa_tags"{{T "perm_wa_tags"}}</option><option value="wa_canned"{{T "perm_wa_canned"}}</option><option value="wa_recurring"{{T "perm_wa_recurring"}}</option><option value="wa_store"{{T "perm_wa_store"}}</option><option value="wa_orders"{{T "perm_wa_orders"}}</option><option value="wa_forms"{{T "perm_wa_forms"}}</option><option value="wa_reminders"{{T "perm_wa_reminders"}}</option><option value="wa_analytics"{{T "perm_wa_analytics"}}</option><option value="wa_blacklist"{{T "perm_wa_blacklist"}}</option><option value="wa_csat"{{T "perm_wa_csat"}}</option><option value="wa_depts"{{T "perm_wa_depts"}}</option><option value="wa_customers"{{T "perm_wa_customers"}}</option><option value="wa_calendar"{{T "perm_wa_calendar"}}</option><option value="wa_macros"{{T "perm_wa_macros"}}</option><option value="wa_files"{{T "perm_wa_files"}}</option><option value="wa_merge"{{T "perm_wa_merge"}}</option><option value="wa_translate"{{T "perm_wa_translate"}}</option><option value="wa_audit"{{T "perm_wa_audit"}}</option><option value="wa_backup"{{T "perm_wa_backup"}}</option><option value="wa_subscribe"{{T "perm_wa_subscribe"}}</option><option value="manage_paygateways"{{T "perm_manage_paygateways"}}</option><option value="manage_paytx"{{T "perm_manage_paytx"}}</option></select></div><button class="btn btn-warning lift"><i class="la la-save me-1"></i> Update</button> <a href="/admin/roles" class="btn btn-white ms-2">{{T "ar_cancel"}}</a></form><script>document.addEventListener('DOMContentLoaded',function(){var s=document.querySelector('form[action=\"/admin/roles/edit\"] select[name=\"permissions\"]');if(s){var v='{{.EditContent}}';v.split(',').forEach(function(p){var o=s.querySelector('option[value=\"'+p.replace(/^\\s+|\\s+$/g,'')+'\"]');if(o)o.selected=true})}})</script></div></div></div>
     {{else}}
     <div class="col-12 col-lg-4"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "role_add"}}</h4></div><div class="card-body">
       <form method="post" action="/admin/roles/add"><div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
-      <div class="form-group"><label>{{T "role_perms"}}</label><select name="permissions" class="form-control" multiple size="18" style="overflow-y:auto;min-height:360px"><option value="manage_users">Users</option><option value="manage_roles">Roles</option><option value="manage_packages">Packages</option><option value="manage_vouchers">Vouchers</option><option value="manage_subscriptions">Subscriptions</option><option value="manage_transactions">Transactions</option><option value="manage_payouts">Payouts</option><option value="manage_pages">Pages</option><option value="manage_marketing">Marketing</option><option value="manage_languages">Languages</option><option value="manage_waservers">WA Servers</option><option value="manage_gateways">Gateways</option><option value="manage_shorteners">Shorteners</option><option value="manage_plugins">Plugins</option><option value="manage_meta">Meta API</option><option value="manage_metatemplates">Meta Templates</option><option value="wa_send">Send Message</option><option value="wa_broadcast">Broadcast</option><option value="wa_scheduled">Scheduled</option><option value="wa_sent">Sent Messages</option><option value="wa_received">Received Messages</option><option value="wa_inbox">Live Chat</option><option value="wa_status">WA Status</option><option value="wa_autoreply">Auto Reply</option><option value="wa_ai_keys">AI Keys</option><option value="wa_ai_plugins">AI Plugins</option><option value="wa_knowledge">Knowledge Base</option><option value="wa_contacts">Contacts</option><option value="wa_groups">Contact Groups</option><option value="wa_unsub">Unsubscribed</option><option value="wa_templates">Templates</option><option value="wa_apikeys">API Keys</option><option value="wa_webhooks">Webhooks</option><option value="wa_logger">Logger</option><option value="wa_settings">Settings</option><option value="wa_docs">Documentation</option><option value="wa_hosts">Hosts</option><option value="wa_ussd">USSD</option><option value="wa_impersonate">Impersonate</option><option value="wa_drips">Drip Campaign</option><option value="wa_tags">Tags</option><option value="wa_canned">Canned Responses</option><option value="wa_recurring">Recurring Campaigns</option><option value="wa_store">Store Products</option><option value="wa_orders">Orders</option><option value="wa_forms">Forms</option><option value="wa_reminders">Payment Reminders</option><option value="wa_analytics">Analytics</option><option value="wa_blacklist">Blacklist</option><option value="wa_csat">CSAT Survey</option><option value="wa_depts">Departments</option><option value="wa_customers">Customer Directory</option><option value="wa_calendar">Calendar</option><option value="wa_macros">Inbox Macros</option><option value="wa_files">File Manager</option><option value="wa_merge">Contact Merge</option><option value="wa_translate">Auto Translate</option><option value="wa_audit">Audit Log</option><option value="wa_backup">Backup</option><option value="wa_subscribe">Pricing/Subscribe</option><option value="manage_paygateways">Payment Gateways</option><option value="manage_paytx">Payment Transactions</option></select></div>
+      <div class="form-group"><label>{{T "role_perms"}}</label><select name="permissions" class="form-control" multiple size="18" style="overflow-y:auto;min-height:360px"><option value="manage_users"{{T "perm_manage_users"}}</option><option value="manage_roles"{{T "perm_manage_roles"}}</option><option value="manage_packages"{{T "perm_manage_packages"}}</option><option value="manage_vouchers"{{T "perm_manage_vouchers"}}</option><option value="manage_subscriptions"{{T "perm_manage_subscriptions"}}</option><option value="manage_transactions"{{T "perm_manage_transactions"}}</option><option value="manage_payouts"{{T "perm_manage_payouts"}}</option><option value="manage_pages"{{T "perm_manage_pages"}}</option><option value="manage_marketing"{{T "perm_manage_marketing"}}</option><option value="manage_languages"{{T "perm_manage_languages"}}</option><option value="manage_waservers"{{T "perm_manage_waservers"}}</option><option value="manage_gateways"{{T "perm_manage_gateways"}}</option><option value="manage_shorteners"{{T "perm_manage_shorteners"}}</option><option value="manage_plugins"{{T "perm_manage_plugins"}}</option><option value="manage_meta"{{T "perm_manage_meta"}}</option><option value="manage_metatemplates"{{T "perm_manage_metatemplates"}}</option><option value="wa_send"{{T "perm_wa_send"}}</option><option value="wa_broadcast"{{T "perm_wa_broadcast"}}</option><option value="wa_scheduled"{{T "perm_wa_scheduled"}}</option><option value="wa_sent"{{T "perm_wa_sent"}}</option><option value="wa_received"{{T "perm_wa_received"}}</option><option value="wa_inbox"{{T "perm_wa_inbox"}}</option><option value="wa_status"{{T "perm_wa_status"}}</option><option value="wa_autoreply"{{T "perm_wa_autoreply"}}</option><option value="wa_ai_keys"{{T "perm_wa_ai_keys"}}</option><option value="wa_ai_plugins"{{T "perm_wa_ai_plugins"}}</option><option value="wa_knowledge"{{T "perm_wa_knowledge"}}</option><option value="wa_contacts"{{T "perm_wa_contacts"}}</option><option value="wa_groups"{{T "perm_wa_groups"}}</option><option value="wa_unsub"{{T "perm_wa_unsub"}}</option><option value="wa_templates"{{T "perm_wa_templates"}}</option><option value="wa_apikeys"{{T "perm_wa_apikeys"}}</option><option value="wa_webhooks"{{T "perm_wa_webhooks"}}</option><option value="wa_logger"{{T "perm_wa_logger"}}</option><option value="wa_settings"{{T "perm_wa_settings"}}</option><option value="wa_docs"{{T "perm_wa_docs"}}</option><option value="wa_hosts"{{T "perm_wa_hosts"}}</option><option value="wa_ussd"{{T "perm_wa_ussd"}}</option><option value="wa_impersonate"{{T "perm_wa_impersonate"}}</option><option value="wa_drips"{{T "perm_wa_drips"}}</option><option value="wa_tags"{{T "perm_wa_tags"}}</option><option value="wa_canned"{{T "perm_wa_canned"}}</option><option value="wa_recurring"{{T "perm_wa_recurring"}}</option><option value="wa_store"{{T "perm_wa_store"}}</option><option value="wa_orders"{{T "perm_wa_orders"}}</option><option value="wa_forms"{{T "perm_wa_forms"}}</option><option value="wa_reminders"{{T "perm_wa_reminders"}}</option><option value="wa_analytics"{{T "perm_wa_analytics"}}</option><option value="wa_blacklist"{{T "perm_wa_blacklist"}}</option><option value="wa_csat"{{T "perm_wa_csat"}}</option><option value="wa_depts"{{T "perm_wa_depts"}}</option><option value="wa_customers"{{T "perm_wa_customers"}}</option><option value="wa_calendar"{{T "perm_wa_calendar"}}</option><option value="wa_macros"{{T "perm_wa_macros"}}</option><option value="wa_files"{{T "perm_wa_files"}}</option><option value="wa_merge"{{T "perm_wa_merge"}}</option><option value="wa_translate"{{T "perm_wa_translate"}}</option><option value="wa_audit"{{T "perm_wa_audit"}}</option><option value="wa_backup"{{T "perm_wa_backup"}}</option><option value="wa_subscribe"{{T "perm_wa_subscribe"}}</option><option value="manage_paygateways"{{T "perm_manage_paygateways"}}</option><option value="manage_paytx"{{T "perm_manage_paytx"}}</option></select></div>
       <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button></form></div></div></div>
     {{end}}
     <div class="col-12 col-lg-8"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "adm_roles"}}</h4></div>
@@ -1830,46 +1958,46 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
       <form method="post" action="/admin/packages/add">
         <div class="form-row"><div class="form-group col-6"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
         <div class="form-group col-3"><label>{{T "pkg_price"}}</label><input name="price" class="form-control" value="0"></div>
-        <div class="form-group col-3"><label>{{T "pkg_hidden"}}</label><select name="hidden" class="form-control"><option value="1">Hidden</option><option value="2">Visible</option></select></div></div>
-        <div class="form-group"><label>{{T "pkg_services"}}</label><select name="services" class="form-control" multiple size="15"><option value="whatsapp">WhatsApp Web</option><option value="meta">Meta Cloud API</option><option value="broadcast">Broadcast</option><option value="drips">Drip Campaign</option><option value="recurring">Recurring Campaign</option><option value="ai">AI Auto Reply</option><option value="inbox">Live Chat</option><option value="contacts">Contacts</option><option value="tags">Contact Tags</option><option value="groups">Contact Groups</option><option value="merge">Merge Duplicates</option><option value="store">Store Products</option><option value="payment">Payment Gateway</option><option value="forms">Interactive Forms</option><option value="reminders">Payment Reminders</option><option value="analytics">Analytics</option><option value="csat">CSAT Survey</option><option value="api">API Keys</option><option value="webhooks">Webhooks</option><option value="templates">Templates</option><option value="canned">Canned Responses</option><option value="macros">Macros</option><option value="translate">Auto Translate</option><option value="widget">Web Widget</option><option value="email">Email Gateway</option><option value="blacklist">Blacklist</option><option value="files">File Manager</option><option value="calendar">Calendar</option><option value="knowledge">Knowledge Base</option><option value="audit">Audit Log</option><option value="backup">Database Backup</option></select></div>
-        <div class="form-group"><label>{{T "pkg_footermark"}}</label><select name="footermark" class="form-control"><option value="2">Off</option><option value="1">On</option></select></div>
-        <hr><h6 class="text-uppercase text-muted small">Limits</h6>
+        <div class="form-group col-3"><label>{{T "pkg_hidden"}}</label><select name="hidden" class="form-control"><option value="1">{{T "pkg_hidden_hidden"}}</option><option value="2"{{T "pkg_hidden_visible"}}</option></select></div></div>
+        <div class="form-group"><label>{{T "pkg_services"}}</label><select name="services" class="form-control" multiple size="15"><option value="whatsapp">{{T "svc_whatsapp"}}</option><option value="meta">{{T "svc_meta"}}</option><option value="broadcast">{{T "svc_broadcast"}}</option><option value="drips">{{T "svc_drips"}}</option><option value="recurring">{{T "svc_recurring"}}</option><option value="ai">{{T "svc_ai"}}</option><option value="inbox">{{T "svc_inbox"}}</option><option value="contacts">{{T "svc_contacts"}}</option><option value="tags">{{T "svc_tags"}}</option><option value="groups">{{T "svc_groups"}}</option><option value="merge">{{T "svc_merge"}}</option><option value="store">{{T "svc_store"}}</option><option value="payment">{{T "svc_payment"}}</option><option value="forms">{{T "svc_forms"}}</option><option value="reminders">{{T "svc_reminders"}}</option><option value="analytics">{{T "svc_analytics"}}</option><option value="csat">{{T "svc_csat"}}</option><option value="api">{{T "svc_api"}}</option><option value="webhooks">{{T "svc_webhooks"}}</option><option value="templates">{{T "svc_templates"}}</option><option value="canned">{{T "svc_canned"}}</option><option value="macros">{{T "svc_macros"}}</option><option value="translate">{{T "svc_translate"}}</option><option value="widget">{{T "svc_widget"}}</option><option value="email">{{T "svc_email"}}</option><option value="blacklist">{{T "svc_blacklist"}}</option><option value="files">{{T "svc_files"}}</option><option value="calendar">{{T "svc_calendar"}}</option><option value="knowledge">{{T "svc_knowledge"}}</option><option value="audit">{{T "svc_audit"}}</option><option value="backup">{{T "svc_backup"}}</option></select></div>
+        <div class="form-group"><label>{{T "pkg_footermark"}}</label><select name="footermark" class="form-control"><option value="2">{{T "pkg_footermark_off"}}</option><option value="1"{{T "pkg_footermark_on"}}</option></select></div>
+        <hr><h6 class="text-uppercase text-muted small">{{T "pkg_limits"}}</h6>
         <div class="form-row">
-        <div class="form-group col-4"><label>Send</label><input name="send_limit" type="number" class="form-control" value="100"></div>
-        <div class="form-group col-4"><label>Receive</label><input name="receive_limit" type="number" class="form-control" value="100"></div>
-        <div class="form-group col-4"><label>USSD</label><input name="ussd_limit" type="number" class="form-control" value="0"></div></div>
+        <div class="form-group col-4"><label>{{T "pkg_limit_send"}}</label><input name="send_limit" type="number" class="form-control" value="100"></div>
+        <div class="form-group col-4"><label>{{T "pkg_limit_receive"}}</label><input name="receive_limit" type="number" class="form-control" value="100"></div>
+        <div class="form-group col-4"><label>{{T "pkg_limit_ussd"}}</label><input name="ussd_limit" type="number" class="form-control" value="0"></div></div>
         <div class="form-row">
-        <div class="form-group col-4"><label>Device</label><input name="device_limit" type="number" class="form-control" value="1"></div>
-        <div class="form-group col-4"><label>WA Send</label><input name="wa_send_limit" type="number" class="form-control" value="100"></div>
-        <div class="form-group col-4"><label>WA Receive</label><input name="wa_receive_limit" type="number" class="form-control" value="100"></div></div>
+        <div class="form-group col-4"><label>{{T "pkg_limit_device"}}</label><input name="device_limit" type="number" class="form-control" value="1"></div>
+        <div class="form-group col-4"><label>{{T "pkg_limit_wa_send"}}</label><input name="wa_send_limit" type="number" class="form-control" value="100"></div>
+        <div class="form-group col-4"><label>{{T "pkg_limit_wa_receive"}}</label><input name="wa_receive_limit" type="number" class="form-control" value="100"></div></div>
         <div class="form-row">
-        <div class="form-group col-3"><label>WA Acc</label><input name="wa_account_limit" type="number" class="form-control" value="1"></div>
-        <div class="form-group col-3"><label>Contact</label><input name="contact_limit" type="number" class="form-control" value="50"></div>
-        <div class="form-group col-3"><label>Scheduled</label><input name="scheduled_limit" type="number" class="form-control" value="5"></div>
-        <div class="form-group col-3"><label>API Key</label><input name="key_limit" type="number" class="form-control" value="5"></div></div>
+        <div class="form-group col-3"><label>{{T "pkg_limit_wa"}}</label><input name="wa_account_limit" type="number" class="form-control" value="1"></div>
+        <div class="form-group col-3"><label>{{T "pkg_limit_contact"}}</label><input name="contact_limit" type="number" class="form-control" value="50"></div>
+        <div class="form-group col-3"><label>{{T "pkg_limit_scheduled"}}</label><input name="scheduled_limit" type="number" class="form-control" value="5"></div>
+        <div class="form-group col-3"><label>{{T "aik_api_key"}}</label><input name="key_limit" type="number" class="form-control" value="5"></div></div>
         <div class="form-row">
-        <div class="form-group col-4"><label>Webhook</label><input name="webhook_limit" type="number" class="form-control" value="5"></div>
-        <div class="form-group col-4"><label>Action</label><input name="action_limit" type="number" class="form-control" value="5"></div>
-        <div class="form-group col-4"><label>Meta</label><input name="meta_limit" type="number" class="form-control" value="0"></div></div>
+        <div class="form-group col-4"><label>{{T "pkg_limit_webhook"}}</label><input name="webhook_limit" type="number" class="form-control" value="5"></div>
+        <div class="form-group col-4"><label>{{T "pkg_limit_action"}}</label><input name="action_limit" type="number" class="form-control" value="5"></div>
+        <div class="form-group col-4"><label>{{T "pkg_limit_meta"}}</label><input name="meta_limit" type="number" class="form-control" value="0"></div></div>
         <div class="form-row">
-        <div class="form-group col-3"><label>Drips</label><input name="drip_limit" type="number" class="form-control" value="1"></div>
-        <div class="form-group col-3"><label>Recurring</label><input name="recurring_limit" type="number" class="form-control" value="1"></div>
-        <div class="form-group col-3"><label>Forms</label><input name="form_limit" type="number" class="form-control" value="1"></div>
-        <div class="form-group col-3"><label>Templates</label><input name="template_limit" type="number" class="form-control" value="5"></div></div>
+        <div class="form-group col-3"><label>{{T "pkg_limit_drips"}}</label><input name="drip_limit" type="number" class="form-control" value="1"></div>
+        <div class="form-group col-3"><label>{{T "pkg_limit_recurring"}}</label><input name="recurring_limit" type="number" class="form-control" value="1"></div>
+        <div class="form-group col-3"><label>{{T "pkg_limit_forms"}}</label><input name="form_limit" type="number" class="form-control" value="1"></div>
+        <div class="form-group col-3"><label>{{T "pkg_limit_template"}}</label><input name="template_limit" type="number" class="form-control" value="5"></div></div>
         <div class="form-row">
-        <div class="form-group col-3"><label>Canned</label><input name="canned_limit" type="number" class="form-control" value="10"></div>
-        <div class="form-group col-3"><label>Macros</label><input name="macro_limit" type="number" class="form-control" value="5"></div>
-        <div class="form-group col-3"><label>AI Key</label><input name="ai_key_limit" type="number" class="form-control" value="3"></div>
-        <div class="form-group col-3"><label>Knowledge</label><input name="knowledge_limit" type="number" class="form-control" value="10"></div></div>
+        <div class="form-group col-3"><label>{{T "pkg_limit_canned"}}</label><input name="canned_limit" type="number" class="form-control" value="10"></div>
+        <div class="form-group col-3"><label>{{T "pkg_limit_macros"}}</label><input name="macro_limit" type="number" class="form-control" value="5"></div>
+        <div class="form-group col-3"><label>{{T "pkg_limit_ai_key"}}</label><input name="ai_key_limit" type="number" class="form-control" value="3"></div>
+        <div class="form-group col-3"><label>{{T "pkg_limit_knowledge"}}</label><input name="knowledge_limit" type="number" class="form-control" value="10"></div></div>
         <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
       </form></div></div></div>
     <div class="col-12 col-lg-7"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "adm_packages"}}</h4></div>
       {{if .EditID}}<div class="border-bottom p-3 bg-light"><form method="post" action="/admin/packages/edit"><input type="hidden" name="id" value="{{.EditID}}"><h6>Edit #{{.EditID}}: {{.EditName}}</h6>
-        <div class="form-row"><div class="form-group col-8"><label>Name</label><input name="name" class="form-control" value="{{.EditName}}" required></div><div class="form-group col-4"><label>Price</label><input name="price" class="form-control" value="{{.EditPrice}}"></div></div>
-        <hr><h6 class="text-uppercase text-muted small">Limits</h6>
-        <div class="form-row"><div class="form-group col-3"><label>Send</label><input name="send_limit" type="number" class="form-control" value="{{.EditSendLimit}}"></div><div class="form-group col-3"><label>Device</label><input name="device_limit" type="number" class="form-control" value="{{.EditDeviceLimit}}"></div><div class="form-group col-3"><label>WA Acc</label><input name="wa_account_limit" type="number" class="form-control" value="{{.EditWaAccountLimit}}"></div><div class="form-group col-3"><label>Contact</label><input name="contact_limit" type="number" class="form-control" value="{{.EditContactLimit}}"></div></div>
-        <button class="btn btn-primary lift"><i class="la la-save me-1"></i> Update</button> <a href="/admin/packages" class="btn btn-white btn-sm ms-2">Cancel</a></form></div>{{end}}
-      <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>{{T "pkg_price"}}</th><th>Limits</th><th>{{T "col_action"}}</th></tr></thead><tbody>
+        <div class="form-row"><div class="form-group col-8"><label>{{T "col_name"}}</label><input name="name" class="form-control" value="{{.EditName}}" required></div><div class="form-group col-4"><label>{{T "pkg_price"}}</label><input name="price" class="form-control" value="{{.EditPrice}}"></div></div>
+        <hr><h6 class="text-uppercase text-muted small">{{T "pkg_limits"}}</h6>
+        <div class="form-row"><div class="form-group col-3"><label>{{T "pkg_limit_send"}}</label><input name="send_limit" type="number" class="form-control" value="{{.EditSendLimit}}"></div><div class="form-group col-3"><label>{{T "pkg_limit_device"}}</label><input name="device_limit" type="number" class="form-control" value="{{.EditDeviceLimit}}"></div><div class="form-group col-3"><label>{{T "pkg_limit_wa"}}</label><input name="wa_account_limit" type="number" class="form-control" value="{{.EditWaAccountLimit}}"></div><div class="form-group col-3"><label>{{T "pkg_limit_contact"}}</label><input name="contact_limit" type="number" class="form-control" value="{{.EditContactLimit}}"></div></div>
+        <button class="btn btn-primary lift"><i class="la la-save me-1"></i> {{T "pkg_update"}}</button> <a href="/admin/packages" class="btn btn-white btn-sm ms-2">{{T "pkg_cancel"}}</a></form></div>{{end}}
+      <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>{{T "pkg_price"}}</th><th>{{T "pkg_limits"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
         {{range .Packages}}<tr><td>{{.ID}}</td><td><strong>{{.Name}}</strong><br><small class="text-muted">{{.Services}}</small></td><td>{{.Price}}</td><td><small>Dev:{{.DeviceLimit}} WA:{{.WaAccountLimit}} Meta:{{.MetaLimit}} AI:{{.AiKeyLimit}}</small></td><td class="text-nowrap"><a class="btn btn-sm btn-white" href="/admin/packages?edit={{.ID}}"><i class="la la-edit"></i></a> <form method="post" action="/admin/packages/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger"><i class="la la-trash"></i></button></form></td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center">-</td></tr>{{end}}
       </tbody></table></div></div></div>
   </div>
@@ -1895,9 +2023,9 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
 {{if eq .Page "admin_subscriptions"}}
   <div class="row">
     <div class="col-12 col-lg-4"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "sub_add"}}</h4></div><div class="card-body">
-      <form method="post" action="/admin/subscriptions/add"><div class="form-group"><label>User</label><select name="user" class="form-control" required>{{range .Users}}<option value="{{.Email}}">{{.Name}} ({{.Email}})</option>{{else}}<option value="">No users</option>{{end}}</select></div><div class="form-group"><label>{{T "adm_packages"}}</label><select name="pkg" class="form-control">{{range .Packages}}<option value="{{.Name}}">{{.Name}}</option>{{end}}</select></div><div class="form-group"><label>{{T "sub_expire"}}</label><input name="expire" type="date" class="form-control"></div><button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>{{if .EditID}}<a href="/admin/waservers" class="btn btn-white btn-sm ms-2">Batal</a>{{end}}</form></div></div></div>
+      <form method="post" action="/admin/subscriptions/add"><div class="form-group"><label>{{T "col_user"}}</label><select name="user" class="form-control" required>{{range .Users}}<option value="{{.Email}}">{{.Name}} ({{.Email}})</option>{{else}}<option value="">{{T "sub_no_users"}}</option>{{end}}</select></div><div class="form-group"><label>{{T "adm_packages"}}</label><select name="pkg" class="form-control">{{range .Packages}}<option value="{{.Name}}">{{.Name}}</option>{{end}}</select></div><div class="form-group"><label>{{T "sub_expire"}}</label><input name="expire" type="date" class="form-control"></div><button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>{{if .EditID}}<a href="/admin/waservers" class="btn btn-white btn-sm ms-2">{{T "btn_cancel"}}</a>{{end}}</form></div></div></div>
     <div class="col-12 col-lg-8"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "adm_subscriptions"}}</h4></div>
-      <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>User</th><th>{{T "adm_packages"}}</th><th>{{T "sub_expire"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
+      <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_user"}}</th><th>{{T "adm_packages"}}</th><th>{{T "sub_expire"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
         {{range .Subscriptions}}<tr><td>{{.ID}}</td><td>{{.User}}</td><td>{{.Pkg}}</td><td>{{.Expire}}</td><td><form method="post" action="/admin/subscriptions/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center">-</td></tr>{{end}}
       </tbody></table></div></div></div>
   </div>
@@ -1940,7 +2068,7 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
 {{if eq .Page "admin_marketing"}}
   <div class="row">
     <div class="col-12 col-lg-5"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "mkt_add"}}</h4></div><div class="card-body">
-      <form method="post" action="/admin/marketing/add"><div class="form-group"><label>{{T "pg_title"}}</label><input name="title" class="form-control" required></div><div class="form-group"><label>{{T "col_message"}}</label><textarea name="content" class="form-control" rows="4"></textarea></div><button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>{{if .EditID}}<a href="/admin/waservers" class="btn btn-white btn-sm ms-2">Batal</a>{{end}}</form></div></div></div>
+      <form method="post" action="/admin/marketing/add"><div class="form-group"><label>{{T "pg_title"}}</label><input name="title" class="form-control" required></div><div class="form-group"><label>{{T "col_message"}}</label><textarea name="content" class="form-control" rows="4"></textarea></div><button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>{{if .EditID}}<a href="/admin/waservers" class="btn btn-white btn-sm ms-2">{{T "btn_cancel"}}</a>{{end}}</form></div></div></div>
     <div class="col-12 col-lg-7"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "adm_marketing"}}</h4></div>
       <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "pg_title"}}</th><th>{{T "col_time"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
         {{range .Marketings}}<tr><td>{{.ID}}</td><td>{{.Title}}</td><td class="text-muted">{{.Created}}</td><td><form method="post" action="/admin/marketing/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
@@ -1973,7 +2101,7 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
   </div>
   <div class="row">
     {{if .EditID}}
-    <div class="col-12 col-lg-5"><div class="card border-warning"><div class="card-header bg-warning bg-opacity-10"><h5 class="card-header-title mb-0">Edit WA Server #{{.EditID}}</h5></div><div class="card-body">
+    <div class="col-12 col-lg-5"><div class="card border-warning"><div class="card-header bg-warning bg-opacity-10"><h5 class="card-header-title mb-0">{{T "was_edit_title"}} #{{.EditID}}</h5></div><div class="card-body">
       <form method="post" action="/admin/waservers/edit"><input type="hidden" name="id" value="{{.EditID}}">
     {{else}}
     <div class="col-12 col-lg-5"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "was_add"}}</h4></div><div class="card-body">
@@ -1982,14 +2110,14 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
         <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" value="{{.EditName}}" required></div>
         <div class="form-row"><div class="form-group col-6"><label>{{T "was_accounts"}}</label><input name="accounts" type="number" class="form-control" value="{{if .EditID}}{{.EditContent}}{{else}}100{{end}}"></div>
         <div class="form-group col-6"><label>{{T "adm_packages"}}</label><select name="packages" class="form-control" multiple>{{range .Packages}}<option value="{{.Name}}" {{if and $.EditID (contains $.EditGroups .Name)}}selected{{end}}>{{.Name}}</option>{{end}}</select></div></div>
-        <div class="form-row"><div class="form-group col-8"><label>URL</label><input name="url" class="form-control" placeholder="http://127.0.0.1" value="{{.EditContent}}"></div>
-        <div class="form-group col-4"><label>Port</label><input name="port" class="form-control" placeholder="8080" value="{{.EditPhone}}"></div></div>
-        <div class="form-group"><label>Secret</label><input name="secret" class="form-control" value="{{.EditKeyword}}"></div>
-        <button class="btn btn-primary lift"><i class="la la-save me-1"></i> {{if .EditID}}Save{{else}}{{T "ar_add_btn"}}{{end}}</button>
-        {{if .EditID}}<a href="/admin/waservers" class="btn btn-white ms-2">Batal</a>{{end}}
+        <div class="form-row"><div class="form-group col-8"><label>{{T "was_url"}}</label><input name="url" class="form-control" placeholder="http://127.0.0.1" value="{{.EditContent}}"></div>
+        <div class="form-group col-4"><label>{{T "was_port"}}</label><input name="port" class="form-control" placeholder="8080" value="{{.EditPhone}}"></div></div>
+        <div class="form-group"><label>{{T "was_secret"}}</label><input name="secret" class="form-control" value="{{.EditKeyword}}"></div>
+        <button class="btn btn-primary lift"><i class="la la-save me-1"></i> {{if .EditID}}{{T "was_save"}}{{else}}{{T "ar_add_btn"}}{{end}}</button>
+        {{if .EditID}}<a href="/admin/waservers" class="btn btn-white ms-2">{{T "btn_cancel"}}</a>{{end}}
       </form></div></div></div>
     <div class="col-12 col-lg-7"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "adm_waservers"}}</h4></div>
-      <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>URL</th><th>{{T "was_accounts"}}</th><th>Packages</th><th>{{T "col_action"}}</th></tr></thead><tbody>
+      <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>URL</th><th>{{T "was_accounts"}}</th><th>{{T "col_packages"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
         {{range .WaServers}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.URL}}:{{.Port}}</td><td>{{.Accounts}}</td><td><span class="badge bg-info bg-opacity-10 text-info small">{{.Packages}}</span></td><td><a class="btn btn-sm btn-white px-2" href="/admin/waservers?edit={{.ID}}">✏️</a><form method="post" action="/admin/waservers/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="6" class="text-muted text-center">-</td></tr>{{end}}
       </tbody></table></div></div></div>
   </div>
@@ -2015,7 +2143,7 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
 {{if eq .Page "admin_shorteners"}}
   <div class="row">
     <div class="col-12 col-lg-4"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "sh_add"}}</h4></div><div class="card-body">
-      <form method="post" action="/admin/shorteners/add"><div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div><button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>{{if .EditID}}<a href="/admin/waservers" class="btn btn-white btn-sm ms-2">Batal</a>{{end}}</form></div></div></div>
+      <form method="post" action="/admin/shorteners/add"><div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div><button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>{{if .EditID}}<a href="/admin/waservers" class="btn btn-white btn-sm ms-2">{{T "btn_cancel"}}</a>{{end}}</form></div></div></div>
     <div class="col-12 col-lg-8"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "adm_shorteners"}}</h4></div>
       <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
         {{range .Shorteners}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td><form method="post" action="/admin/shorteners/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="3" class="text-muted text-center">-</td></tr>{{end}}
@@ -2026,7 +2154,7 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
 {{if eq .Page "admin_plugins"}}
   <div class="row">
     <div class="col-12 col-lg-4"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "plg_add"}}</h4></div><div class="card-body">
-      <form method="post" action="/admin/plugins/add"><div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div><div class="form-group"><label>{{T "plg_dir"}}</label><input name="dir" class="form-control"></div><button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>{{if .EditID}}<a href="/admin/waservers" class="btn btn-white btn-sm ms-2">Batal</a>{{end}}</form></div></div></div>
+      <form method="post" action="/admin/plugins/add"><div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div><div class="form-group"><label>{{T "plg_dir"}}</label><input name="dir" class="form-control"></div><button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>{{if .EditID}}<a href="/admin/waservers" class="btn btn-white btn-sm ms-2">{{T "btn_cancel"}}</a>{{end}}</form></div></div></div>
     <div class="col-12 col-lg-8"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "adm_plugins"}}</h4></div>
       <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>{{T "plg_dir"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
         {{range .Plugins}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.Dir}}</td><td><form method="post" action="/admin/plugins/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
@@ -2036,26 +2164,26 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
 
 {{if eq .Page "admin_meta"}}
   <div class="row">
-    <div class="col-12 col-lg-4"><div class="card"><div class="card-header"><h4 class="card-header-title">Tambah Meta Account</h4></div><div class="card-body">
+    <div class="col-12 col-lg-4"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "meta_add_title"}}</h4></div><div class="card-body">
       <form method="post" action="/admin/meta/add">
-        <div class="form-group"><label>Nama</label><input name="name" class="form-control" placeholder="My Business" required></div>
-        <div class="form-group"><label>Phone Number ID</label><input name="phone_number_id" class="form-control" placeholder="123456789..." required></div>
-        <div class="form-group"><label>Access Token</label><input name="access_token" class="form-control" placeholder="EAA..." required></div>
-        <div class="form-group"><label>App ID</label><input name="app_id" class="form-control" placeholder="123456..."></div>
-        <div class="form-group"><label>App Secret</label><input name="app_secret" class="form-control" placeholder="abc123..."></div>
-        <div class="form-group"><label>Verify Token</label><input name="verify_token" class="form-control" placeholder="chatgo_webhook_123"></div>
-        <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> Tambah</button>
+        <div class="form-group"><label>{{T "col_name"}}</label><input name="name" class="form-control" placeholder="My Business" required></div>
+        <div class="form-group"><label>{{T "meta_phone_id"}}</label><input name="phone_number_id" class="form-control" placeholder="123456789..." required></div>
+        <div class="form-group"><label>{{T "meta_access_token"}}</label><input name="access_token" class="form-control" placeholder="EAA..." required></div>
+        <div class="form-group"><label>{{T "meta_app_id"}}</label><input name="app_id" class="form-control" placeholder="123456..."></div>
+        <div class="form-group"><label>{{T "meta_app_secret"}}</label><input name="app_secret" class="form-control" placeholder="abc123..."></div>
+        <div class="form-group"><label>{{T "meta_verify_token"}}</label><input name="verify_token" class="form-control" placeholder="chatgo_webhook_123"></div>
+        <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
       </form></div></div></div>
-    <div class="col-12 col-lg-8"><div class="card"><div class="card-header"><h4 class="card-header-title">Meta Accounts</h4></div>
-      <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Nama</th><th>Phone ID</th><th>Action</th></tr></thead><tbody>
-        {{range .MetaAccounts}}<tr><td>{{.ID}}</td><td>{{.Name}} <span class="badge badge-soft-primary" style="font-size:9px">Meta</span></td><td>{{.PhoneNumberID}}</td><td><form method="post" action="/admin/meta/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">Delete</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
+    <div class="col-12 col-lg-8"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "meta_list_title"}}</h4></div>
+      <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>{{T "meta_phone_id"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
+        {{range .MetaAccounts}}<tr><td>{{.ID}}</td><td>{{.Name}} <span class="badge badge-soft-primary" style="font-size:9px">Meta</span></td><td>{{.PhoneNumberID}}</td><td><form method="post" action="/admin/meta/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
       </tbody></table></div></div></div>
   </div>
-  <div class="card mt-3"><div class="card-header"><h4 class="card-header-title">Webhook URL</h4></div>
+  <div class="card mt-3"><div class="card-header"><h4 class="card-header-title">{{T "meta_webhook_title"}}</h4></div>
   <div class="card-body">
-    <p class="small text-muted">Copy URL ini ke Facebook Developer Console &gt; WhatsApp &gt; Configuration &gt; Webhook:</p>
+    <p class="small text-muted">{{T "meta_webhook_desc"}}</p>
     <code id="webhookUrl" style="word-break:break-all">{{.AppURL}}/webhook/meta</code>
-    <p class="small text-muted mt-2">Verify Token: sesuai yang diisi di form atas.</p>
+    <p class="small text-muted mt-2">{{T "meta_webhook_verify"}}</p>
 </div></div>
 <script>
 (function(){
@@ -2079,17 +2207,17 @@ onScroll();
 
 {{if eq .Page "admin_metatemplates"}}
   <div class="row">
-    <div class="col-12 col-lg-4"><div class="card"><div class="card-header"><h4 class="card-header-title">Tambah Template</h4></div><div class="card-body">
+    <div class="col-12 col-lg-4"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "meta_tpl_add"}}</h4></div><div class="card-body">
       <form method="post" action="/admin/metatemplates/add">
-        <div class="form-group"><label>Nama Template</label><input name="name" class="form-control" placeholder="hello_world" required></div>
-        <div class="form-group"><label>Language</label><select name="language" class="form-control"><option value="id">Indonesia</option><option value="en">English</option><option value="en_US">English (US)</option></select></div>
-        <div class="form-group"><label>Category</label><select name="category" class="form-control"><option value="marketing">Marketing</option><option value="utility">Utility</option><option value="authentication">Authentication</option></select></div>
-        <div class="form-group"><label>Components (JSON)</label><textarea name="components" class="form-control" rows="4" placeholder='[{"type":"body","text":"Halo {{1}}, pesanan {{2}} sudah diproses"}]'></textarea></div>
-        <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> Tambah</button>
+        <div class="form-group"><label>{{T "meta_tpl_name"}}</label><input name="name" class="form-control" placeholder="hello_world" required></div>
+        <div class="form-group"><label>{{T "meta_tpl_lang"}}</label><select name="language" class="form-control"><option value="id">{{T "meta_tpl_lang_id"}}</option><option value="en">{{T "meta_tpl_lang_en"}}</option><option value="en_US">{{T "meta_tpl_lang_en_us"}}</option></select></div>
+        <div class="form-group"><label>{{T "meta_tpl_cat"}}</label><select name="category" class="form-control"><option value="marketing">{{T "meta_tpl_cat_marketing"}}</option><option value="utility">{{T "meta_tpl_cat_utility"}}</option><option value="authentication">{{T "meta_tpl_cat_auth"}}</option></select></div>
+        <div class="form-group"><label>{{T "meta_tpl_comp"}}</label><textarea name="components" class="form-control" rows="4" placeholder='[{"type":"body","text":"Halo {{1}}, pesanan {{2}} sudah diproses"}]'></textarea></div>
+        <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
       </form></div></div></div>
-    <div class="col-12 col-lg-8"><div class="card"><div class="card-header"><h4 class="card-header-title">Templates</h4></div>
-      <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>Nama</th><th>Lang</th><th>Category</th><th>Action</th></tr></thead><tbody>
-        {{range .MetaTemplates}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.Language}}</td><td>{{.Category}}</td><td><form method="post" action="/admin/metatemplates/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">Delete</button></form></td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center">-</td></tr>{{end}}
+    <div class="col-12 col-lg-8"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "meta_tpl_list"}}</h4></div>
+      <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>{{T "meta_tpl_lang"}}</th><th>{{T "meta_tpl_cat"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
+        {{range .MetaTemplates}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.Language}}</td><td>{{.Category}}</td><td><form method="post" action="/admin/metatemplates/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center">-</td></tr>{{end}}
       </tbody></table></div></div></div>
   </div>
 {{end}}
@@ -2156,8 +2284,8 @@ onScroll();
 <div class="inbox-split" id="inboxSplit">
 <div class="panel-left">
 <div style="padding:12px 16px;background:#f0f2f5;border-bottom:1px solid #e0e0e0;display:flex;justify-content:space-between;align-items:center">
-<strong>Chat{{if gt .UnreadCount 0}} <span class="badge badge-danger">{{.UnreadCount}}</span>{{end}}</strong>
-<div style="width:180px"><input type="text" id="inboxSearch" class="form-control form-control-sm" placeholder="Cari..."></div>
+<strong>{{T "inbox_chat_title"}}{{if gt .UnreadCount 0}} <span class="badge badge-danger">{{.UnreadCount}}</span>{{end}}</strong>
+<div style="width:180px"><input type="text" id="inboxSearch" class="form-control form-control-sm" placeholder="{{T "inbox_search"}}"></div>
 </div>
 <div style="overflow-y:auto;flex:1" id="convList">
 {{range .InboxConversations}}
@@ -2166,10 +2294,10 @@ onScroll();
 <div class="flex-grow-1 min-w-0">
 <div class="d-flex justify-content-between"><span class="conv-name">{{if .Name}}{{.Name}}{{else}}+{{.Phone}}{{end}}</span><span class="conv-time">{{.LastTime}}</span></div>
 <div class="d-flex align-items-center gap-2"><span class="conv-msg">{{.LastMsg}}</span>{{if gt .Unread 0}}<span class="badge badge-pill" style="background:#25d366;font-size:10px;min-width:20px">{{.Unread}}</span>{{end}}</div>
-</div></div>{{else}}<div class="text-center text-muted py-4">Belum ada percakapan</div>{{end}}
+</div></div>{{else}}<div class="text-center text-muted py-4">{{T "inbox_empty"}}</div>{{end}}
 </div></div>
 <div class="panel-right" id="chatPanel">
-<div class="chat-empty" id="chatEmpty"><i class="la la-comments"></i><div>Pilih percakapan untuk mulai chat</div></div>
+<div class="chat-empty" id="chatEmpty"><i class="la la-comments"></i><div>{{T "inbox_select_hint"}}</div></div>
 <div id="chatView" style="display:none;flex-direction:column;height:100%">
 <div class="chat-header" id="chatHeader">
 <button class="btn btn-sm d-md-none" onclick="closeChat()" style="border:none;background:none;font-size:20px">&larr;</button>
@@ -2181,7 +2309,7 @@ onScroll();
 <div class="chat-area" id="chatMessages"></div>
 <div class="chat-footer">
 <div class="chat-input-wrap">
-<textarea id="chatInput" rows="1" placeholder="Ketik pesan..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMsg()}"></textarea>
+<textarea id="chatInput" rows="1" placeholder="{{T "inbox_chat_ph"}}" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMsg()}"></textarea>
 <button onclick="sendChatMsg()"><i class="la la-send" style="font-size:18px"></i></button>
 </div></div></div></div></div>
 <script>
@@ -2202,7 +2330,7 @@ function closeChat(){document.getElementById('chatPanel').classList.remove('open
 function loadMessages(){
 fetch('/inbox/messages?phone='+encodeURIComponent(chatPhone)).then(function(r){return r.json()}).then(function(msgs){
 var box=document.getElementById('chatMessages');
-if(!msgs||!msgs.length){box.innerHTML='<div class="text-center text-muted py-4">Belum ada pesan</div>';scrollChat();return}
+if(!msgs||!msgs.length){box.innerHTML='<div class="text-center text-muted py-4">{{T "inbox_no_messages"}}</div>';scrollChat();return}
 var html='';
 for(var i=0;i<msgs.length;i++){
 var m=msgs[i],side=m.type==='sent'?'flex-end':'flex-start';
@@ -2264,16 +2392,16 @@ scrollChat();
 <h6 class="mb-0 d-flex align-items-center gap-2">
 <a href="/inbox" class="text-decoration-none text-muted">&larr;</a>
 <div class="avatar {{if .IsGroup}}group{{else}}person{{end}}" style="width:36px;height:36px;font-size:13px">{{if .ChatName}}{{slice .ChatName 0 1}}{{else}}+{{end}}</div>
-<div><strong>{{if .ChatName}}{{.ChatName}}{{else}}+{{.Phone}}{{end}}</strong>{{if .IsGroup}}<small class="text-success ms-1">Group</small>{{end}}{{if .Channel}}<small class="badge badge-soft-primary ms-1">{{.Channel}}</small>{{end}}</div>
+<div><strong>{{if .ChatName}}{{.ChatName}}{{else}}+{{.Phone}}{{end}}</strong>{{if .IsGroup}}<small class="text-success ms-1">{{T "type_group"}}</small>{{end}}{{if .Channel}}<small class="badge badge-soft-primary ms-1">{{.Channel}}</small>{{end}}</div>
 </h6>
 <div class="d-flex gap-2 align-items-center">
 <select id="chatChannel" class="form-select form-select-sm" style="width:auto;font-size:12px" onchange="onChannelChange()">
-<option value="whatsmeow">WA</option>
-{{if .MetaAccounts}}<option value="meta">Meta</option>{{end}}
+<option value="whatsmeow">{{T "inbox_wa_channel"}}</option>
+{{if .MetaAccounts}}<option value="meta">{{T "inbox_meta_channel"}}</option>{{end}}
 </select>
 <select id="chatAccountPhone" class="form-select form-select-sm" style="width:auto;display:inline"> {{range .ConnectedAccounts}}{{if eq .Status "connected"}}<option value="+{{.Phone}}">+{{.Phone}}</option>{{end}}{{end}}</select>
 <select id="chatMetaAccount" class="form-select form-select-sm" style="width:auto;display:none"> {{range .MetaAccounts}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select>
-{{if .Users}}<form method="post" action="/inbox/assign" style="display:inline" class="me-1"><input type="hidden" name="phone" value="{{.Phone}}"><select name="agent_id" class="form-select form-select-sm" style="width:auto;font-size:11px" onchange="this.form.submit()"><option value="0">Unassigned</option>{{range .Users}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select></form><form method="post" action="/inbox/close" style="display:inline"><input type="hidden" name="phone" value="{{.Phone}}"><button class="btn btn-sm btn-outline-danger" style="font-size:11px;padding:2px 8px">Close</button></form>{{end}}</div>
+{{if .Users}}<form method="post" action="/inbox/assign" style="display:inline" class="me-1"><input type="hidden" name="phone" value="{{.Phone}}"><select name="agent_id" class="form-select form-select-sm" style="width:auto;font-size:11px" onchange="this.form.submit()"><option value="0">{{T "inbox_unassigned"}}</option>{{range .Users}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select></form><form method="post" action="/inbox/close" style="display:inline"><input type="hidden" name="phone" value="{{.Phone}}"><button class="btn btn-sm btn-outline-danger" style="font-size:11px;padding:2px 8px">{{T "inbox_close_btn"}}</button></form>{{end}}</div>
 </div>
 <div class="card-body p-0">
 <div class="chat-area" id="chatMessages">
@@ -2285,18 +2413,18 @@ scrollChat();
 </div>
 </div>
 {{else}}
-<div class="text-center text-muted py-4">Belum ada pesan. Kirim pesan pertama!</div>
+<div class="text-center text-muted py-4">{{T "inbox_chat_empty"}}</div>
 {{end}}
 </div>
 </div>
 <div class="card-footer bg-white border-top" style="padding:8px 16px">
 {{if .Notes}}<div class="mb-2" style="max-height:100px;overflow-y:auto">{{range .Notes}}<div class="small text-muted mb-1"><i class="la la-sticky-note me-1"></i> {{.Note}} <span class="text-muted" style="font-size:10px">{{.Created}}</span></div>{{end}}</div>{{end}}
 <div class="d-flex gap-1 mb-1">
-  <form method="post" action="/inbox/note" class="d-flex gap-1 flex-grow-1"><input type="hidden" name="phone" value="{{.Phone}}"><input name="note" class="form-control form-control-sm" placeholder="Tambah catatan internal..." style="font-size:12px"><button class="btn btn-sm btn-outline-secondary" style="font-size:11px"><i class="la la-sticky-note"></i></button></form>
+  <form method="post" action="/inbox/note" class="d-flex gap-1 flex-grow-1"><input type="hidden" name="phone" value="{{.Phone}}"><input name="note" class="form-control form-control-sm" placeholder="{{T "inbox_note_ph"}}" style="font-size:12px"><button class="btn btn-sm btn-outline-secondary" style="font-size:11px"><i class="la la-sticky-note"></i></button></form>
 </div>
 <form id="chatForm" onsubmit="return sendChat(event)">
 <div class="chat-input-group">
-<textarea id="chatInput" name="message" class="form-control" placeholder="Ketik pesan..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat(event)}"></textarea>
+<textarea id="chatInput" name="message" class="form-control" placeholder="{{T "inbox_chat_ph"}}" rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat(event)}"></textarea>
 <input type="hidden" name="phone" value="{{.Phone}}">
 <button type="submit" id="sendBtn"><i class="la la-paper-plane"></i></button>
 </div>
@@ -2345,7 +2473,7 @@ return false;
 
 function loadMessages(){
 fetch('/inbox/messages?phone='+encodeURIComponent(chatPhone)).then(function(r){return r.json()}).then(function(msgs){
-if(!msgs||!msgs.length){chatBox.innerHTML='<div class="text-center text-muted py-4">Belum ada pesan</div>';return}
+if(!msgs||!msgs.length){chatBox.innerHTML='<div class="text-center text-muted py-4">{{T "inbox_no_messages"}}</div>';return}
 var html='';
 for(var i=0;i<msgs.length;i++){
 var m=msgs[i];
@@ -2403,25 +2531,25 @@ pre code{font-size:13px}
 </style>
 <div class="row">
 <div class="col-12 col-lg-3"><div class="docs-nav">
-<a href="#quick">Quick Start</a>
-<a href="#wa">Hubungkan WA</a>
-<a href="#contacts">Kontak</a>
-<a href="#broadcast">Broadcast</a>
-<a href="#drip">Drip</a>
-<a href="#ai">AI Auto Reply</a>
-<a href="#inbox">Inbox</a>
-<a href="#store">WA Store</a>
-<a href="#payment">Payment</a>
-<a href="#team">Team Support</a>
-<a href="#analytics">Analytics</a>
-<a href="#tools">Tools</a>
-<a href="#api">API</a>
+<a href="#quick">{{T "docs_nav_quick"}}</a>
+<a href="#wa">{{T "docs_nav_wa"}}</a>
+<a href="#contacts">{{T "docs_nav_contacts"}}</a>
+<a href="#broadcast">{{T "docs_nav_broadcast"}}</a>
+<a href="#drip">{{T "docs_nav_drip"}}</a>
+<a href="#ai">{{T "docs_nav_ai"}}</a>
+<a href="#inbox">{{T "docs_nav_inbox"}}</a>
+<a href="#store">{{T "docs_nav_store"}}</a>
+<a href="#payment">{{T "docs_nav_payment"}}</a>
+<a href="#team">{{T "docs_nav_team"}}</a>
+<a href="#analytics">{{T "docs_nav_analytics"}}</a>
+<a href="#tools">{{T "docs_nav_tools"}}</a>
+<a href="#api">{{T "docs_nav_api"}}</a>
 </div></div>
 <div class="col-12 col-lg-9">
 
 <div class="docs-section" id="quick">
-<h3>Quick Start</h3>
-<p>Demo: <code>{{.AppEmail}}</code> / <code>password</code></p>
+<h3>{{T "docs_quick_title"}}</h3>
+<p>{{T "landing_demo_label"}} <code>{{.AppEmail}}</code> / <code>password</code></p>
 <div class="docs-step"><strong>1. Hubungkan WA:</strong> Buka WhatsApp di HP → Perangkat Tertaut → Tautkan Perangkat. Di ChatGo: buka <code>/wa</code> → Tambah Akun → Scan QR.</div>
 <div class="docs-step"><strong>2. Tambah Kontak:</strong> <code>/contacts</code> → import CSV atau tambah manual.</div>
 <div class="docs-step"><strong>3. Kirim Broadcast:</strong> <code>/broadcast</code> → pilih grup → tulis pesan → kirim massal.</div>
@@ -2572,29 +2700,29 @@ n.forEach(function(a){a.addEventListener('click',function(e){e.preventDefault();
     <div class="col-12 col-lg-5">
       <div class="card"><div class="card-header"><h4 class="card-header-title">{{T "kb_add"}}</h4></div><div class="card-body">
         <form method="post" action="/knowledge/add">
-          <div class="form-group"><label>{{T "kb_title"}}</label><input name="title" class="form-control" placeholder="{{T "ar_faq_tab"}} Produk" required></div>
+          <div class="form-group"><label>{{T "kb_title"}}</label><input name="title" class="form-control" placeholder="{{T "ar_faq_tab"}}" required></div>
           <div class="form-group"><label>{{T "kb_question"}}</label><input name="question" class="form-control" placeholder="{{T "kb_question_dot"}}..." required></div>
           <div class="form-group"><label>{{T "kb_answer"}}</label><textarea name="answer" class="form-control" rows="3" placeholder="{{T "kb_answer_dot"}}..." required></textarea></div>
-          <div class="form-group"><label>{{T "kb_category"}}</label><input name="category" class="form-control" placeholder="produk, harga"></div>
+          <div class="form-group"><label>{{T "kb_category"}}</label><input name="category" class="form-control" placeholder="{{T "kb_placeholder_category"}}"></div>
           <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
         </form>
         <hr class="my-3">
         <form method="post" action="/knowledge/import" enctype="multipart/form-data">
           <label class="text-muted small mb-2 d-block">{{T "kb_import"}}</label>
-          <div class="input-group"><input type="text" name="title" class="form-control" placeholder="Judul (opsional)"><input type="file" name="file" class="form-control" accept=".csv,.txt" required><button class="btn btn-white">{{T "kb_upload"}}</button></div>
+<div class="input-group"><input type="text" name="title" class="form-control" placeholder="{{T "kb_placeholder_title"}}"><input type="file" name="file" class="form-control" accept=".csv,.txt" required><button class="btn btn-white">{{T "kb_upload"}}</button></div>
           <small class="form-text text-muted">{{T "kb_csv_hint"}} <a href="/web/sample-knowledge.csv" target="_blank">{{T "kb_sample"}}</a></small>
         </form>
         <hr class="my-3">
         <form method="post" action="/knowledge/url">
           <label class="text-muted small mb-2 d-block">{{T "kb_url"}}</label>
-          <div class="input-group"><input type="text" name="title" class="form-control" placeholder="Judul (opsional)"><input type="url" name="url" class="form-control" placeholder="https://..." required><button class="btn btn-white">{{T "kb_train"}}</button></div>
+<div class="input-group"><input type="text" name="title" class="form-control" placeholder="{{T "kb_placeholder_title"}}"><input type="url" name="url" class="form-control" placeholder="https://..." required><button class="btn btn-white">{{T "kb_train"}}</button></div>
           <small class="form-text text-muted">{{T "kb_url_hint"}}</small>
         </form>
         <hr class="my-3">
         <form method="post" action="/knowledge/pdf" enctype="multipart/form-data">
-          <label class="text-muted small mb-2 d-block">📄 Upload PDF</label>
-          <div class="input-group"><input type="text" name="title" class="form-control" placeholder="Judul (opsional)"><input type="file" name="file" class="form-control" accept=".pdf" required><button class="btn btn-white">Upload</button></div>
-          <small class="form-text text-muted">Upload PDF (brosur, daftar harga). Teks akan diekstrak otomatis.</small>
+          <label class="text-muted small mb-2 d-block">📄 {{T "kb_upload_pdf"}}</label>
+          <div class="input-group"><input type="text" name="title" class="form-control" placeholder="{{T "kb_placeholder_title"}}"><input type="file" name="file" class="form-control" accept=".pdf" required><button class="btn btn-white">{{T "kb_upload"}}</button></div>
+          <small class="form-text text-muted">{{T "kb_pdf_hint"}}</small>
         </form>
       </div></div>
     </div>
@@ -2613,5 +2741,15 @@ n.forEach(function(a){a.addEventListener('click',function(e){e.preventDefault();
       </div>
     </div>
   </div>
+{{end}}
+{{if eq .Page "faq"}}
+<div class="row">
+<div class="col-12 col-lg-5"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "faq_add_title"}}</h4></div><div class="card-body">
+<form method="post" action="/faq/add"><div class="form-group"><label>{{T "col_question"}}</label><input name="question" class="form-control" placeholder="{{T "faq_question_ph"}}" required></div><div class="form-group"><label>{{T "col_answer"}}</label><textarea name="answer" class="form-control" rows="3" placeholder="{{T "faq_answer_ph"}}" required></textarea></div><button class="btn btn-primary"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button></form>
+<hr><h6>{{T "kb_import"}}</h6><form method="post" action="/faq/import" enctype="multipart/form-data"><div class="form-group"><label>{{T "faq_import_csv"}}</label><input type="file" name="file" class="form-control" accept=".csv" required></div><button class="btn btn-outline-primary btn-sm"><i class="la la-upload me-1"></i> {{T "btn_import"}}</button></form>
+</div></div></div>
+<div class="col-12 col-lg-7"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "faq_list_title"}} <small class="text-muted">— {{T "faq_subtitle"}}</small></h4></div>
+<div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_question"}}</th><th>{{T "col_answer"}}</th><th></th></tr></thead><tbody>
+{{range .FAQ}}<tr><td>{{.id}}</td><td>{{.question}}</td><td>{{.answer}}</td><td><form method="post" action="/faq/delete" style="display:inline"><input type="hidden" name="id" value="{{.id}}"><button class="btn btn-sm btn-danger">&times;</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">{{T "faq_empty"}}</td></tr>{{end}}</tbody></table></div></div></div></div>
 {{end}}{{end}}`
 

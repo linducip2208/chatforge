@@ -37,14 +37,14 @@ func registerAdminRoutes(mux *http.ServeMux) {
 		enc, _ := secret.Encrypt(r.FormValue("apikey"))
 		uid, _ := strconv.ParseInt(r.Header.Get("X-User-ID"), 10, 64)
 		db.AddAiKey(uid, r.FormValue("name"), r.FormValue("provider"), r.FormValue("model"), enc, r.FormValue("base_url"), r.FormValue("system_prompt"))
-	}, "/ai/keys"))
+	}, "/autoreply"))
 	mux.HandleFunc("/ai/keys/delete", a(func(w http.ResponseWriter, r *http.Request) {
 		id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
 		if id > 0 {
 			uid, _ := strconv.ParseInt(r.Header.Get("X-User-ID"), 10, 64)
 			db.DeleteAiKey(uid, id)
 		}
-		http.Redirect(w, r, "/ai/keys", http.StatusSeeOther)
+		http.Redirect(w, r, "/autoreply", http.StatusSeeOther)
 	}))
 	// Knowledge base
 	mux.HandleFunc("/knowledge", ap("knowledge"))
@@ -56,12 +56,12 @@ func registerAdminRoutes(mux *http.ServeMux) {
 		category := r.FormValue("category")
 		rows, _ := json.Marshal([]map[string]string{{"question": question, "answer": answer, "category": category}})
 		db.AddKnowledge(title, string(rows))
-	}, "/knowledge"))
-	mux.HandleFunc("/knowledge/delete", acd(func(id int64) { db.DeleteKnowledge(id) }, "/knowledge"))
+	}, "/autoreply"))
+	mux.HandleFunc("/knowledge/delete", acd(func(id int64) { db.DeleteKnowledge(id) }, "/autoreply"))
 	mux.HandleFunc("/knowledge/toggle", a(func(w http.ResponseWriter, r *http.Request) {
 		id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
 		if id > 0 { db.ToggleKnowledge(id) }
-		http.Redirect(w, r, "/knowledge", http.StatusSeeOther)
+		http.Redirect(w, r, "/autoreply", http.StatusSeeOther)
 	}))
 	// CSV import
 	mux.HandleFunc("/knowledge/import", a(handleKnowledgeImport))
@@ -76,8 +76,8 @@ func registerAdminRoutes(mux *http.ServeMux) {
 	}, "/autoreply"))
 	mux.HandleFunc("/ai/training/delete", acd(func(id int64) { db.DeleteAiTraining(id) }, "/autoreply"))
 	mux.HandleFunc("/ai/plugins", ap("ai_plugins"))
-	mux.HandleFunc("/ai/plugins/add", acp(func(r *http.Request) { db.AddAiPlugin(r.FormValue("name"), r.FormValue("endpoint")) }, "/ai/plugins"))
-	mux.HandleFunc("/ai/plugins/delete", acd(func(id int64) { db.DeleteAiPlugin(id) }, "/ai/plugins"))
+	mux.HandleFunc("/ai/plugins/add", acp(func(r *http.Request) { db.AddAiPlugin(r.FormValue("name"), r.FormValue("endpoint")) }, "/autoreply"))
+	mux.HandleFunc("/ai/plugins/delete", acd(func(id int64) { db.DeleteAiPlugin(id) }, "/autoreply"))
 
 	// Admin
 	mux.HandleFunc("/admin", ap("admin"))
@@ -286,7 +286,7 @@ func registerAdminRoutes(mux *http.ServeMux) {
 
 func handleKnowledgeImport(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Redirect(w, r, "/knowledge", http.StatusSeeOther)
+		http.Redirect(w, r, "/autoreply", http.StatusSeeOther)
 		return
 	}
 	title := r.FormValue("title")
@@ -295,14 +295,14 @@ func handleKnowledgeImport(w http.ResponseWriter, r *http.Request) {
 	}
 	file, _, err := r.FormFile("file")
 	if err != nil {
-		http.Redirect(w, r, "/knowledge?msg=File+required", http.StatusSeeOther)
+		http.Redirect(w, r, "/autoreply?msg=File+required", http.StatusSeeOther)
 		return
 	}
 	defer file.Close()
 	reader := csv.NewReader(file)
 	headers, err := reader.Read()
 	if err != nil {
-		http.Redirect(w, r, "/knowledge?msg=Invalid+CSV", http.StatusSeeOther)
+		http.Redirect(w, r, "/autoreply?msg=Invalid+CSV", http.StatusSeeOther)
 		return
 	}
 	colQ := -1; colA := -1; colC := -1
@@ -315,7 +315,7 @@ func handleKnowledgeImport(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if colQ < 0 || colA < 0 {
-		http.Redirect(w, r, "/knowledge?msg=CSV+must+have+question+and+answer+columns", http.StatusSeeOther)
+		http.Redirect(w, r, "/autoreply?msg=CSV+must+have+question+and+answer+columns", http.StatusSeeOther)
 		return
 	}
 	var rows []map[string]string
@@ -331,12 +331,12 @@ func handleKnowledgeImport(w http.ResponseWriter, r *http.Request) {
 		rows = append(rows, map[string]string{"question": q, "answer": a, "category": c})
 	}
 	if len(rows) == 0 {
-		http.Redirect(w, r, "/knowledge?msg=No+valid+rows", http.StatusSeeOther)
+		http.Redirect(w, r, "/autoreply?msg=No+valid+rows", http.StatusSeeOther)
 		return
 	}
 	content, _ := json.Marshal(map[string]interface{}{"rows": rows})
 	db.AddKnowledge(title, string(content))
-	http.Redirect(w, r, "/knowledge?msg=Imported+"+strconv.Itoa(len(rows))+"+rows", http.StatusSeeOther)
+	http.Redirect(w, r, "/autoreply?msg=Imported+"+strconv.Itoa(len(rows))+"+rows", http.StatusSeeOther)
 }
 
 func safeGet(record []string, i int) string {
@@ -346,24 +346,23 @@ func safeGet(record []string, i int) string {
 
 func handleKnowledgeURL(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Redirect(w, r, "/knowledge", http.StatusSeeOther)
+		http.Redirect(w, r, "/autoreply", http.StatusSeeOther)
 		return
 	}
 	title := r.FormValue("title")
 	urlStr := strings.TrimSpace(r.FormValue("url"))
 	if urlStr == "" {
-		http.Redirect(w, r, "/knowledge?msg=URL+required", http.StatusSeeOther)
+		http.Redirect(w, r, "/autoreply?msg=URL+required", http.StatusSeeOther)
 		return
 	}
 	resp, err := http.DefaultClient.Get(urlStr)
 	if err != nil {
-		http.Redirect(w, r, "/knowledge?msg=URL+fetch+failed", http.StatusSeeOther)
+		http.Redirect(w, r, "/autoreply?msg=URL+fetch+failed", http.StatusSeeOther)
 		return
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 100*1024))
 	text := string(body)
-	// strip HTML
 	for _, re := range []string{`<script[^>]*>[\s\S]*?</script>`, `<style[^>]*>[\s\S]*?</style>`, `<[^>]+>`, `&[a-z]+;`} {
 		text = regexp.MustCompile(re).ReplaceAllString(text, " ")
 	}
@@ -373,7 +372,7 @@ func handleKnowledgeURL(w http.ResponseWriter, r *http.Request) {
 		text = text[:3000]
 	}
 	if len(text) < 20 {
-		http.Redirect(w, r, "/knowledge?msg=URL+content+too+short", http.StatusSeeOther)
+		http.Redirect(w, r, "/autoreply?msg=URL+content+too+short", http.StatusSeeOther)
 		return
 	}
 	if title == "" {
@@ -382,24 +381,24 @@ func handleKnowledgeURL(w http.ResponseWriter, r *http.Request) {
 	}
 	content, _ := json.Marshal(map[string]interface{}{"rows": []map[string]string{{"content": text}}})
 	db.AddKnowledge(title, string(content))
-	http.Redirect(w, r, "/knowledge?msg=URL+trained:+"+title, http.StatusSeeOther)
+	http.Redirect(w, r, "/autoreply?msg=URL+trained:+"+title, http.StatusSeeOther)
 }
 
 func handleKnowledgePDF(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Redirect(w, r, "/knowledge", http.StatusSeeOther)
+		http.Redirect(w, r, "/autoreply", http.StatusSeeOther)
 		return
 	}
 	title := r.FormValue("title")
 	file, _, err := r.FormFile("file")
 	if err != nil {
-		http.Redirect(w, r, "/knowledge?msg=File+required", http.StatusSeeOther)
+		http.Redirect(w, r, "/autoreply?msg=File+required", http.StatusSeeOther)
 		return
 	}
 	defer file.Close()
 	raw, _ := io.ReadAll(io.LimitReader(file, 5*1024*1024))
 	if len(raw) < 100 {
-		http.Redirect(w, r, "/knowledge?msg=PDF+too+small", http.StatusSeeOther)
+		http.Redirect(w, r, "/autoreply?msg=PDF+too+small", http.StatusSeeOther)
 		return
 	}
 	text := extractPDFText(string(raw))
@@ -407,13 +406,13 @@ func handleKnowledgePDF(w http.ResponseWriter, r *http.Request) {
 	text = strings.TrimSpace(text)
 	if len(text) > 5000 { text = text[:5000] }
 	if len(text) < 20 {
-		http.Redirect(w, r, "/knowledge?msg=PDF+text+not+found+(scanned?)", http.StatusSeeOther)
+		http.Redirect(w, r, "/autoreply?msg=PDF+text+not+found+(scanned?)", http.StatusSeeOther)
 		return
 	}
 	if title == "" { title = "PDF Import" }
 	content, _ := json.Marshal(map[string]interface{}{"rows": []map[string]string{{"content": text}}})
 	db.AddKnowledge(title, string(content))
-	http.Redirect(w, r, "/knowledge?msg=PDF+ok+("+strconv.Itoa(len(text))+"+chars)", http.StatusSeeOther)
+	http.Redirect(w, r, "/autoreply?msg=PDF+ok+("+strconv.Itoa(len(text))+"+chars)", http.StatusSeeOther)
 }
 
 func extractPDFText(raw string) string {

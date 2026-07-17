@@ -128,7 +128,12 @@ func main() {
 				http.Redirect(w, r, "/contacts?msg=Contact+limit+reached.+Upgrade+your+plan.", http.StatusSeeOther)
 				return
 			}
-			db.AddContact(uid, r.FormValue("name"), r.FormValue("phone"), joinVals(r, "groups"))
+			id, _ := db.AddContact(uid, r.FormValue("name"), r.FormValue("phone"), joinVals(r, "groups"))
+			var tagIDs []int64
+			for _, s := range r.Form["tag_ids"] {
+				if tid, err := strconv.ParseInt(s, 10, 64); err == nil { tagIDs = append(tagIDs, tid) }
+			}
+			if len(tagIDs) > 0 { db.SetContactTags(id, tagIDs) }
 		}
 		http.Redirect(w, r, "/contacts", http.StatusSeeOther)
 	}))
@@ -272,6 +277,10 @@ func main() {
 	mux.HandleFunc("/inbox/canned", authMiddleware(handleInboxCanned))
 	mux.HandleFunc("/inbox/star", authMiddleware(handleInboxStar))
 	mux.HandleFunc("/inbox/suggest", authMiddleware(handleInboxSuggest))
+	mux.HandleFunc("/faq", authMiddleware(handleFAQ))
+	mux.HandleFunc("/faq/add", authMiddleware(handleFAQAdd))
+	mux.HandleFunc("/faq/delete", authMiddleware(handleFAQDelete))
+	mux.HandleFunc("/faq/import", authMiddleware(handleFAQImport))
 	mux.HandleFunc("/customers", authMiddleware(p("customers")))
 	mux.HandleFunc("/customers/profile", authMiddleware(handleCustomerProfile))
 	mux.HandleFunc("/calendar", authMiddleware(p("calendar")))
@@ -501,6 +510,7 @@ type pageData struct {
 	Devices       []store.Device
 	Ussds         []store.Ussd
 	Knowledges    []store.KnowledgeEntry
+	FAQ           []map[string]string
 	DocsSteps     []DocsStep
 	InboxConversations []store.InboxConversation
 	ChatMessages  []store.ChatMessage
@@ -713,6 +723,8 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.AiKeys, _ = db.ListAiKeys(uid)
 		d.Knowledges, _ = db.ListKnowledge()
 		d.AiTrainings, _ = db.ListAiTrainings()
+		d.FAQ, _ = db.ListFAQ(uid)
+		d.AiPlugins, _ = db.ListAiPlugins()
 	case "webhooks":
 		d.Webhooks, _ = db.ListWebhooks()
 	case "broadcast":
@@ -864,6 +876,8 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.MetaTemplates, _ = db.ListMetaTemplates()
 	case "knowledge":
 		d.Knowledges, _ = db.ListKnowledge()
+	case "faq":
+		d.FAQ, _ = db.ListFAQ(uid)
 	case "docs":
 		d.DocsSteps = allDocsSteps
 	}
@@ -1447,23 +1461,42 @@ func handleInboxSearch(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Fprint(w, "]")
 }
+func saveAutoreplyMedia(r *http.Request) (mediaType, mediaURL string) {
+	file, header, err := r.FormFile("media_file")
+	if err != nil { return }
+	defer file.Close()
+	ext := strings.ToLower(filepath.Ext(header.Filename))
+	mediaDir := "public/uploads/"
+	os.MkdirAll(mediaDir, 0755)
+	fname := fmt.Sprintf("%s%d%s", mediaDir, time.Now().UnixNano(), ext)
+	out, err := os.Create(fname)
+	if err != nil { return }
+	io.Copy(out, file)
+	out.Close()
+	mediaURL = "/" + fname
+	switch ext {
+	case ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp": mediaType = "image"
+	case ".mp4", ".mov", ".avi", ".mkv": mediaType = "video"
+	case ".mp3", ".ogg", ".wav", ".aac", ".m4a": mediaType = "audio"
+	default: mediaType = "document"
+	}
+	return
+}
+
 func handleAutoReplyAdd(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Redirect(w, r, "/autoreply", http.StatusSeeOther)
 		return
 	}
+	r.ParseMultipartForm(10 << 20)
 	keyword := r.FormValue("keyword")
 	match := r.FormValue("match")
 	reply := r.FormValue("reply")
 	useAI := r.FormValue("use_ai") == "on" || r.FormValue("use_ai") == "1"
 	aiKeyID, _ := strconv.ParseInt(r.FormValue("ai_key_id"), 10, 64)
 	if match == "ai" {
-		if faq := r.FormValue("faq"); faq != "" {
-			reply = faq
-		}
-		if keyword == "" {
-			keyword = match // "ai"
-		}
+		if faq := r.FormValue("faq"); faq != "" { reply = faq }
+		if keyword == "" { keyword = match }
 		if reply == "" && !useAI {
 			http.Redirect(w, r, "/autoreply", http.StatusSeeOther)
 			return
@@ -1474,15 +1507,14 @@ func handleAutoReplyAdd(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if match == "" {
-		match = "contains"
-	}
+	if match == "" { match = "contains" }
 	aid := joinVals(r, "account_ids"); uid := getUserID(r)
 	if !engine.ValidateAccountIDs(uid, aid) {
 		http.Redirect(w, r, "/autoreply?msg="+template.URLQueryEscaper("Nomor tidak valid"), http.StatusSeeOther)
 		return
 	}
-	_, _ = db.AddAutoReply(uid, keyword, match, reply, useAI, aiKeyID, aid, func()int64{t,_:=strconv.ParseInt(r.FormValue("training_id"),10,64);return t}())
+	mediaType, mediaURL := saveAutoreplyMedia(r)
+	_, _ = db.AddAutoReply(uid, keyword, match, reply, useAI, aiKeyID, aid, func()int64{t,_:=strconv.ParseInt(r.FormValue("training_id"),10,64);return t}(), mediaType, mediaURL)
 	http.Redirect(w, r, "/autoreply", http.StatusSeeOther)
 }
 
@@ -1505,13 +1537,15 @@ func handleAutoReplyEdit(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
 	if r.Method == http.MethodPost {
 		if id > 0 {
+			r.ParseMultipartForm(10 << 20)
 			keyword := r.FormValue("keyword")
 			match := r.FormValue("match")
 			reply := r.FormValue("reply")
 			useAI := r.FormValue("use_ai") == "on" || r.FormValue("use_ai") == "1"
 			aiKeyID, _ := strconv.ParseInt(r.FormValue("ai_key_id"), 10, 64)
 			if match == "" { match = "contains" }
-			_ = db.UpdateAutoReply(getUserID(r), id, keyword, match, reply, useAI, aiKeyID, joinVals(r, "account_ids"), func()int64{t,_:=strconv.ParseInt(r.FormValue("training_id"),10,64);return t}())
+			mediaType, mediaURL := saveAutoreplyMedia(r)
+			_ = db.UpdateAutoReply(getUserID(r), id, keyword, match, reply, useAI, aiKeyID, joinVals(r, "account_ids"), func()int64{t,_:=strconv.ParseInt(r.FormValue("training_id"),10,64);return t}(), mediaType, mediaURL)
 		}
 		http.Redirect(w, r, "/autoreply", http.StatusSeeOther)
 		return
@@ -1523,6 +1557,11 @@ func handleContactEdit(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		if id > 0 {
 			_ = db.UpdateContact(getUserID(r), id, r.FormValue("name"), r.FormValue("phone"), joinVals(r, "groups"))
+			var tagIDs []int64
+			for _, s := range r.Form["tag_ids"] {
+				if tid, err := strconv.ParseInt(s, 10, 64); err == nil { tagIDs = append(tagIDs, tid) }
+			}
+			if len(tagIDs) > 0 { db.SetContactTags(id, tagIDs) }
 		}
 		http.Redirect(w, r, "/contacts", http.StatusSeeOther)
 		return
@@ -1595,7 +1634,9 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = db.SetSetting("app_name", r.FormValue("app_name"))
 	setBool("force_own_key", "force_own_key")
-	http.Redirect(w, r, "/settings", http.StatusSeeOther)
+	redir := "/settings"
+	if strings.Contains(r.Referer(), "/autoreply") { redir = "/autoreply" }
+	http.Redirect(w, r, redir, http.StatusSeeOther)
 }
 
 // ---- generic CRUD helpers ----
@@ -1964,9 +2005,8 @@ func handleTranslate(w http.ResponseWriter, r *http.Request) {
 	text := r.FormValue("text")
 	to := r.FormValue("to")
 	if text == "" || to == "" { http.Error(w, "text and to required", 400); return }
-	// use first AI key for translation
 	keys, _ := db.ListAiKeys(getUserID(r))
-	if len(keys) == 0 { fmt.Fprint(w, text); return }
+	if len(keys) == 0 { http.Error(w, "no ai key configured", 400); return }
 	ak := keys[0]
 	dec, _ := secret.Decrypt(ak.APIKey)
 	if dec == "" { dec = ak.APIKey }
@@ -1974,7 +2014,7 @@ func handleTranslate(w http.ResponseWriter, r *http.Request) {
 	if reply, err := aiservice.Reply(dec, ak.Provider, ak.Model, ak.BaseURL, "", prompt, nil, nil); err == nil {
 		fmt.Fprint(w, reply)
 	} else {
-		fmt.Fprint(w, text)
+		http.Error(w, err.Error(), 500)
 	}
 }
 
@@ -2091,6 +2131,53 @@ func handleInboxStar(w http.ResponseWriter, r *http.Request) {
 
 // ---- Payment / Subscription ----
 
+func handleFAQ(w http.ResponseWriter, r *http.Request) {
+	render(w, r, "faq")
+}
+
+func handleFAQAdd(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		db.AddFAQ(getUserID(r), r.FormValue("question"), r.FormValue("answer"))
+	}
+	http.Redirect(w, r, "/faq", http.StatusSeeOther)
+}
+
+func handleFAQDelete(w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+	if id > 0 { db.DeleteFAQ(getUserID(r), id) }
+	http.Redirect(w, r, "/faq", http.StatusSeeOther)
+}
+
+func handleFAQImport(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Redirect(w, r, "/faq", http.StatusSeeOther)
+		return
+	}
+	file, _, err := r.FormFile("file")
+	if err != nil { http.Redirect(w, r, "/faq?msg=File+required", http.StatusSeeOther); return }
+	defer file.Close()
+	reader := csv.NewReader(file)
+	headers, _ := reader.Read()
+	colQ, colA := -1, -1
+	for i, h := range headers {
+		h = strings.ToLower(strings.TrimSpace(h))
+		switch h {
+		case "question", "pertanyaan": colQ = i
+		case "answer", "jawaban": colA = i
+		}
+	}
+	if colQ < 0 || colA < 0 { http.Redirect(w, r, "/faq?msg=CSV+must+have+question+and+answer+columns", http.StatusSeeOther); return }
+	uid := getUserID(r)
+	count := 0
+	for {
+		record, err := reader.Read()
+		if err != nil { break }
+		q := strings.TrimSpace(safeGet(record, colQ))
+		a := strings.TrimSpace(safeGet(record, colA))
+		if q != "" && a != "" { db.AddFAQ(uid, q, a); count++ }
+	}
+	http.Redirect(w, r, "/faq?msg=Imported+"+strconv.Itoa(count)+"+FAQs", http.StatusSeeOther)
+}
 
 func handleSubscribe(w http.ResponseWriter, r *http.Request) {
 	render(w, r, "subscribe")

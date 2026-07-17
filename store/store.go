@@ -31,6 +31,8 @@ type AutoReply struct {
 	TrainingID int64
 	UserID     int64
 	Created    string
+	MediaType  string
+	MediaURL   string
 }
 
 type SentMessage struct {
@@ -169,11 +171,14 @@ func (d *DB) migrate() error {
 	d.safeAddColumn("meta_accounts", "user_id", "BIGINT NOT NULL DEFAULT 0")
 	d.safeAddColumn("meta_accounts", "parent_id", "BIGINT NOT NULL DEFAULT 0")
 	d.safeAddColumn("autoreplies", "user_id", "BIGINT NOT NULL DEFAULT 0")
+	d.safeAddColumn("autoreplies", "media_type", "VARCHAR(20) NOT NULL DEFAULT ''")
+	d.safeAddColumn("autoreplies", "media_url", "VARCHAR(1024) NOT NULL DEFAULT ''")
 	d.safeAddColumn("subscriptions", "status", "VARCHAR(20) NOT NULL DEFAULT 'active'")
 	d.safeAddColumn("subscriptions", "user_id", "BIGINT NOT NULL DEFAULT 0")
 	d.safeAddColumn("subscriptions", "package_id", "BIGINT NOT NULL DEFAULT 0")
 	d.safeAddColumn("sent", "starred", "TINYINT NOT NULL DEFAULT 0")
 	d.safeAddColumn("received", "starred", "TINYINT NOT NULL DEFAULT 0")
+	d.sql.Exec(`CREATE TABLE IF NOT EXISTS faq (id BIGINT AUTO_INCREMENT PRIMARY KEY, question VARCHAR(500) NOT NULL, answer TEXT NOT NULL, user_id BIGINT NOT NULL DEFAULT 0, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`)
 	d.sql.Exec(`CREATE TABLE IF NOT EXISTS wa_session_owners (phone VARCHAR(64) PRIMARY KEY, user_id BIGINT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`)
 	d.safeAddColumn("received", "wa_phone", "VARCHAR(64) NOT NULL DEFAULT ''")
 	d.safeAddColumn("sent", "wa_phone", "VARCHAR(64) NOT NULL DEFAULT ''")
@@ -190,9 +195,9 @@ func (d *DB) migrate() error {
 }
 
 // AutoReply CRUD
-func (d *DB) AddAutoReply(userID int64, keyword, match, reply string, useAI bool, aiKeyID int64, accountID string, trainingID int64) (int64, error) {
+func (d *DB) AddAutoReply(userID int64, keyword, match, reply string, useAI bool, aiKeyID int64, accountID string, trainingID int64, mediaType, mediaURL string) (int64, error) {
 	ai := 0; if useAI { ai = 1 }
-	res, err := d.sql.Exec(`INSERT INTO autoreplies (user_id,keyword,match_type,reply,is_active,use_ai,ai_key_id,account_id,training_id) VALUES (?,?,?,?,1,?,?,?,?)`, userID, keyword, match, reply, ai, aiKeyID, accountID, trainingID)
+	res, err := d.sql.Exec(`INSERT INTO autoreplies (user_id,keyword,match_type,reply,is_active,use_ai,ai_key_id,account_id,training_id,media_type,media_url) VALUES (?,?,?,?,1,?,?,?,?,?,?)`, userID, keyword, match, reply, ai, aiKeyID, accountID, trainingID, mediaType, mediaURL)
 	if err != nil { return 0, err }
 	return res.LastInsertId()
 }
@@ -216,38 +221,38 @@ func (d *DB) GetAutoReply(userID int64, id int64) (*AutoReply, error) {
 	var a AutoReply; var active int
 	var err error
 	if userID == 0 {
-		err = d.sql.QueryRow(`SELECT id,keyword,match_type,reply,is_active,use_ai,ai_key_id,IFNULL(account_id,''),IFNULL(training_id,0),IFNULL(user_id,0),created_at FROM autoreplies WHERE id=?`, id).Scan(&a.ID, &a.Keyword, &a.Match, &a.Reply, &active, &a.UseAI, &a.AiKeyID, &a.AccountID, &a.TrainingID, &a.UserID, &a.Created)
+		err = d.sql.QueryRow(`SELECT id,keyword,match_type,reply,is_active,use_ai,ai_key_id,IFNULL(account_id,''),IFNULL(training_id,0),IFNULL(user_id,0),IFNULL(media_type,''),IFNULL(media_url,''),created_at FROM autoreplies WHERE id=?`, id).Scan(&a.ID, &a.Keyword, &a.Match, &a.Reply, &active, &a.UseAI, &a.AiKeyID, &a.AccountID, &a.TrainingID, &a.UserID, &a.MediaType, &a.MediaURL, &a.Created)
 	} else {
-		err = d.sql.QueryRow(`SELECT id,keyword,match_type,reply,is_active,use_ai,ai_key_id,IFNULL(account_id,''),IFNULL(training_id,0),IFNULL(user_id,0),created_at FROM autoreplies WHERE id=? AND user_id=?`, id, userID).Scan(&a.ID, &a.Keyword, &a.Match, &a.Reply, &active, &a.UseAI, &a.AiKeyID, &a.AccountID, &a.TrainingID, &a.UserID, &a.Created)
+		err = d.sql.QueryRow(`SELECT id,keyword,match_type,reply,is_active,use_ai,ai_key_id,IFNULL(account_id,''),IFNULL(training_id,0),IFNULL(user_id,0),IFNULL(media_type,''),IFNULL(media_url,''),created_at FROM autoreplies WHERE id=? AND user_id=?`, id, userID).Scan(&a.ID, &a.Keyword, &a.Match, &a.Reply, &active, &a.UseAI, &a.AiKeyID, &a.AccountID, &a.TrainingID, &a.UserID, &a.MediaType, &a.MediaURL, &a.Created)
 	}
 	a.IsActive = active == 1
 	if err != nil { return nil, err }
 	return &a, nil
 }
-func (d *DB) UpdateAutoReply(userID int64, id int64, keyword, match, reply string, useAI bool, aiKeyID int64, accountID string, trainingID int64) error {
+func (d *DB) UpdateAutoReply(userID int64, id int64, keyword, match, reply string, useAI bool, aiKeyID int64, accountID string, trainingID int64, mediaType, mediaURL string) error {
 	use := 0
 	if useAI { use = 1 }
 	if userID == 0 {
-		_, err := d.sql.Exec(`UPDATE autoreplies SET keyword=?, match_type=?, reply=?, use_ai=?, ai_key_id=?, account_id=?, training_id=? WHERE id=?`, keyword, match, reply, use, aiKeyID, accountID, trainingID, id)
+		_, err := d.sql.Exec(`UPDATE autoreplies SET keyword=?, match_type=?, reply=?, use_ai=?, ai_key_id=?, account_id=?, training_id=?, media_type=?, media_url=? WHERE id=?`, keyword, match, reply, use, aiKeyID, accountID, trainingID, mediaType, mediaURL, id)
 		return err
 	}
-	_, err := d.sql.Exec(`UPDATE autoreplies SET keyword=?, match_type=?, reply=?, use_ai=?, ai_key_id=?, account_id=?, training_id=? WHERE id=? AND user_id=?`, keyword, match, reply, use, aiKeyID, accountID, trainingID, id, userID)
+	_, err := d.sql.Exec(`UPDATE autoreplies SET keyword=?, match_type=?, reply=?, use_ai=?, ai_key_id=?, account_id=?, training_id=?, media_type=?, media_url=? WHERE id=? AND user_id=?`, keyword, match, reply, use, aiKeyID, accountID, trainingID, mediaType, mediaURL, id, userID)
 	return err
 }
 func (d *DB) ListAutoReplies(userID int64) ([]AutoReply, error) {
 	var rows *sql.Rows
 	var err error
 	if userID == 0 {
-		rows, err = d.sql.Query(`SELECT id,keyword,match_type,reply,is_active,use_ai,ai_key_id,IFNULL(account_id,''),IFNULL(training_id,0),IFNULL(user_id,0),created_at FROM autoreplies ORDER BY id DESC`)
+		rows, err = d.sql.Query(`SELECT id,keyword,match_type,reply,is_active,use_ai,ai_key_id,IFNULL(account_id,''),IFNULL(training_id,0),IFNULL(user_id,0),IFNULL(media_type,''),IFNULL(media_url,''),created_at FROM autoreplies ORDER BY id DESC`)
 	} else {
-		rows, err = d.sql.Query(`SELECT id,keyword,match_type,reply,is_active,use_ai,ai_key_id,IFNULL(account_id,''),IFNULL(training_id,0),IFNULL(user_id,0),created_at FROM autoreplies WHERE user_id=? ORDER BY id DESC`, userID)
+		rows, err = d.sql.Query(`SELECT id,keyword,match_type,reply,is_active,use_ai,ai_key_id,IFNULL(account_id,''),IFNULL(training_id,0),IFNULL(user_id,0),IFNULL(media_type,''),IFNULL(media_url,''),created_at FROM autoreplies WHERE user_id=? ORDER BY id DESC`, userID)
 	}
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []AutoReply
 	for rows.Next() {
 		var a AutoReply; var active int
-		if err := rows.Scan(&a.ID,&a.Keyword,&a.Match,&a.Reply,&active,&a.UseAI,&a.AiKeyID,&a.AccountID,&a.TrainingID,&a.UserID,&a.Created); err != nil { return nil, err }
+		if err := rows.Scan(&a.ID,&a.Keyword,&a.Match,&a.Reply,&active,&a.UseAI,&a.AiKeyID,&a.AccountID,&a.TrainingID,&a.UserID,&a.MediaType,&a.MediaURL,&a.Created); err != nil { return nil, err }
 		a.IsActive = active==1
 		out = append(out, a)
 	}
@@ -509,13 +514,43 @@ func (d *DB) ToggleStar(typ string, id int64) {
 
 func extractCleanPhone(jid string) string {
 	if len(jid) <= 16 { return jid }
-	// broadcast JID: {phone}{broadcast_id}, phone part usually 10-15 chars
 	for cut := 14; cut >= 10; cut-- {
 		if cut <= len(jid) {
 			return jid[:cut]
 		}
 	}
 	return jid
+}
+
+func (d *DB) AddFAQ(userID int64, question, answer string) (int64, error) {
+	res, err := d.sql.Exec(`INSERT INTO faq (user_id, question, answer) VALUES (?,?,?)`, userID, question, answer)
+	if err != nil { return 0, err }
+	return res.LastInsertId()
+}
+func (d *DB) DeleteFAQ(userID int64, id int64) error {
+	if userID == 0 { _, err := d.sql.Exec(`DELETE FROM faq WHERE id=?`, id); return err }
+	_, err := d.sql.Exec(`DELETE FROM faq WHERE id=? AND user_id=?`, id, userID)
+	return err
+}
+func (d *DB) ListFAQ(userID int64) ([]map[string]string, error) {
+	var rows *sql.Rows; var err error
+	if userID == 0 { rows, err = d.sql.Query(`SELECT id, question, answer FROM faq ORDER BY id DESC`)
+	} else { rows, err = d.sql.Query(`SELECT id, question, answer FROM faq WHERE user_id=? ORDER BY id DESC`, userID) }
+	if err != nil { return nil, err }
+	defer rows.Close()
+	var out []map[string]string
+	for rows.Next() { var id int64; var q, a string; rows.Scan(&id, &q, &a); out = append(out, map[string]string{"id": fmt.Sprintf("%d", id), "question": q, "answer": a}) }
+	return out, nil
+}
+func (d *DB) FindFAQAnswer(userID int64, incoming string) (string, bool) {
+	faqs, _ := d.ListFAQ(userID)
+	msg := strings.ToLower(strings.TrimSpace(incoming))
+	for _, f := range faqs {
+		kw := strings.ToLower(strings.TrimSpace(f["question"]))
+		if kw == "" { continue }
+		for _, k := range strings.Split(kw, ",") { if strings.Contains(msg, strings.TrimSpace(k)) { return f["answer"], true } }
+	}
+	return "", false
 }
 
 // Welcome tracking
