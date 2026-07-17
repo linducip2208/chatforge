@@ -172,6 +172,76 @@ Embed Chatforge as a **WhatsApp live chat widget** on any website:
 
 ---
 
+## 📖 Usage Guide
+
+### 1. Connect WhatsApp
+Go to **Account & QR** → click Add Account → scan QR code with WhatsApp (Linked Devices).
+
+### 2. Send Message
+Go to **Send Message** → select your WA number, enter recipient phone, type message, click Send.
+
+### 3. Auto Reply
+Go to **Auto Reply** → add rule:
+- **Match Type**: Contains / Exact / Starts With / AI
+- **Keyword**: trigger word
+- **Reply**: response text (supports spintax `{Hi|Hello}`)
+- **AI**: check "Use AI" and select an AI Key
+- **Account**: select which WA number the rule applies to
+
+### 4. Broadcast
+Go to **Broadcast** → enter campaign name, message, select groups or paste numbers, check sender numbers, click Send.
+
+### 5. Contacts
+Go to **Contacts** → add contacts manually or import CSV. Create groups, assign tags, merge duplicates.
+
+### 6. Drip Campaign
+Go to **Drip Campaign** → create campaign, add steps with delay, activate. Users auto-enroll when they message you.
+
+### 7. AI Setup
+Go to **AI Keys** (Admin) → add provider (OpenAI, DeepSeek, Gemini, etc.), paste API key, select model. Then use in Auto Reply rules.
+
+### 8. Packages & Limits
+Go to **Packages** (Admin) → create plans with limits (devices, contacts, drips, templates, AI keys). Assign subscriptions to users.
+
+### 9. API Usage
+```bash
+# Send message
+curl -X POST http://localhost:8080/api/send \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"phone":"628123456789","message":"Hello World"}'
+
+# Check status
+curl http://localhost:8080/api/status -H "X-API-Key: YOUR_API_KEY"
+
+# List contacts
+curl http://localhost:8080/api/contacts -H "X-API-Key: YOUR_API_KEY"
+```
+
+### 10. Environment Variables
+```env
+# .env file
+CHATGO_MYSQL=root:password@tcp(127.0.0.1:3306)/chatgo?charset=utf8mb4
+CHATGO_ENC_KEY=your-32-byte-aes-key-here
+APP_URL=https://your-domain.com
+APP_NAME=ChatGo
+```
+
+### 11. Deploy to Linux
+```bash
+# Build
+GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o chatgo_linux .
+
+# Upload
+scp chatgo_linux .env user@server:/opt/chatgo/
+
+# Systemd service
+sudo cp chatgo.service /etc/systemd/system/
+sudo systemctl enable chatgo --now
+```
+
+---
+
 ## ⚠️ Disclaimer
 
 This is an unofficial WhatsApp client using the [whatsmeow](https://github.com/tulir/whatsmeow) library. Use at your own risk. Not affiliated with or endorsed by Meta Platforms, Inc. or WhatsApp LLC.
@@ -253,6 +323,76 @@ Butuh bantuan setup, instalasi, atau custom development?
 - **Macros** — workflow multi-aksi satu klik
 - **Auto Translate** — terjemahan pesan otomatis via AI
 
+## 📖 Panduan Penggunaan
+
+### 1. Hubungkan WhatsApp
+Buka **Account & QR** → klik Add Account → scan QR code dengan WhatsApp (Linked Devices).
+
+### 2. Kirim Pesan
+Buka **Send Message** → pilih nomor WA pengirim, masukkan nomor tujuan, ketik pesan, klik Send.
+
+### 3. Auto Reply
+Buka **Auto Reply** → tambah rule:
+- **Match Type**: Contains / Exact / Starts With / AI
+- **Keyword**: kata pemicu
+- **Reply**: teks balasan (support spintax `{Halo|Hai}`)
+- **AI**: centang "Use AI" lalu pilih AI Key
+- **Account**: pilih nomor WA mana yang menerapkan rule ini
+
+### 4. Broadcast
+Buka **Broadcast** → isi nama campaign, pesan, pilih grup atau tempel nomor, centang nomor pengirim, klik Send.
+
+### 5. Kontak
+Buka **Contacts** → tambah kontak manual atau import CSV. Buat grup, beri tag, gabung duplikat.
+
+### 6. Drip Campaign
+Buka **Drip Campaign** → buat campaign, tambah step dengan delay, aktifkan. User otomatis masuk saat kirim pesan.
+
+### 7. Setup AI
+Buka **AI Keys** (Admin) → tambah provider (OpenAI, DeepSeek, Gemini, dll.), tempel API key, pilih model. Lalu pakai di rule Auto Reply.
+
+### 8. Paket & Limit
+Buka **Packages** (Admin) → buat paket dengan limit (device, kontak, drips, template, AI key). Assign subscription ke user.
+
+### 9. Penggunaan API
+```bash
+# Kirim pesan
+curl -X POST http://localhost:8080/api/send \
+  -H "X-API-Key: API_KEY_ANDA" \
+  -H "Content-Type: application/json" \
+  -d '{"phone":"628123456789","message":"Halo Dunia"}'
+
+# Cek status
+curl http://localhost:8080/api/status -H "X-API-Key: API_KEY_ANDA"
+
+# Lihat kontak
+curl http://localhost:8080/api/contacts -H "X-API-Key: API_KEY_ANDA"
+```
+
+### 10. Environment Variables
+```env
+# File .env
+CHATGO_MYSQL=root:password@tcp(127.0.0.1:3306)/chatgo?charset=utf8mb4
+CHATGO_ENC_KEY=kunci-aes-32-byte-anda
+APP_URL=https://domain-anda.com
+APP_NAME=ChatGo
+```
+
+### 11. Deploy ke Linux
+```bash
+# Build
+GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o chatgo_linux .
+
+# Upload
+scp chatgo_linux .env user@server:/opt/chatgo/
+
+# Systemd service
+sudo cp chatgo.service /etc/systemd/system/
+sudo systemctl enable chatgo --now
+```
+
 ## ⚠️ Disclaimer
 
 Ini adalah WhatsApp client tidak resmi menggunakan library [whatsmeow](https://github.com/tulir/whatsmeow). Gunakan dengan risiko sendiri. Tidak berafiliasi dengan Meta Platforms, Inc. atau WhatsApp LLC.
+
+**META** dan **WhatsApp** adalah merek dagang terdaftar Meta Platforms, Inc.
