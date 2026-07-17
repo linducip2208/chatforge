@@ -2125,94 +2125,120 @@ onScroll();
 .acc-status .dot.yellow{background:#f6c343}
 .acc-status .dot.red{background:#e63757}
 .acc-phone{font-family:monospace;font-size:13px;color:#6e788c}
+.inbox-split{display:flex;height:calc(100vh - 140px);min-height:500px}
+.panel-left{width:380px;min-width:340px;border-right:1px solid #e5e7eb;display:flex;flex-direction:column;overflow:hidden}
+.panel-right{flex:1;display:flex;flex-direction:column;background:#efeae2;overflow:hidden}
+.chat-empty{display:flex;align-items:center;justify-content:center;height:100%;color:#8696a0;font-size:16px;flex-direction:column;gap:8px}
+.chat-empty i{font-size:64px;opacity:.3}
+.chat-header{display:flex;align-items:center;padding:10px 16px;background:#f0f2f5;border-bottom:1px solid #e0e0e0;gap:12px;min-height:60px}
+.chat-area{flex:1;overflow-y:auto;padding:16px 40px;background-color:#efeae2;background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22><rect width=%22200%22 height=%22200%22 fill=%22%23efeae2%22/><circle cx=%22100%22 cy=%22100%22 r=%2260%22 fill=%22%23e5ddd5%22 opacity=%220.5%22/></svg>')}
+.chat-footer{border-top:1px solid #e0e0e0;padding:8px 16px;background:#f0f2f5}
+.chat-bubble{max-width:70%;padding:6px 10px 6px 10px;border-radius:8px;word-wrap:break-word;box-shadow:0 1px 0.5px rgba(0,0,0,.13);font-size:14.2px;line-height:1.4;position:relative;margin-bottom:3px}
+.chat-bubble.received{background:#fff;align-self:flex-start;border-top-left-radius:0}
+.chat-bubble.sent{background:#d9fdd3;align-self:flex-end;border-top-right-radius:0}
+.chat-bubble.sent.phone-sync{background:#dbeafe;border:1px solid #93c5fd}
+.chat-bubble.sent.phone-sync::after{content:'📱';position:absolute;top:-8px;right:4px;font-size:10px}
+.chat-sender{font-size:12.5px;font-weight:600;color:#10B981;margin-bottom:2px}
+.chat-time{font-size:11px;color:#667781;float:right;margin-left:8px;margin-top:2px}
+.chat-input-wrap{display:flex;align-items:center;gap:8px}
+.chat-input-wrap textarea{flex:1;resize:none;border-radius:8px;padding:9px 12px;min-height:42px;max-height:100px;border:1px solid #e0e0e0;font-size:14px;outline:none}
+.chat-input-wrap textarea:focus{border-color:#00a884}
+.chat-input-wrap button{width:42px;height:42px;border-radius:50%;border:none;background:#00a884;color:#fff;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.conv-item{cursor:pointer;transition:background .15s;border-bottom:1px solid #f0f0f0;padding:12px 16px;display:flex;gap:12px;align-items:center}
+.conv-item:hover{background:#f0f2f5}
+.conv-item.active{background:#e8f3ff}
+.conv-item.unread{background:#eef2ff}
+.conv-item .conv-name{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.conv-item .conv-msg{font-size:13px;color:#667781;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+.conv-item .conv-time{font-size:11px;color:#8696a0;white-space:nowrap}
+@media(max-width:768px){.panel-left{width:100%}.panel-right{display:none}.panel-right.open{display:flex;position:fixed;top:0;left:0;right:0;bottom:0;z-index:1000}.chat-area{padding:12px 16px}}
 </style>
-
-<div class="card">
-<div class="card-header pb-0">
-<div class="d-flex justify-content-between align-items-center">
-<h4 class="card-header-title mb-0">Live Chat{{if gt .UnreadCount 0}} <span class="badge badge-danger">{{.UnreadCount}} baru</span>{{end}}</h4>
-<div class="inbox-search" style="width:220px"><i class="la la-search"></i><input type="text" id="inboxSearch" class="form-control form-control-sm" placeholder="Cari..."></div>
+<div class="inbox-split" id="inboxSplit">
+<div class="panel-left">
+<div style="padding:12px 16px;background:#f0f2f5;border-bottom:1px solid #e0e0e0;display:flex;justify-content:space-between;align-items:center">
+<strong>Chat{{if gt .UnreadCount 0}} <span class="badge badge-danger">{{.UnreadCount}}</span>{{end}}</strong>
+<div style="width:180px"><input type="text" id="inboxSearch" class="form-control form-control-sm" placeholder="Cari..."></div>
 </div>
-<div class="main-tabs mt-2">
-<button class="tab-item active" onclick={{js "var p=document.getElementById('chat-panel'),s=document.getElementById('status-panel');p.style.display='block';s.style.display='none';var btns=this.parentElement.querySelectorAll('button');for(var i=0;i<btns.length;i++)btns[i].classList.remove('active');this.classList.add('active');return false"}}>Chat</button>
-<button class="tab-item" onclick={{js "var p=document.getElementById('chat-panel'),s=document.getElementById('status-panel');p.style.display='none';s.style.display='block';var btns=this.parentElement.querySelectorAll('button');for(var i=0;i<btns.length;i++)btns[i].classList.remove('active');this.classList.add('active');return false"}}>Status</button>
-</div>
-</div>
-
-<div class="tab-panel active" id="chat-panel">
-<div class="sub-tabs">
-<button class="sub-btn active" onclick={{js "var d=document.querySelectorAll('#inboxList .inbox-conv');for(var i=0;i<d.length;i++)d[i].style.display='';var s=this.parentElement.querySelectorAll('button');for(var i=0;i<s.length;i++)s[i].classList.remove('active');this.classList.add('active')"}}>Semua</button>
-<button class="sub-btn" onclick={{js "var d=document.querySelectorAll('#inboxList .inbox-conv');for(var i=0;i<d.length;i++){var g=d[i].getAttribute('data-group');d[i].style.display=g==='private'?'':'none'};var s=this.parentElement.querySelectorAll('button');for(var i=0;i<s.length;i++)s[i].classList.remove('active');this.classList.add('active')"}}>Private</button>
-<button class="sub-btn" onclick={{js "var d=document.querySelectorAll('#inboxList .inbox-conv');for(var i=0;i<d.length;i++){var g=d[i].getAttribute('data-group');d[i].style.display=g==='group'?'':'none'};var s=this.parentElement.querySelectorAll('button');for(var i=0;i<s.length;i++)s[i].classList.remove('active');this.classList.add('active')"}}>Group</button>
-<button class="sub-btn" onclick="window.location='/inbox?filter=unread'">Unread</button>
-</div>
-<div class="list-group list-group-flush" id="inboxList">
+<div style="overflow-y:auto;flex:1" id="convList">
 {{range .InboxConversations}}
-<a href="/inbox/chat?phone={{.Phone}}" class="list-group-item list-group-item-action inbox-conv{{if gt .Unread 0}} unread{{end}}" data-group="{{if .IsGroup}}group{{else}}private{{end}}">
-<div class="d-flex align-items-center gap-3">
-<div class="avatar {{if .IsGroup}}group{{else}}person{{end}}">{{if .IsGroup}}G{{else}}{{slice .Name 0 1}}{{if not .Name}}+{{end}}{{end}}</div>
+<div class="conv-item{{if gt .Unread 0}} unread{{end}}" data-phone="{{.Phone}}" data-name="{{if .Name}}{{.Name}}{{else}}+{{.Phone}}{{end}}" data-group="{{.IsGroup}}" data-channel="{{.Channel}}" onclick="openChat('{{.Phone}}','{{if .Name}}{{.Name}}{{else}}+{{.Phone}}{{end}}','{{.IsGroup}}','{{.Channel}}')">
+<div class="avatar {{if .IsGroup}}group{{else}}person{{end}}" style="width:48px;height:48px;font-size:16px">{{if .IsGroup}}G{{else}}{{slice .Name 0 1}}{{if not .Name}}+{{end}}{{end}}</div>
 <div class="flex-grow-1 min-w-0">
-<div class="d-flex justify-content-between align-items-start">
-<div class="d-flex align-items-center gap-2">
-<strong>{{if .Name}}{{.Name}}{{else}}+{{.Phone}}{{end}}</strong>
-{{if .IsGroup}}<span class="badge badge-soft-success" style="font-size:10px">Group</span>{{end}}
-{{if eq .Channel "meta"}}<span class="badge badge-soft-primary" style="font-size:10px">Meta</span>{{end}}
-{{if gt .Unread 0}}<span class="badge badge-pill badge-danger" style="font-size:10px">{{.Unread}}</span>{{end}}
+<div class="d-flex justify-content-between"><span class="conv-name">{{if .Name}}{{.Name}}{{else}}+{{.Phone}}{{end}}</span><span class="conv-time">{{.LastTime}}</span></div>
+<div class="d-flex align-items-center gap-2"><span class="conv-msg">{{.LastMsg}}</span>{{if gt .Unread 0}}<span class="badge badge-pill" style="background:#25d366;font-size:10px;min-width:20px">{{.Unread}}</span>{{end}}</div>
+</div></div>{{else}}<div class="text-center text-muted py-4">Belum ada percakapan</div>{{end}}
+</div></div>
+<div class="panel-right" id="chatPanel">
+<div class="chat-empty" id="chatEmpty"><i class="la la-comments"></i><div>Pilih percakapan untuk mulai chat</div></div>
+<div id="chatView" style="display:none;flex-direction:column;height:100%">
+<div class="chat-header" id="chatHeader">
+<button class="btn btn-sm d-md-none" onclick="closeChat()" style="border:none;background:none;font-size:20px">&larr;</button>
+<div class="avatar person" style="width:40px;height:40px;font-size:14px" id="chatAvatar">+</div>
+<div class="flex-grow-1"><strong id="chatTitle">-</strong><div><small class="text-muted" id="chatSubtitle"></small></div></div>
+<select id="chatAccountPhone" class="form-select form-select-sm" style="width:auto">{{range .ConnectedAccounts}}{{if eq .Status "connected"}}<option value="+{{.Phone}}">+{{.Phone}}</option>{{end}}{{end}}</select>
+<button class="btn btn-sm btn-outline-secondary" onclick="exportChat()" title="Export CSV"><i class="la la-download"></i></button>
 </div>
-<small class="text-muted">{{.LastTime}}</small>
-</div>
-<div class="last-msg text-muted small mt-1">{{.LastMsg}}</div>
-</div>
-</div>
-</a>
-{{else}}
-<div class="list-group-item text-center text-muted py-4">Belum ada percakapan</div>
-{{end}}
-</div>
-{{if .InboxPages}}<div class="card-footer"><div class="pagination">{{range .InboxPages}}{{if eq . $.PageNum}}<span class="active">{{.}}</span>{{else}}<a href="?page={{.}}">{{.}}</a>{{end}}{{end}}</div></div>{{end}}
-</div>
-
-<div class="tab-panel" id="status-panel">
-<div class="p-3">
-<h6 class="mb-3">Status</h6>
-<div class="row g-3">
-{{range .Statuses}}
-<div class="col-6 col-md-4 col-lg-3">
-<div class="card border" style="border-radius:12px;overflow:hidden">
-<div class="d-flex align-items-center gap-2 p-3">
-<div class="avatar person" style="width:40px;height:40px;font-size:14px">{{slice .Name 0 1}}{{if not .Name}}+{{end}}</div>
-<div class="min-w-0">
-<div class="fw-bold small">{{if .Name}}{{.Name}}{{else}}+{{.Phone}}{{end}}</div>
-<div class="text-muted" style="font-size:11px">{{.Created}}</div>
-</div>
-</div>
-{{if .MediaURL}}<div style="height:120px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:12px">Media</div>{{end}}
-{{if .Caption}}<div class="p-2 small">{{.Caption}}</div>{{end}}
-</div>
-</div>
-{{else}}
-<div class="col-12 text-center text-muted py-4">Belum ada status. Status muncul saat kontak posting story.</div>
-{{end}}
-</div>
-</div>
-</div>
-</div>
-
+<div class="chat-area" id="chatMessages"></div>
+<div class="chat-footer">
+<div class="chat-input-wrap">
+<textarea id="chatInput" rows="1" placeholder="Ketik pesan..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMsg()}"></textarea>
+<button onclick="sendChatMsg()"><i class="la la-send" style="font-size:18px"></i></button>
+</div></div></div></div></div>
 <script>
-var srch=document.getElementById('inboxSearch');if(srch)srch.addEventListener('input',function(){
+var chatPhone='',chatName='',chatIsGroup='';
+function openChat(phone,name,isGroup,channel){
+document.querySelectorAll('.conv-item').forEach(function(e){e.classList.remove('active')});
+var el=document.querySelector('.conv-item[data-phone="'+phone+'"]');if(el)el.classList.add('active');
+chatPhone=phone;chatName=name;chatIsGroup=isGroup==='true';
+document.getElementById('chatEmpty').style.display='none';
+document.getElementById('chatView').style.display='flex';
+document.getElementById('chatTitle').textContent=name;
+document.getElementById('chatSubtitle').textContent=(isGroup==='true'?'Group':'')+(channel==='meta'?' Meta':'');
+document.getElementById('chatAvatar').textContent=name.charAt(0)||'+';
+if(window.innerWidth<768)document.getElementById('chatPanel').classList.add('open');
+loadMessages();
+}
+function closeChat(){document.getElementById('chatPanel').classList.remove('open');}
+function loadMessages(){
+fetch('/inbox/messages?phone='+encodeURIComponent(chatPhone)).then(function(r){return r.json()}).then(function(msgs){
+var box=document.getElementById('chatMessages');
+if(!msgs||!msgs.length){box.innerHTML='<div class="text-center text-muted py-4">Belum ada pesan</div>';scrollChat();return}
+var html='';
+for(var i=0;i<msgs.length;i++){
+var m=msgs[i],side=m.type==='sent'?'flex-end':'flex-start';
+var bubble='chat-bubble '+m.type;
+if(m.type==='sent'&&m.channel==='phone_sync')bubble+=' phone-sync';
+html+='<div class="d-flex w-100 mb-1" style="justify-content:'+side+'"><div class="'+bubble+'">';
+if(m.type==='received'&&m.sender_name)html+='<div class="chat-sender">'+m.sender_name+'</div>';
+html+='<div>'+m.message+'<span class="chat-time">'+m.created+'</span></div></div></div>';
+}
+box.innerHTML=html;scrollChat();
+});
+}
+function sendChatMsg(){
+var inp=document.getElementById('chatInput'),msg=inp.value.trim();
+if(!msg||!chatPhone)return;
+var f=new FormData();f.append('phone',chatPhone);f.append('message',msg);
+var acp=document.getElementById('chatAccountPhone');if(acp)f.append('account_phone',acp.value);
+fetch('/inbox/send',{method:'POST',body:f}).then(function(r){return r.json()}).then(function(d){
+if(d.ok){inp.value='';loadMessages();inp.focus();}
+});
+}
+function scrollChat(){var box=document.getElementById('chatMessages');if(box)box.scrollTop=box.scrollHeight;}
+function exportChat(){
+fetch('/inbox/messages?phone='+encodeURIComponent(chatPhone)).then(function(r){return r.json()}).then(function(msgs){
+var csv='type,message,time\n';msgs.forEach(function(m){csv+='"'+m.type+'","'+m.message.replace(/"/g,'""')+'","'+m.created+'"\n'});
+var blob=new Blob(['\uFEFF'+csv],{type:'text/csv'});
+var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=chatPhone+'.csv';a.click();
+});
+}
+var evtSource=new EventSource('/inbox/events');
+evtSource.onmessage=function(e){var d=JSON.parse(e.data);if(d.phone===chatPhone)loadMessages();};
+document.getElementById('inboxSearch').addEventListener('input',function(){
 var q=this.value.toLowerCase();
-document.querySelectorAll('#inboxList .inbox-conv').forEach(function(el){
-if(el.style.display==='none')return;
-el.style.display=el.textContent.toLowerCase().includes(q)?'':'none';
+document.querySelectorAll('.conv-item').forEach(function(el){el.style.display=el.textContent.toLowerCase().includes(q)?'':'none'});
 });
-});
-setInterval(function(){
-fetch('/inbox/unread-count').then(function(r){return r.json()}).then(function(d){
-var b=document.querySelector('.inbox-badge');
-if(d.unread>0){if(b)b.textContent=d.unread;else{var n=document.querySelector('.nav-link[href="/inbox"]');if(n)n.innerHTML+=' <span class="badge badge-pill badge-danger ml-1 inbox-badge">'+d.unread+'</span>'}}
-else{if(b)b.remove()}
-});
-},5000);
+scrollChat();
 </script>
 {{end}}
 {{if eq .Page "inbox_chat"}}

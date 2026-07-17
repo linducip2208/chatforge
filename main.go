@@ -270,6 +270,8 @@ func main() {
 	mux.HandleFunc("/inbox/label", authMiddleware(handleInboxLabel))
 	mux.HandleFunc("/inbox/filter/", authMiddleware(handleInboxFilter))
 	mux.HandleFunc("/inbox/canned", authMiddleware(handleInboxCanned))
+	mux.HandleFunc("/inbox/star", authMiddleware(handleInboxStar))
+	mux.HandleFunc("/inbox/suggest", authMiddleware(handleInboxSuggest))
 	mux.HandleFunc("/customers", authMiddleware(p("customers")))
 	mux.HandleFunc("/customers/profile", authMiddleware(handleCustomerProfile))
 	mux.HandleFunc("/calendar", authMiddleware(p("calendar")))
@@ -2056,7 +2058,39 @@ func handleInboxCanned(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(list)
 }
 
+func handleInboxSuggest(w http.ResponseWriter, r *http.Request) {
+	phone := r.URL.Query().Get("phone")
+	if phone == "" { w.WriteHeader(400); return }
+	keys, _ := db.ListAiKeys(getUserID(r))
+	if len(keys) == 0 { w.Header().Set("Content-Type", "application/json"); fmt.Fprint(w, `{"reply":""}`); return }
+	ak := keys[0]
+	dec, _ := secret.Decrypt(ak.APIKey)
+	if dec == "" { dec = ak.APIKey }
+	msgs, _ := db.ChatHistory(phone, 10)
+	context := ""
+	for i := len(msgs) - 1; i >= 0; i-- {
+		prefix := "Customer"
+		if msgs[i].Type == "sent" { prefix = "Agent" }
+		context += prefix + ": " + msgs[i].Message + "\n"
+	}
+	prompt := "Based on this conversation, suggest a helpful short reply in Indonesian:\n" + context + "\nReply:"
+	reply, err := aiservice.Reply(dec, ak.Provider, ak.Model, ak.BaseURL, "", prompt, nil, nil)
+	w.Header().Set("Content-Type", "application/json")
+	if err != nil || reply == "" { fmt.Fprint(w, `{"reply":""}`); return }
+	reply = strings.Trim(reply, "\"' \n")
+	b, _ := json.Marshal(map[string]string{"reply": reply})
+	w.Write(b)
+}
+
+func handleInboxStar(w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+	typ := r.FormValue("type")
+	if id > 0 && (typ == "sent" || typ == "received") { db.ToggleStar(typ, id) }
+	w.WriteHeader(200)
+}
+
 // ---- Payment / Subscription ----
+
 
 func handleSubscribe(w http.ResponseWriter, r *http.Request) {
 	render(w, r, "subscribe")

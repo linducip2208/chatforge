@@ -172,6 +172,8 @@ func (d *DB) migrate() error {
 	d.safeAddColumn("subscriptions", "status", "VARCHAR(20) NOT NULL DEFAULT 'active'")
 	d.safeAddColumn("subscriptions", "user_id", "BIGINT NOT NULL DEFAULT 0")
 	d.safeAddColumn("subscriptions", "package_id", "BIGINT NOT NULL DEFAULT 0")
+	d.safeAddColumn("sent", "starred", "TINYINT NOT NULL DEFAULT 0")
+	d.safeAddColumn("received", "starred", "TINYINT NOT NULL DEFAULT 0")
 	d.sql.Exec(`CREATE TABLE IF NOT EXISTS wa_session_owners (phone VARCHAR(64) PRIMARY KEY, user_id BIGINT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`)
 	d.safeAddColumn("received", "wa_phone", "VARCHAR(64) NOT NULL DEFAULT ''")
 	d.safeAddColumn("sent", "wa_phone", "VARCHAR(64) NOT NULL DEFAULT ''")
@@ -373,7 +375,7 @@ func (d *DB) GroupInboxPaginated(userID int64, page, perPage int) ([]InboxConver
 		rows, err = d.sql.Query(`SELECT t.phone, COALESCE(g.name, MAX(t.name)) as name, MAX(t.is_group) as is_group, COUNT(CASE WHEN t.is_read=0 THEN 1 END) as unread, MAX(t.channel) as channel, MAX(t.created_at) as last_time FROM (SELECT phone, name, is_group, is_read, channel, created_at FROM received UNION ALL `+baseSent+`) t LEFT JOIN wa_groups g ON t.phone = g.jid GROUP BY t.phone ORDER BY last_time DESC LIMIT ? OFFSET ?`, perPage, offset)
 	} else {
 		baseRecv := `SELECT r.phone, r.name, r.is_group, r.is_read, r.channel, r.created_at FROM received r INNER JOIN wa_session_owners o ON r.wa_phone = o.phone AND o.user_id = ?`
-		baseSentU := `SELECT s.phone, '' as name, 0 as is_group, 1 as is_read, s.channel, s.created_at FROM sent s INNER JOIN wa_session_owners o ON s.wa_phone = o.phone AND o.user_id = ?`
+		baseSentU := `SELECT s.phone, '' as name, 0 as is_group, 1 as is_read, s.channel, s.created_at FROM sent s LEFT JOIN wa_session_owners o ON s.wa_phone = o.phone AND o.user_id = ? WHERE s.wa_phone = '' OR o.phone IS NOT NULL`
 		rows, err = d.sql.Query(`SELECT t.phone, COALESCE(g.name, MAX(t.name)) as name, MAX(t.is_group) as is_group, COUNT(CASE WHEN t.is_read=0 THEN 1 END) as unread, MAX(t.channel) as channel, MAX(t.created_at) as last_time FROM (`+baseRecv+` UNION ALL `+baseSentU+`) t LEFT JOIN wa_groups g ON t.phone = g.jid GROUP BY t.phone ORDER BY last_time DESC LIMIT ? OFFSET ?`, userID, userID, perPage, offset)
 	}
 	if err != nil { return nil, err }
@@ -384,6 +386,13 @@ func (d *DB) GroupInboxPaginated(userID int64, page, perPage int) ([]InboxConver
 		if err := rows.Scan(&c.Phone, &c.Name, &g, &c.Unread, &c.Channel, &lastTime); err != nil { return nil, err }
 		c.IsGroup = g == 1
 		c.LastTime = lastTime
+		// Jika tidak ada nama, coba cari di contacts
+		if c.Name == "" && !c.IsGroup {
+			cleanPhone := extractCleanPhone(c.Phone)
+			var contactName string
+			d.sql.QueryRow(`SELECT name FROM contacts WHERE phone=? OR phone=?`, c.Phone, cleanPhone).Scan(&contactName)
+			if contactName != "" { c.Name = contactName }
+		}
 		d.sql.QueryRow(`SELECT message, created_at FROM received WHERE phone=? UNION ALL SELECT message, created_at FROM sent WHERE phone=? ORDER BY created_at DESC LIMIT 1`, c.Phone, c.Phone).Scan(&c.LastMsg, &c.LastTime)
 		out = append(out, c)
 	}
@@ -405,7 +414,7 @@ func (d *DB) GroupInbox(userID int64) ([]InboxConversation, error) {
 }
 
 func (d *DB) ChatHistory(phone string, limit int) ([]ChatMessage, error) {
-	rows, err := d.sql.Query(`SELECT 'received' as type, id, phone, name, message, created_at, is_read, sender_name, is_group, channel FROM received WHERE phone=? UNION ALL SELECT 'sent' as type, id, phone, '' as name, message, created_at, 1 as is_read, '' as sender_name, 0 as is_group, channel FROM sent WHERE phone=? ORDER BY created_at DESC LIMIT ?`, phone, phone, limit)
+	rows, err := d.sql.Query(`SELECT 'received' as type, id, phone, name, message, created_at, is_read, sender_name, is_group, channel FROM received WHERE phone=? UNION ALL SELECT 'sent' as type, id, phone, '' as name, message, created_at, 1 as is_read, '' as sender_name, 0 as is_group, channel FROM sent WHERE phone=? ORDER BY created_at ASC LIMIT ?`, phone, phone, limit)
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []ChatMessage
@@ -488,6 +497,25 @@ func (d *DB) GetSession(token string) (int64, bool) {
 }
 func (d *DB) DeleteSession(token string) {
 	d.sql.Exec(`DELETE FROM sessions WHERE token=?`, token)
+}
+
+func (d *DB) ToggleStar(typ string, id int64) {
+	if typ == "sent" {
+		d.sql.Exec(`UPDATE sent SET starred=1-starred WHERE id=?`, id)
+	} else {
+		d.sql.Exec(`UPDATE received SET starred=1-starred WHERE id=?`, id)
+	}
+}
+
+func extractCleanPhone(jid string) string {
+	if len(jid) <= 16 { return jid }
+	// broadcast JID: {phone}{broadcast_id}, phone part usually 10-15 chars
+	for cut := 14; cut >= 10; cut-- {
+		if cut <= len(jid) {
+			return jid[:cut]
+		}
+	}
+	return jid
 }
 
 // Welcome tracking

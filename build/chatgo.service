@@ -1,0 +1,24 @@
+[Unit]
+Description=ChatGo WhatsApp Marketing SaaS
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/chatgo
+ExecStart=/opt/chatgo/chatgo
+Restart=always
+RestartSec=5
+
+# Environment (atau load dari .env di WorkingDirectory)
+EnvironmentFile=/opt/chatgo/.env
+
+# Security hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/opt/chatgo/data
+
+[Install]
+WantedBy=multi-user.target
