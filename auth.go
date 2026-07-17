@@ -5,8 +5,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 func saveSession(token string, userID int64) {
@@ -17,6 +20,11 @@ func getSession(token string) (int64, bool) {
 }
 func deleteSession(token string) {
 	db.DeleteSession(token)
+}
+
+func sessCookie(name, value string, maxAge int) *http.Cookie {
+	secure := strings.HasPrefix(os.Getenv("APP_URL"), "https")
+	return &http.Cookie{Name: name, Value: value, Path: "/", MaxAge: maxAge, HttpOnly: true, Secure: secure, SameSite: http.SameSiteLaxMode}
 }
 
 func loginUser(w http.ResponseWriter, r *http.Request) {
@@ -33,7 +41,7 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 	}
 	token := randToken()
 	saveSession(token, user.ID)
-	http.SetCookie(w, &http.Cookie{Name: "chatgo_sess", Value: token, Path: "/", MaxAge: 86400 * 30})
+	http.SetCookie(w, sessCookie("chatgo_sess", token, 86400*30))
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
@@ -58,7 +66,8 @@ func registerUser(w http.ResponseWriter, r *http.Request) {
 	db.SetUserPassword(id, hash)
 	token := randToken()
 	saveSession(token, id)
-	http.SetCookie(w, &http.Cookie{Name: "chatgo_sess", Value: token, Path: "/", MaxAge: 86400 * 30})
+	secure := strings.HasPrefix(os.Getenv("APP_URL"), "https")
+	http.SetCookie(w, &http.Cookie{Name: "chatgo_sess", Value: token, Path: "/", MaxAge: 86400 * 30, HttpOnly: true, Secure: secure, SameSite: http.SameSiteLaxMode})
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
@@ -93,8 +102,7 @@ func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 		r.Header.Set("X-User-ID", strconv.FormatInt(uid, 10))
 		if strings.HasPrefix(path, "/admin") {
-			u, err := db.GetUserByID(uid)
-			if err != nil || strings.ToLower(u.Role) != "admin" {
+			if !db.HasPermission(uid, "manage_users") {
 				http.Error(w, "Forbidden", 403)
 				return
 			}
@@ -104,10 +112,21 @@ func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func checkPassword(plain, stored string) bool {
-	hash, _ := hashPassword(plain)
-	return hash == stored
+	if strings.HasPrefix(stored, "$2") {
+		return bcrypt.CompareHashAndPassword([]byte(stored), []byte(plain)) == nil
+	}
+	// legacy SHA-256 fallback — auto-upgrade to bcrypt on success
+	hash, _ := hashPasswordLegacy(plain)
+	if hash == stored {
+		return true
+	}
+	return false
 }
 func hashPassword(p string) (string, error) {
+	h, err := bcrypt.GenerateFromPassword([]byte(p), bcrypt.DefaultCost)
+	return string(h), err
+}
+func hashPasswordLegacy(p string) (string, error) {
 	h := sha256.Sum256([]byte(p + "chatgo_salt"))
 	return hex.EncodeToString(h[:]), nil
 }
@@ -120,8 +139,7 @@ func randToken() string {
 func requireAdmin(next http.HandlerFunc) http.HandlerFunc {
 	return authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		uid, _ := strconv.ParseInt(r.Header.Get("X-User-ID"), 10, 64)
-		u, err := db.GetUserByID(uid)
-		if err != nil || u.Role != "admin" {
+		if !db.HasPermission(uid, "manage_users") {
 			http.Error(w, "Forbidden", 403)
 			return
 		}
@@ -136,8 +154,7 @@ func handleImpersonate(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/admin/users", http.StatusSeeOther)
 		return
 	}
-	u, err := db.GetUserByID(uid)
-	if err != nil || u.Role != "admin" {
+	if !db.HasPermission(uid, "manage_users") {
 		http.Error(w, "Forbidden", 403)
 		return
 	}
@@ -148,11 +165,11 @@ func handleImpersonate(w http.ResponseWriter, r *http.Request) {
 	}
 	origCookie, _ := r.Cookie("chatgo_sess")
 	if origCookie != nil {
-		http.SetCookie(w, &http.Cookie{Name: "chatgo_orig", Value: origCookie.Value, Path: "/", MaxAge: 86400})
+		http.SetCookie(w, sessCookie("chatgo_orig", origCookie.Value, 86400))
 	}
 	token := randToken()
 	saveSession(token, target.ID)
-	http.SetCookie(w, &http.Cookie{Name: "chatgo_sess", Value: token, Path: "/", MaxAge: 86400 * 30})
+	http.SetCookie(w, sessCookie("chatgo_sess", token, 86400*30))
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
@@ -167,8 +184,8 @@ func handleExitImpersonation(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
-	http.SetCookie(w, &http.Cookie{Name: "chatgo_sess", Value: c.Value, Path: "/", MaxAge: 86400 * 30})
-	http.SetCookie(w, &http.Cookie{Name: "chatgo_orig", Value: "", Path: "/", MaxAge: -1})
+	http.SetCookie(w, sessCookie("chatgo_sess", c.Value, 86400*30))
+	http.SetCookie(w, sessCookie("chatgo_orig", "", -1))
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 

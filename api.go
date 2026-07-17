@@ -36,7 +36,7 @@ func handleAPISend(w http.ResponseWriter, r *http.Request) {
 		writeAPIError(w, "phone and message required", 400)
 		return
 	}
-	if err := engine.SendFrom(strings.TrimPrefix(req.AccountPhone, "+"), req.Phone, msgtemplate.Render(req.Message, msgtemplate.Vars{Phone: req.Phone})); err != nil {
+	if err := engine.SendFrom(0, strings.TrimPrefix(req.AccountPhone, "+"), req.Phone, msgtemplate.Render(req.Message, msgtemplate.Vars{Phone: req.Phone})); err != nil {
 		writeAPIError(w, err.Error(), 500)
 		return
 	}
@@ -77,8 +77,8 @@ func handleAPIMessages(w http.ResponseWriter, r *http.Request) {
 
 func handleAPIContacts(w http.ResponseWriter, r *http.Request) {
 	if !checkAPIKey(r) { writeAPIError(w, "invalid api key", 401); return }
-	contacts, _ := db.ListContacts()
-	groups, _ := db.ListGroups()
+	contacts, _ := db.ListContacts(0)
+	groups, _ := db.ListGroups(0)
 	writeAPIOK(w, map[string]interface{}{"contacts": contacts, "groups": groups})
 }
 

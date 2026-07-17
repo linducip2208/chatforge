@@ -6,6 +6,7 @@ type Drip struct {
 	ID        int64
 	Name      string
 	Status    string
+	UserID    int64
 	Created   string
 	Steps     []DripStep
 }
@@ -62,12 +63,14 @@ func (d *DB) migrateDrip() error {
 			return err
 		}
 	}
+	d.sql.Exec(`ALTER TABLE drips ADD COLUMN user_id BIGINT NOT NULL DEFAULT 0`)
+	d.sql.Exec(`ALTER TABLE drip_steps ADD COLUMN user_id BIGINT NOT NULL DEFAULT 0`)
 	return nil
 }
 
 // ---- Drips ----
-func (d *DB) AddDrip(name string) (int64, error) {
-	res, err := d.sql.Exec(`INSERT INTO drips (name) VALUES (?)`, name)
+func (d *DB) AddDrip(userID int64, name string) (int64, error) {
+	res, err := d.sql.Exec(`INSERT INTO drips (user_id, name) VALUES (?, ?)`, userID, name)
 	if err != nil { return 0, err }
 	return res.LastInsertId()
 }
@@ -80,7 +83,7 @@ func (d *DB) DeleteDrip(id int64) error {
 	return err
 }
 func (d *DB) ListDrips() ([]Drip, error) {
-	rows, err := d.sql.Query(`SELECT d.id, d.name, d.status, d.created_at, IFNULL(s.id,0), IFNULL(s.delay_minutes,0), IFNULL(s.message,''), IFNULL(s.sort_order,0) FROM drips d LEFT JOIN drip_steps s ON s.drip_id=d.id ORDER BY d.id DESC, s.sort_order`)
+	rows, err := d.sql.Query(`SELECT d.id, d.name, d.status, IFNULL(d.user_id,0), d.created_at, IFNULL(s.id,0), IFNULL(s.delay_minutes,0), IFNULL(s.message,''), IFNULL(s.sort_order,0) FROM drips d LEFT JOIN drip_steps s ON s.drip_id=d.id ORDER BY d.id DESC, s.sort_order`)
 	if err != nil { return nil, err }
 	defer rows.Close()
 	seen := map[int64]*Drip{}
@@ -90,7 +93,7 @@ func (d *DB) ListDrips() ([]Drip, error) {
 		var delay, sortOrd int
 		var msg string
 		var dr Drip
-		rows.Scan(&dr.ID, &dr.Name, &dr.Status, &dr.Created, &sid, &delay, &msg, &sortOrd)
+		rows.Scan(&dr.ID, &dr.Name, &dr.Status, &dr.UserID, &dr.Created, &sid, &delay, &msg, &sortOrd)
 		if existing, ok := seen[dr.ID]; ok {
 			if sid > 0 {
 				existing.Steps = append(existing.Steps, DripStep{ID: sid, DripID: dr.ID, DelayMinutes: delay, Message: msg, SortOrder: sortOrd})
@@ -109,7 +112,7 @@ func (d *DB) ListDrips() ([]Drip, error) {
 	return out, nil
 }
 func (d *DB) GetDrip(id int64) (*Drip, error) {
-	rows, err := d.sql.Query(`SELECT d.id, d.name, d.status, d.created_at, s.id, s.delay_minutes, s.message, s.sort_order FROM drips d LEFT JOIN drip_steps s ON s.drip_id=d.id WHERE d.id=? ORDER BY s.sort_order`, id)
+	rows, err := d.sql.Query(`SELECT d.id, d.name, d.status, IFNULL(d.user_id,0), d.created_at, s.id, s.delay_minutes, s.message, s.sort_order FROM drips d LEFT JOIN drip_steps s ON s.drip_id=d.id WHERE d.id=? ORDER BY s.sort_order`, id)
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var dr *Drip
@@ -120,9 +123,9 @@ func (d *DB) GetDrip(id int64) (*Drip, error) {
 		var sortOrd int
 		if dr == nil {
 			dr = &Drip{}
-			rows.Scan(&dr.ID, &dr.Name, &dr.Status, &dr.Created, &sid, &delay, &msg, &sortOrd)
+			rows.Scan(&dr.ID, &dr.Name, &dr.Status, &dr.UserID, &dr.Created, &sid, &delay, &msg, &sortOrd)
 		} else {
-			rows.Scan(new(int64), new(string), new(string), new(string), &sid, &delay, &msg, &sortOrd)
+			rows.Scan(new(int64), new(string), new(string), new(int64), new(string), &sid, &delay, &msg, &sortOrd)
 		}
 		if sid > 0 {
 			dr.Steps = append(dr.Steps, DripStep{ID: sid, DripID: dr.ID, DelayMinutes: delay, Message: msg, SortOrder: sortOrd})

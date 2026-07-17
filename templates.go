@@ -198,137 +198,180 @@ if(a){var t=a.offsetTop-s.offsetHeight/2;if(t>0)s.scrollTop=t}
 </html>{{end}}
 
 {{define "sidebar"}}
+<style>
+.nav-group-header{cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:6px 12px;margin:2px 8px;border-radius:8px;color:#8895b7;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;transition:all .15s;user-select:none}
+.nav-group-header:hover{color:#fff;background:rgba(255,255,255,.04)}
+.nav-group-header i.la-chevron-down{font-size:11px;transition:transform .2s}
+.nav-group-header.collapsed i.la-chevron-down{transform:rotate(-90deg)}
+.nav-group-body{overflow:hidden;transition:max-height .3s ease}
+.nav-group-body.collapsed{max-height:0!important}
+.nav-sub{padding-left:16px}
+</style>
 <nav class="navbar navbar-vertical fixed-left navbar-expand-md navbar-dark navbar-vibrant" id="sidebar">
   <div class="container-fluid">
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#sidebarCollapse">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <a class="navbar-brand" href="/">
-      <img src="{{.AppLogo}}" class="navbar-brand-img mx-auto" alt="{{.AppName}}" onerror="this.outerHTML='<span style=&quot;color:#fff;font-weight:800;font-size:20px&quot;>{{.AppName}}</span>'">
-    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#sidebarCollapse"><span class="navbar-toggler-icon"></span></button>
+    <a class="navbar-brand" href="/"><img src="{{.AppLogo}}" class="navbar-brand-img mx-auto" alt="{{.AppName}}" onerror="this.outerHTML='<span style=&quot;color:#fff;font-weight:800;font-size:20px&quot;>{{.AppName}}</span>'"></a>
     <div class="collapse navbar-collapse" id="sidebarCollapse">
-      <h6 class="navbar-heading">{{T "nav_overview"}}</h6>
-      <ul class="navbar-nav">
-        <li class="nav-item"><a class="nav-link {{if eq .Active "home"}}active{{end}}" href="/"><i class="la la-chart-bar la-lg"></i> {{T "nav_dashboard"}}<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;font-weight:600;padding:2px 5px;border-radius:3px">META</span></a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "inbox"}}active{{end}}" href="/inbox"><i class="la la-comments la-lg"></i> Live Chat{{if gt .UnreadCount 0}} <span class="badge badge-pill badge-danger ml-1 inbox-badge">{{.UnreadCount}}</span>{{end}}</a></li>
-      </ul>
-      <hr class="navbar-divider my-3">
-      {{if eq .Role "admin"}}
-      <h6 class="navbar-heading">{{T "nav_whatsapp"}}</h6>
-      <ul class="navbar-nav">
-        <li class="nav-item"><a class="nav-link {{if eq .Active "wa"}}active{{end}}" href="/wa"><i class="la la-whatsapp la-lg"></i> {{T "nav_account_qr"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "send"}}active{{end}}" href="/send"><i class="la la-paper-plane la-lg"></i> {{T "nav_send"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "broadcast"}}active{{end}}" href="/broadcast"><i class="la la-bullhorn la-lg"></i> {{T "nav_broadcast"}}<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;font-weight:600;padding:2px 5px;border-radius:3px">META</span></a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "drips"}}active{{end}}" href="/drips"><i class="la la-tint la-lg"></i> Drip Campaign</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "scheduled"}}active{{end}}" href="/scheduled"><i class="la la-clock la-lg"></i> {{T "nav_scheduled"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "sent"}}active{{end}}" href="/sent"><i class="la la-telegram la-lg"></i> {{T "nav_sent"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "received"}}active{{end}}" href="/received"><i class="la la-comment la-lg"></i> {{T "nav_received"}}</a></li>
-      </ul>
-      {{else}}
-      <h6 class="navbar-heading">{{T "nav_whatsapp"}}</h6>
-      <ul class="navbar-nav">
-        <li class="nav-item"><a class="nav-link {{if eq .Active "wa"}}active{{end}}" href="/wa"><i class="la la-whatsapp la-lg"></i> {{T "nav_account_qr"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "send"}}active{{end}}" href="/send"><i class="la la-paper-plane la-lg"></i> {{T "nav_send"}}</a></li>
-      </ul>
-      {{end}}
-      <hr class="navbar-divider my-3">
-      {{if eq .Role "admin"}}
-      <h6 class="navbar-heading">{{T "nav_hosts"}}</h6>
-      <ul class="navbar-nav">
-        <li class="nav-item"><a class="nav-link {{if eq .Active "hosts_whatsapp"}}active{{end}}" href="/hosts/whatsapp"><i class="la la-whatsapp la-lg"></i> {{T "nav_hosts_whatsapp"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "hosts_android"}}active{{end}}" href="/hosts/android"><i class="la la-mobile la-lg"></i> {{T "nav_hosts_android"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "ussd"}}active{{end}}" href="/ussd"><i class="la la-satellite-dish la-lg"></i> {{T "nav_ussd"}}</a></li>
-      </ul>
-      <hr class="navbar-divider my-3">
-      {{end}}
-      {{if eq .Role "admin"}}
-      <h6 class="navbar-heading">{{T "nav_contacts"}}</h6>
-      <ul class="navbar-nav">
-        <li class="nav-item"><a class="nav-link {{if eq .Active "contacts"}}active{{end}}" href="/contacts"><i class="la la-address-book la-lg"></i> {{T "nav_contacts_saved"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "groups"}}active{{end}}" href="/contacts/groups"><i class="la la-list la-lg"></i> {{T "nav_contacts_groups"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "tags"}}active{{end}}" href="/tags"><i class="la la-tags la-lg"></i> Tags</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "unsub"}}active{{end}}" href="/contacts/unsub"><i class="la la-unlink la-lg"></i> {{T "nav_contacts_unsub"}}</a></li>
-      </ul>
-      <hr class="navbar-divider my-3">
-      <h6 class="navbar-heading">{{T "nav_tools"}}</h6>
-      <ul class="nav nav-sm flex-column">
-        <li class="nav-item"><a class="nav-link {{if eq .Active "settings"}}active{{end}}" href="/settings"><i class="la la-cog la-lg"></i> {{T "nav_settings"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "autoreply"}}active{{end}}" href="/autoreply"><i class="la la-robot la-lg"></i> {{T "nav_autoreply"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "templates"}}active{{end}}" href="/templates"><i class="la la-file-alt la-lg"></i> {{T "nav_templates"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "canned"}}active{{end}}" href="/canned"><i class="la la-comment-dots la-lg"></i> Canned</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "tracker"}}active{{end}}" href="/tracker"><i class="la la-link la-lg"></i> Links</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "abtests"}}active{{end}}" href="/ab-tests"><i class="la la-balance-scale la-lg"></i> A/B Test</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "store"}}active{{end}}" href="/store"><i class="la la-store la-lg"></i> Store</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "orders"}}active{{end}}" href="/store/orders"><i class="la la-shopping-bag la-lg"></i> Orders</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "forms"}}active{{end}}" href="/forms"><i class="la la-wpforms la-lg"></i> Forms</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "reminders"}}active{{end}}" href="/reminders"><i class="la la-bell la-lg"></i> Reminders</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "analytics"}}active{{end}}" href="/analytics"><i class="la la-chart-pie la-lg"></i> Analytics</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "blacklist"}}active{{end}}" href="/blacklist"><i class="la la-ban la-lg"></i> Blacklist</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "csat"}}active{{end}}" href="/csat"><i class="la la-star la-lg"></i> CSAT</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "recurring"}}active{{end}}" href="/recurring"><i class="la la-redo-alt la-lg"></i> Recurring</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "uploads"}}active{{end}}" href="/uploads"><i class="la la-folder-open la-lg"></i> Files</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "calendar"}}active{{end}}" href="/calendar"><i class="la la-calendar la-lg"></i> Calendar</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "customers"}}active{{end}}" href="/customers"><i class="la la-users la-lg"></i> Customers</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "merge"}}active{{end}}" href="/merge"><i class="la la-code-branch la-lg"></i> Merge</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "macros"}}active{{end}}" href="/macros"><i class="la la-bolt la-lg"></i> Macros</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "translate"}}active{{end}}" href="/translate-tool"><i class="la la-language la-lg"></i> Translate</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "widget"}}active{{end}}" href="/widget-info"><i class="la la-code la-lg"></i> Widget</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "emailwa"}}active{{end}}" href="/email-wa"><i class="la la-envelope la-lg"></i> Email→WA</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "apikeys"}}active{{end}}" href="/apikeys"><i class="la la-key la-lg"></i> {{T "nav_apikeys"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "webhooks"}}active{{end}}" href="/webhooks"><i class="la la-code-branch la-lg"></i> {{T "nav_webhooks"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "logger"}}active{{end}}" href="/logger"><i class="la la-clipboard-list la-lg"></i> {{T "nav_logger"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "settings"}}active{{end}}" href="/settings"><i class="la la-cog la-lg"></i> {{T "nav_settings"}}</a></li>
-      </ul>
-      {{else}}
-      <h6 class="navbar-heading">{{T "nav_tools"}}</h6>
-      <ul class="navbar-nav">
-        <li class="nav-item"><a class="nav-link {{if eq .Active "templates"}}active{{end}}" href="/templates"><i class="la la-file-alt la-lg"></i> {{T "nav_templates"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "apikeys"}}active{{end}}" href="/apikeys"><i class="la la-key la-lg"></i> {{T "nav_apikeys"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "settings"}}active{{end}}" href="/settings"><i class="la la-cog la-lg"></i> {{T "nav_settings"}}</a></li>
-      </ul>
-      {{end}}
-      {{if eq .Role "admin"}}
-      <hr class="navbar-divider my-3">
-      <h6 class="navbar-heading">{{T "nav_admin"}}</h6>
-      <ul class="navbar-nav">
-        <li class="nav-item"><a class="nav-link {{if eq .Active "admin"}}active{{end}}" href="/admin"><i class="la la-chart-bar la-lg"></i> {{T "nav_overview"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_users"}}active{{end}}" href="/admin/users"><i class="la la-users la-lg"></i> {{T "adm_users"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_roles"}}active{{end}}" href="/admin/roles"><i class="la la-user-shield la-lg"></i> {{T "adm_roles"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_packages"}}active{{end}}" href="/admin/packages"><i class="la la-box la-lg"></i> {{T "adm_packages"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_vouchers"}}active{{end}}" href="/admin/vouchers"><i class="la la-ticket-alt la-lg"></i> {{T "adm_vouchers"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_subscriptions"}}active{{end}}" href="/admin/subscriptions"><i class="la la-star la-lg"></i> {{T "adm_subscriptions"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_transactions"}}active{{end}}" href="/admin/transactions"><i class="la la-money-bill la-lg"></i> {{T "adm_transactions"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_paygateways"}}active{{end}}" href="/admin/gateways-pay"><i class="la la-credit-card la-lg"></i> Pay Gateways</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_transactions_pay"}}active{{end}}" href="/admin/transactions-pay"><i class="la la-receipt la-lg"></i> Pay Logs</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "backup"}}active{{end}}" href="/backup"><i class="la la-database la-lg"></i> Backup</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "audit"}}active{{end}}" href="/audit"><i class="la la-history la-lg"></i> Audit</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_payouts"}}active{{end}}" href="/admin/payouts"><i class="la la-hand-holding-usd la-lg"></i> {{T "adm_payouts"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_pages"}}active{{end}}" href="/admin/pages"><i class="la la-file la-lg"></i> {{T "adm_pages"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_marketing"}}active{{end}}" href="/admin/marketing"><i class="la la-bullhorn la-lg"></i> {{T "adm_marketing"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_languages"}}active{{end}}" href="/admin/languages"><i class="la la-language la-lg"></i> {{T "adm_languages"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_waservers"}}active{{end}}" href="/admin/waservers"><i class="la la-server la-lg"></i> {{T "adm_waservers"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_gateways"}}active{{end}}" href="/admin/gateways"><i class="la la-code la-lg"></i> {{T "adm_gateways"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_shorteners"}}active{{end}}" href="/admin/shorteners"><i class="la la-link la-lg"></i> {{T "adm_shorteners"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_plugins"}}active{{end}}" href="/admin/plugins"><i class="la la-puzzle-piece la-lg"></i> {{T "adm_plugins"}}</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_meta"}}active{{end}}" href="/admin/meta"><i class="la la-cloud la-lg"></i> Meta API<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;font-weight:600;padding:2px 5px;border-radius:3px">META</span></a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "admin_metatemplates"}}active{{end}}" href="/admin/metatemplates"><i class="la la-file-alt la-lg"></i> Templates<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;font-weight:600;padding:2px 5px;border-radius:3px">META</span></a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "meta_send"}}active{{end}}" href="/meta/send"><i class="la la-paper-plane la-lg"></i> Meta Send<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;font-weight:600;padding:2px 5px;border-radius:3px">META</span></a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "meta_campaigns"}}active{{end}}" href="/meta/campaigns"><i class="la la-bullhorn la-lg"></i> Meta Campaign<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;font-weight:600;padding:2px 5px;border-radius:3px">META</span></a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "meta_inbox"}}active{{end}}" href="/meta/inbox"><i class="la la-comments la-lg"></i> Meta Inbox<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;font-weight:600;padding:2px 5px;border-radius:3px">META</span></a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "meta_logs"}}active{{end}}" href="/meta/logs"><i class="la la-clipboard-list la-lg"></i> Meta Logs<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;font-weight:600;padding:2px 5px;border-radius:3px">META</span></a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "meta_analytics"}}active{{end}}" href="/meta/analytics"><i class="la la-chart-bar la-lg"></i> Meta Stats<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;font-weight:600;padding:2px 5px;border-radius:3px">META</span></a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "meta_webhook"}}active{{end}}" href="/meta/webhook"><i class="la la-link la-lg"></i> Meta Webhook<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;font-weight:600;padding:2px 5px;border-radius:3px">META</span></a></li>
-      </ul>
-      {{end}}
-      <hr class="navbar-divider my-3">
-      <h6 class="navbar-heading">{{T "nav_docs"}}</h6>
-      <ul class="navbar-nav">
-        <li class="nav-item"><a class="nav-link {{if eq .Active "subscribe"}}active{{end}}" href="/subscribe"><i class="la la-shopping-cart la-lg"></i> Upgrade</a></li>
-        <li class="nav-item"><a class="nav-link {{if eq .Active "docs"}}active{{end}}" href="/docs"><i class="la la-book la-lg"></i> {{T "nav_docs"}}</a></li>
-      </ul>
+
+{{template "sgroup" dict "id" "dashboard" "icon" "la-chart-bar" "label" "Dashboard" "open" true}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "home"}}active{{end}}" href="/"><i class="la la-chart-bar la-lg"></i> Dashboard</a></li>
+{{template "egroup"}}
+
+{{template "sgroup" dict "id" "inbox" "icon" "la-comments" "label" "Inbox" "open" true}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "inbox"}}active{{end}}" href="/inbox"><i class="la la-inbox la-lg"></i> All Conversations{{if gt .UnreadCount 0}} <span class="badge badge-pill badge-danger ml-1">{{.UnreadCount}}</span>{{end}}</a></li>
+{{template "egroup"}}
+
+{{template "sgroup" dict "id" "contacts" "icon" "la-address-book" "label" "Contacts"}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "contacts"}}active{{end}}" href="/contacts"><i class="la la-address-book la-lg"></i> All Contacts</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "groups"}}active{{end}}" href="/contacts/groups"><i class="la la-list la-lg"></i> Groups</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "tags"}}active{{end}}" href="/tags"><i class="la la-tags la-lg"></i> Tags</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "unsub"}}active{{end}}" href="/contacts/unsub"><i class="la la-unlink la-lg"></i> Unsubscribed</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "merge"}}active{{end}}" href="/merge"><i class="la la-code-branch la-lg"></i> Merge Duplicates</a></li>
+{{template "egroup"}}
+
+{{template "sgroup" dict "id" "broadcast" "icon" "la-bullhorn" "label" "Broadcast & Campaigns"}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "broadcast"}}active{{end}}" href="/broadcast"><i class="la la-paper-plane la-lg"></i> Broadcast<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;padding:2px 5px;border-radius:3px">META</span></a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "drips"}}active{{end}}" href="/drips"><i class="la la-tint la-lg"></i> Drip Campaign</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "recurring"}}active{{end}}" href="/recurring"><i class="la la-redo-alt la-lg"></i> Recurring</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "scheduled"}}active{{end}}" href="/scheduled"><i class="la la-clock la-lg"></i> Scheduled</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "abtests"}}active{{end}}" href="/ab-tests"><i class="la la-balance-scale la-lg"></i> A/B Test</a></li>
+{{template "egroup"}}
+
+{{template "sgroup" dict "id" "channels" "icon" "la-plug" "label" "Channels"}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "wa"}}active{{end}}" href="/wa"><i class="la la-whatsapp la-lg"></i> WhatsApp (Unofficial)</a></li>
+  <li class="nav-item" style="padding-left:16px"><a class="nav-link {{if eq .Active "wa"}}active{{end}}" href="/wa"><i class="la la-qrcode la-lg"></i> Account & QR</a></li>
+  <li class="nav-item" style="padding-left:16px"><a class="nav-link {{if eq .Active "hosts_whatsapp"}}active{{end}}" href="/hosts/whatsapp"><i class="la la-server la-lg"></i> Devices</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_meta"}}active{{end}}" href="/admin/meta"><i class="la la-cloud la-lg"></i> WhatsApp Cloud API (Meta)<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;padding:2px 5px;border-radius:3px">META</span></a></li>
+  <li class="nav-item" style="padding-left:16px"><a class="nav-link {{if eq .Active "admin_metatemplates"}}active{{end}}" href="/admin/metatemplates"><i class="la la-file-alt la-lg"></i> Templates</a></li>
+  <li class="nav-item" style="padding-left:16px"><a class="nav-link {{if eq .Active "meta_webhook"}}active{{end}}" href="/meta/webhook"><i class="la la-link la-lg"></i> Webhook</a></li>
+  <li class="nav-item" style="padding-left:16px"><a class="nav-link {{if eq .Active "admin_meta"}}active{{end}}" href="/admin/meta"><i class="la la-cog la-lg"></i> API Config</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "emailwa"}}active{{end}}" href="/email-wa"><i class="la la-envelope la-lg"></i> Email &rarr; WA</a></li>
+{{template "egroup"}}
+
+{{template "sgroup" dict "id" "logs" "icon" "la-envelope" "label" "Message Logs"}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "send"}}active{{end}}" href="/send"><i class="la la-share la-lg"></i> Send Message</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "sent"}}active{{end}}" href="/sent"><i class="la la-arrow-up la-lg"></i> Outgoing</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "received"}}active{{end}}" href="/received"><i class="la la-arrow-down la-lg"></i> Incoming</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "meta_logs"}}active{{end}}" href="/meta/logs"><i class="la la-clipboard-list la-lg"></i> Meta Logs<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;padding:2px 5px;border-radius:3px">META</span></a></li>
+{{template "egroup"}}
+
+{{template "sgroup" dict "id" "automation" "icon" "la-robot" "label" "Automation"}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "autoreply"}}active{{end}}" href="/autoreply"><i class="la la-reply la-lg"></i> Auto Reply</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "canned"}}active{{end}}" href="/canned"><i class="la la-comment-dots la-lg"></i> Canned Responses</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "macros"}}active{{end}}" href="/macros"><i class="la la-bolt la-lg"></i> Macros</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "forms"}}active{{end}}" href="/forms"><i class="la la-wpforms la-lg"></i> Forms</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "reminders"}}active{{end}}" href="/reminders"><i class="la la-bell la-lg"></i> Reminders</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "translate"}}active{{end}}" href="/translate-tool"><i class="la la-language la-lg"></i> Translate</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "widget"}}active{{end}}" href="/widget-info"><i class="la la-code la-lg"></i> Widget</a></li>
+{{template "egroup"}}
+
+{{template "sgroup" dict "id" "commerce" "icon" "la-store" "label" "Commerce"}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "store"}}active{{end}}" href="/store"><i class="la la-store la-lg"></i> Store</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "orders"}}active{{end}}" href="/store/orders"><i class="la la-shopping-bag la-lg"></i> Orders</a></li>
+{{template "egroup"}}
+
+{{if .IsAdmin}}
+<hr class="navbar-divider my-2">
+<div style="color:#6e84a3;font-size:11px;text-align:center;padding:4px;letter-spacing:1px">ADMIN</div>
+
+{{template "sgroup" dict "id" "admin_overview" "icon" "la-shield-alt" "label" "Overview"}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin"}}active{{end}}" href="/admin"><i class="la la-chart-bar la-lg"></i> Overview</a></li>
+{{template "egroup"}}
+
+{{template "sgroup" dict "id" "admin_business" "icon" "la-building" "label" "Business"}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_users"}}active{{end}}" href="/admin/users"><i class="la la-users la-lg"></i> Users</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_roles"}}active{{end}}" href="/admin/roles"><i class="la la-user-shield la-lg"></i> Roles</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_packages"}}active{{end}}" href="/admin/packages"><i class="la la-box la-lg"></i> Packages</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_subscriptions"}}active{{end}}" href="/admin/subscriptions"><i class="la la-star la-lg"></i> Subscriptions</a></li>
+{{template "egroup"}}
+
+{{template "sgroup" dict "id" "admin_finance" "icon" "la-money-bill" "label" "Finance"}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_vouchers"}}active{{end}}" href="/admin/vouchers"><i class="la la-ticket-alt la-lg"></i> Vouchers</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_transactions"}}active{{end}}" href="/admin/transactions"><i class="la la-receipt la-lg"></i> Transactions</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_paygateways"}}active{{end}}" href="/admin/gateways-pay"><i class="la la-credit-card la-lg"></i> Payment Gateways</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_transactions_pay"}}active{{end}}" href="/admin/transactions-pay"><i class="la la-file-invoice la-lg"></i> Payment Logs</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_payouts"}}active{{end}}" href="/admin/payouts"><i class="la la-hand-holding-usd la-lg"></i> Payouts</a></li>
+{{template "egroup"}}
+
+{{template "sgroup" dict "id" "admin_system" "icon" "la-server" "label" "System"}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "backup"}}active{{end}}" href="/backup"><i class="la la-database la-lg"></i> Backup</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "audit"}}active{{end}}" href="/audit"><i class="la la-history la-lg"></i> Audit</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "logger"}}active{{end}}" href="/logger"><i class="la la-clipboard-list la-lg"></i> Log</a></li>
+{{template "egroup"}}
+
+{{template "sgroup" dict "id" "admin_content" "icon" "la-file" "label" "Content"}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_pages"}}active{{end}}" href="/admin/pages"><i class="la la-copy la-lg"></i> Pages</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_marketing"}}active{{end}}" href="/admin/marketing"><i class="la la-bullhorn la-lg"></i> Marketing</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_languages"}}active{{end}}" href="/admin/languages"><i class="la la-language la-lg"></i> Languages</a></li>
+{{template "egroup"}}
+
+{{template "sgroup" dict "id" "admin_infra" "icon" "la-network-wired" "label" "Infrastructure"}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_waservers"}}active{{end}}" href="/admin/waservers"><i class="la la-server la-lg"></i> WA Servers</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_gateways"}}active{{end}}" href="/admin/gateways"><i class="la la-code la-lg"></i> Gateways</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_shorteners"}}active{{end}}" href="/admin/shorteners"><i class="la la-link la-lg"></i> URL Shorteners</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "admin_plugins"}}active{{end}}" href="/admin/plugins"><i class="la la-puzzle-piece la-lg"></i> Plugins</a></li>
+{{template "egroup"}}
+
+{{template "sgroup" dict "id" "reports" "icon" "la-chart-pie" "label" "Reports"}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "analytics"}}active{{end}}" href="/analytics"><i class="la la-chart-pie la-lg"></i> Analytics</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "meta_analytics"}}active{{end}}" href="/meta/analytics"><i class="la la-chart-bar la-lg"></i> Meta Stats<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;padding:2px 5px;border-radius:3px">META</span></a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "csat"}}active{{end}}" href="/csat"><i class="la la-star la-lg"></i> CSAT</a></li>
+{{template "egroup"}}
+
+{{template "sgroup" dict "id" "settings" "icon" "la-cog" "label" "Settings"}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "settings"}}active{{end}}" href="/settings"><i class="la la-cog la-lg"></i> General</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "templates"}}active{{end}}" href="/templates"><i class="la la-file-alt la-lg"></i> Templates</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "tracker"}}active{{end}}" href="/tracker"><i class="la la-link la-lg"></i> Links</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "blacklist"}}active{{end}}" href="/blacklist"><i class="la la-ban la-lg"></i> Blacklist</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "uploads"}}active{{end}}" href="/uploads"><i class="la la-folder-open la-lg"></i> Files</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "calendar"}}active{{end}}" href="/calendar"><i class="la la-calendar la-lg"></i> Calendar</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "customers"}}active{{end}}" href="/customers"><i class="la la-users la-lg"></i> Customers</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "apikeys"}}active{{end}}" href="/apikeys"><i class="la la-key la-lg"></i> API Keys</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "webhooks"}}active{{end}}" href="/webhooks"><i class="la la-code-branch la-lg"></i> Webhooks</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "logger"}}active{{end}}" href="/logger"><i class="la la-clipboard-list la-lg"></i> Log</a></li>
+{{template "egroup"}}
+{{end}}
+
+<ul class="navbar-nav mt-2">
+  <li class="nav-item"><a class="nav-link {{if eq .Active "subscribe"}}active{{end}}" href="/subscribe"><i class="la la-shopping-cart la-lg"></i> Upgrade</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "docs"}}active{{end}}" href="/docs"><i class="la la-book la-lg"></i> Documentation</a></li>
+</ul>
     </div>
   </div>
-</nav>{{end}}
+</nav>
+<script>
+(function(){
+var groups=document.querySelectorAll('.nav-group-header');
+groups.forEach(function(h){
+var body=h.nextElementSibling;
+var height=body.scrollHeight+'px';
+body.style.maxHeight=height;
+h.addEventListener('click',function(){
+h.classList.toggle('collapsed');
+body.classList.toggle('collapsed');
+if(body.classList.contains('collapsed'))body.style.maxHeight='0';
+else body.style.maxHeight=body.scrollHeight+'px';
+});
+var sub=body.querySelectorAll('.nav-link');
+sub.forEach(function(a){
+if(a.classList.contains('active')){h.classList.remove('collapsed');body.classList.remove('collapsed');body.style.maxHeight=body.scrollHeight+'px'}
+});
+});
+})();
+</script>
+{{end}}
+
+{{define "sgroup"}}
+<div class="nav-group-header{{if not .open}} collapsed{{end}}">
+<span><i class="la {{.icon}} la-lg me-1"></i>{{.label}}</span>
+<i class="la la-chevron-down"></i>
+</div>
+<ul class="navbar-nav nav-group-body{{if not .open}} collapsed{{end}}" style="max-height:{{if .open}}800{{else}}0{{end}}px;padding-left:4px">
+{{end}}
+
+{{define "egroup"}}
+</ul>
+{{end}}
 
 {{define "landing"}}<!DOCTYPE html>
 <html lang="{{.LangCode}}">
@@ -655,6 +698,7 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
         <div class="card-header"><h4 class="card-header-title">{{T "send_title"}}</h4></div>
         <div class="card-body">
           <form method="post" action="/send"><input type="hidden" name="is_text" value="1">
+            <div class="form-group"><label>Kirim Dari</label><select name="account_phone" class="form-control" required {{if not .HasConnected}}disabled{{end}}><option value="">-- Pilih Nomor Pengirim --</option>{{range .ConnectedAccounts}}{{if eq .Status "connected"}}<option value="+{{.Phone}}">+{{.Phone}}</option>{{end}}{{end}}</select>{{if not .HasConnected}}<small class="form-text text-muted">Hubungkan nomor WA dulu di halaman Devices</small>{{end}}</div>
             <div class="form-group"><label>{{T "send_to"}}</label><input name="phone" class="form-control" placeholder="628123456789" value="{{.SendTo}}" required><small class="form-text text-muted">{{T "send_to_hint"}}</small></div>
             <div class="form-group"><label>{{T "send_message"}}</label><textarea name="message" class="form-control" rows="4" placeholder="{{T "send_message_ph"}}" required></textarea></div>
             <button class="btn btn-primary lift" {{if ne .Status "connected"}}disabled{{end}}><i class="la la-paper-plane me-1"></i> {{T "send_btn"}}</button>
@@ -1787,7 +1831,7 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
         <div class="form-row"><div class="form-group col-6"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
         <div class="form-group col-3"><label>{{T "pkg_price"}}</label><input name="price" class="form-control" value="0"></div>
         <div class="form-group col-3"><label>{{T "pkg_hidden"}}</label><select name="hidden" class="form-control"><option value="1">Hidden</option><option value="2">Visible</option></select></div></div>
-        <div class="form-group"><label>{{T "pkg_services"}}</label><select name="services" class="form-control" multiple size="15"><option value="whatsapp">WhatsApp Web</option><option value="meta">Meta Cloud API</option><option value="broadcast">Broadcast</option><option value="drips">Drip Campaign</option><option value="recurring">Recurring Campaign</option><option value="ai">AI Auto Reply</option><option value="inbox">Live Chat</option><option value="contacts">Contacts</option><option value="store">Store Products</option><option value="payment">Payment Gateway</option><option value="forms">Interactive Forms</option><option value="analytics">Analytics</option><option value="api">API Keys</option><option value="webhooks">Webhooks</option><option value="templates">Templates</option><option value="macros">Macros</option><option value="translate">Auto Translate</option><option value="widget">Web Widget</option><option value="email">Email Gateway</option></select></div>
+        <div class="form-group"><label>{{T "pkg_services"}}</label><select name="services" class="form-control" multiple size="15"><option value="whatsapp">WhatsApp Web</option><option value="meta">Meta Cloud API</option><option value="broadcast">Broadcast</option><option value="drips">Drip Campaign</option><option value="recurring">Recurring Campaign</option><option value="ai">AI Auto Reply</option><option value="inbox">Live Chat</option><option value="contacts">Contacts</option><option value="tags">Contact Tags</option><option value="groups">Contact Groups</option><option value="merge">Merge Duplicates</option><option value="store">Store Products</option><option value="payment">Payment Gateway</option><option value="forms">Interactive Forms</option><option value="reminders">Payment Reminders</option><option value="analytics">Analytics</option><option value="csat">CSAT Survey</option><option value="api">API Keys</option><option value="webhooks">Webhooks</option><option value="templates">Templates</option><option value="canned">Canned Responses</option><option value="macros">Macros</option><option value="translate">Auto Translate</option><option value="widget">Web Widget</option><option value="email">Email Gateway</option><option value="blacklist">Blacklist</option><option value="files">File Manager</option><option value="calendar">Calendar</option><option value="knowledge">Knowledge Base</option><option value="audit">Audit Log</option><option value="backup">Database Backup</option></select></div>
         <div class="form-group"><label>{{T "pkg_footermark"}}</label><select name="footermark" class="form-control"><option value="2">Off</option><option value="1">On</option></select></div>
         <hr><h6 class="text-uppercase text-muted small">Limits</h6>
         <div class="form-row">
@@ -1807,11 +1851,26 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
         <div class="form-group col-4"><label>Webhook</label><input name="webhook_limit" type="number" class="form-control" value="5"></div>
         <div class="form-group col-4"><label>Action</label><input name="action_limit" type="number" class="form-control" value="5"></div>
         <div class="form-group col-4"><label>Meta</label><input name="meta_limit" type="number" class="form-control" value="0"></div></div>
+        <div class="form-row">
+        <div class="form-group col-3"><label>Drips</label><input name="drip_limit" type="number" class="form-control" value="1"></div>
+        <div class="form-group col-3"><label>Recurring</label><input name="recurring_limit" type="number" class="form-control" value="1"></div>
+        <div class="form-group col-3"><label>Forms</label><input name="form_limit" type="number" class="form-control" value="1"></div>
+        <div class="form-group col-3"><label>Templates</label><input name="template_limit" type="number" class="form-control" value="5"></div></div>
+        <div class="form-row">
+        <div class="form-group col-3"><label>Canned</label><input name="canned_limit" type="number" class="form-control" value="10"></div>
+        <div class="form-group col-3"><label>Macros</label><input name="macro_limit" type="number" class="form-control" value="5"></div>
+        <div class="form-group col-3"><label>AI Key</label><input name="ai_key_limit" type="number" class="form-control" value="3"></div>
+        <div class="form-group col-3"><label>Knowledge</label><input name="knowledge_limit" type="number" class="form-control" value="10"></div></div>
         <button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>
       </form></div></div></div>
     <div class="col-12 col-lg-7"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "adm_packages"}}</h4></div>
+      {{if .EditID}}<div class="border-bottom p-3 bg-light"><form method="post" action="/admin/packages/edit"><input type="hidden" name="id" value="{{.EditID}}"><h6>Edit #{{.EditID}}: {{.EditName}}</h6>
+        <div class="form-row"><div class="form-group col-8"><label>Name</label><input name="name" class="form-control" value="{{.EditName}}" required></div><div class="form-group col-4"><label>Price</label><input name="price" class="form-control" value="{{.EditPrice}}"></div></div>
+        <hr><h6 class="text-uppercase text-muted small">Limits</h6>
+        <div class="form-row"><div class="form-group col-3"><label>Send</label><input name="send_limit" type="number" class="form-control" value="{{.EditSendLimit}}"></div><div class="form-group col-3"><label>Device</label><input name="device_limit" type="number" class="form-control" value="{{.EditDeviceLimit}}"></div><div class="form-group col-3"><label>WA Acc</label><input name="wa_account_limit" type="number" class="form-control" value="{{.EditWaAccountLimit}}"></div><div class="form-group col-3"><label>Contact</label><input name="contact_limit" type="number" class="form-control" value="{{.EditContactLimit}}"></div></div>
+        <button class="btn btn-primary lift"><i class="la la-save me-1"></i> Update</button> <a href="/admin/packages" class="btn btn-white btn-sm ms-2">Cancel</a></form></div>{{end}}
       <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>{{T "pkg_price"}}</th><th>Limits</th><th>{{T "col_action"}}</th></tr></thead><tbody>
-        {{range .Packages}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.Price}}</td><td><small>S:{{.SendLimit}} D:{{.DeviceLimit}} M:{{.MetaLimit}}</small></td><td><form method="post" action="/admin/packages/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center">-</td></tr>{{end}}
+        {{range .Packages}}<tr><td>{{.ID}}</td><td><strong>{{.Name}}</strong><br><small class="text-muted">{{.Services}}</small></td><td>{{.Price}}</td><td><small>Dev:{{.DeviceLimit}} WA:{{.WaAccountLimit}} Meta:{{.MetaLimit}} AI:{{.AiKeyLimit}}</small></td><td class="text-nowrap"><a class="btn btn-sm btn-white" href="/admin/packages?edit={{.ID}}"><i class="la la-edit"></i></a> <form method="post" action="/admin/packages/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger"><i class="la la-trash"></i></button></form></td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center">-</td></tr>{{end}}
       </tbody></table></div></div></div>
   </div>
 {{end}}
@@ -2162,6 +2221,8 @@ else{if(b)b.remove()}
 .chat-bubble{max-width:75%;padding:8px 12px;border-radius:8px;word-wrap:break-word;box-shadow:0 1px 1px rgba(0,0,0,.08);font-size:14px;line-height:1.4;position:relative}
 .chat-bubble.received{background:#fff;align-self:flex-start;border-top-left-radius:0}
 .chat-bubble.sent{background:#d9fdd3;align-self:flex-end;border-top-right-radius:0}
+.chat-bubble.sent.phone-sync{background:#dbeafe;border:1px solid #93c5fd;border-top-right-radius:0}
+.chat-bubble.sent.phone-sync::after{content:'📱';position:absolute;top:-8px;right:4px;font-size:10px}
 .chat-meta{font-size:10.5px;color:#667781;margin-bottom:1px}
 .chat-sender{font-size:12px;font-weight:600;color:#10B981;margin-bottom:1px}
 .chat-time{font-size:10px;color:#99aab5;float:right;margin-left:8px;margin-top:2px}
@@ -2192,7 +2253,7 @@ else{if(b)b.remove()}
 <div class="chat-area" id="chatMessages">
 {{range .ChatMessages}}
 <div class="d-flex w-100 mb-1" style="{{if eq .Type "sent"}}justify-content:flex-end{{else}}justify-content:flex-start{{end}}">
-<div class="chat-bubble {{.Type}}">
+<div class="chat-bubble {{.Type}}{{if eq .Channel "phone_sync"}} phone-sync{{end}}">
 {{if and (eq .Type "received") .SenderName}}<div class="chat-sender">{{.SenderName}}</div>{{end}}
 <div>{{.Message}}<span class="chat-time">{{.Created}}</span></div>
 </div>
@@ -2263,7 +2324,9 @@ var html='';
 for(var i=0;i<msgs.length;i++){
 var m=msgs[i];
 var side=m.type==='sent'?'flex-end':'flex-start';
-html+='<div class="d-flex w-100 mb-1" style="justify-content:'+side+'"><div class="chat-bubble '+m.type+'">';
+var bubbleClass='chat-bubble '+m.type;
+if(m.type==='sent'&&m.channel==='phone_sync')bubbleClass+=' phone-sync';
+html+='<div class="d-flex w-100 mb-1" style="justify-content:'+side+'"><div class="'+bubbleClass+'">';
 if(m.type==='received'&&m.sender_name)html+='<div class="chat-sender">'+m.sender_name+'</div>';
 html+='<div>'+m.message+'<span class="chat-time">'+m.created+'</span></div></div></div>';
 }

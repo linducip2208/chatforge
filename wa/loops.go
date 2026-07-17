@@ -11,6 +11,7 @@ import (
 
 	"chatgo/meta"
 	"chatgo/msgtemplate"
+	"chatgo/secret"
 	"chatgo/store"
 
 	waTypes "go.mau.fi/whatsmeow/types"
@@ -42,7 +43,7 @@ func (e *Engine) campaignLoop() {
 		}
 		for _, c := range camps {
 			if c.Status == "pending" {
-				_ = e.db.UpdateCampaignStatus(c.ID, "running")
+				_ = e.db.UpdateCampaignStatus(0, c.ID, "running")
 			}
 			e.runCampaign(c)
 		}
@@ -85,7 +86,7 @@ func (e *Engine) runCampaign(c store.Campaign) {
 	for _, gid := range strings.Split(c.Groups, ",") {
 		gid = strings.TrimSpace(gid)
 		if gid == "" { continue }
-		list, _ := e.db.ContactsByGroup(gid)
+		list, _ := e.db.ContactsByGroup(0, gid)
 		for _, ct := range list {
 			if !seen[ct.Phone] && ct.Phone != "" && !alreadySent[ct.Phone] {
 				seen[ct.Phone] = true
@@ -128,7 +129,9 @@ func (e *Engine) runCampaign(c store.Campaign) {
 	if c.MetaAccountID > 0 {
 		acc, err := e.db.GetMetaAccount(c.MetaAccountID)
 		if err == nil {
-			metaClient = meta.New(acc.PhoneNumberID, acc.AccessToken, acc.VerifyToken)
+			token := acc.AccessToken
+			if d, err := secret.Decrypt(token); err == nil && d != "" { token = d }
+			metaClient = meta.New(acc.PhoneNumberID, token, acc.VerifyToken)
 		}
 	}
 	// rate limit config
@@ -185,9 +188,9 @@ func (e *Engine) runCampaign(c store.Campaign) {
 			digits := onlyDigits(ct.Phone)
 			if digits != "" {
 				if c.MediaURL != "" && c.MediaType == "image" {
-					sendErr = e.SendMedia(sendSession.Phone, ct.Phone, "image", c.MediaURL, msg)
-				} else if c.MediaURL != "" && c.MediaType == "document" {
-					sendErr = e.SendMedia(sendSession.Phone, ct.Phone, "document", c.MediaURL, msg)
+				sendErr = e.SendMedia(0, sendSession.Phone, ct.Phone, "image", c.MediaURL, msg)
+			} else if c.MediaURL != "" && c.MediaType == "document" {
+				sendErr = e.SendMedia(0, sendSession.Phone, ct.Phone, "document", c.MediaURL, msg)
 				} else {
 					jid := waTypes.NewJID(digits, waTypes.DefaultUserServer)
 					sendErr = e.sendVia(sendSession, jid, msg)
@@ -206,7 +209,7 @@ func (e *Engine) runCampaign(c store.Campaign) {
 		}
 		time.Sleep(time.Duration(interval) * time.Second)
 	}
-	_ = e.db.UpdateCampaignStatus(c.ID, "done")
+	_ = e.db.UpdateCampaignStatus(0, c.ID, "done")
 	e.db.Log("campaign", "done", "Campaign #"+itoa(c.ID)+" ("+c.Name+") finished")
 }
 
@@ -220,7 +223,7 @@ func (e *Engine) campaignTerminated(id int64) bool {
 }
 
 func mustCampaigns(e *Engine) []store.Campaign {
-	c, _ := e.db.ListCampaigns()
+	c, _ := e.db.ListCampaigns(0)
 	return c
 }
 
@@ -245,9 +248,9 @@ func (e *Engine) scheduledLoop() {
 				for _, ph := range phones {
 					if ph = strings.TrimSpace(strings.TrimPrefix(ph, "+")); ph != "" { p = ph; break }
 				}
-				_ = e.SendFrom(p, s.Phone, msg)
-			} else {
-				_ = e.Send(s.Phone, msg)
+			_ = e.SendFrom(s.UserID, p, s.Phone, msg)
+		} else {
+			_ = e.Send(s.UserID, s.Phone, msg)
 			}
 			if s.Repeat > 0 {
 				_ = e.db.RescheduleAfter(s.ID, s.Repeat) // keep pending, move next time
@@ -334,13 +337,18 @@ func (e *Engine) dripLoop() {
 				continue
 			}
 			step := drip.Steps[en.CurrentStep]
-			// send via first connected WA session
-			e.mu.RLock()
-			var s *session
-			for _, ss := range e.sessions {
-				if ss.status == "connected" { s = ss; break }
+		// send via user's first connected WA session
+		e.mu.RLock()
+		var s *session
+		for _, ss := range e.sessions {
+			if ss.status == "connected" {
+				if drip.UserID != 0 && ss.userID != 0 && ss.userID != drip.UserID {
+					continue
+				}
+				s = ss; break
 			}
-			e.mu.RUnlock()
+		}
+		e.mu.RUnlock()
 			if s == nil { continue }
 			msg := msgtemplate.Render(step.Message, msgtemplate.Vars{Name: en.Name, Phone: en.Phone, Message: ""})
 			digits := onlyDigits(en.Phone)
@@ -421,7 +429,7 @@ func (e *Engine) recurringLoop() {
 			for _, gid := range strings.Split(c.Groups, ",") {
 				gid = strings.TrimSpace(gid)
 				if gid == "" { continue }
-				list, _ := e.db.ContactsByGroup(gid)
+				list, _ := e.db.ContactsByGroup(0, gid)
 				for _, ct := range list {
 					if !seen[ct.Phone] && ct.Phone != "" { seen[ct.Phone] = true }
 				}

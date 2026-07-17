@@ -6,12 +6,34 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"io"
+	"os"
+	"sync"
 )
 
-var key = []byte("chatgo-32bytekey-xxxxxxxxxxxxxx!!!")[:32] // stays on-server
+var (
+	key  []byte
+	once sync.Once
+)
+
+func ensureKey() {
+	once.Do(func() {
+		keyStr := os.Getenv("CHATGO_ENC_KEY")
+		if keyStr == "" {
+			keyStr = "chatgo-32bytekey-xxxxxxxxxxxxxx!!!"
+		}
+		k := []byte(keyStr)
+		if len(k) < 32 {
+			padded := make([]byte, 32)
+			copy(padded, k)
+			k = padded
+		}
+		key = k[:32]
+	})
+}
 
 // Encrypt plaintext → base64-encoded ciphertext.
 func Encrypt(plain string) (string, error) {
+	ensureKey()
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return "", err
@@ -30,6 +52,7 @@ func Encrypt(plain string) (string, error) {
 
 // Decrypt base64 ciphertext → plaintext.
 func Decrypt(encoded string) (string, error) {
+	ensureKey()
 	ciphertext, err := base64.StdEncoding.DecodeString(encoded)
 	if err != nil {
 		return "", err

@@ -20,15 +20,16 @@ func (d *DB) QueryRow(query string, args ...interface{}) *sql.Row {
 }
 
 type AutoReply struct {
-	ID        int64
-	Keyword   string
-	Match     string
-	Reply     string
-	IsActive  bool
-	UseAI     bool
+	ID         int64
+	Keyword    string
+	Match      string
+	Reply      string
+	IsActive   bool
+	UseAI      bool
 	AiKeyID    int64
 	AccountID  string
 	TrainingID int64
+	UserID     int64
 	Created    string
 }
 
@@ -96,6 +97,18 @@ func Open(dsn string) (*DB, error) {
 	return db, nil
 }
 
+func (d *DB) columnExists(table, column string) bool {
+	var n int
+	d.sql.QueryRow(`SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=?`, table, column).Scan(&n)
+	return n > 0
+}
+
+func (d *DB) safeAddColumn(table, column, def string) {
+	if !d.columnExists(table, column) {
+		d.sql.Exec(`ALTER TABLE ` + table + ` ADD COLUMN ` + column + ` ` + def)
+	}
+}
+
 func (d *DB) migrate() error {
 	stmts := []string{
 		`CREATE TABLE IF NOT EXISTS autoreplies (
@@ -148,16 +161,17 @@ func (d *DB) migrate() error {
 			return fmt.Errorf("add is_read: %w", err)
 		}
 	}
-	d.sql.Exec(`ALTER TABLE received ADD COLUMN sender_phone VARCHAR(64) NOT NULL DEFAULT ''`)
-	d.sql.Exec(`ALTER TABLE received ADD COLUMN sender_name VARCHAR(255) NOT NULL DEFAULT ''`)
-	d.sql.Exec(`ALTER TABLE received ADD COLUMN channel VARCHAR(20) NOT NULL DEFAULT 'whatsmeow'`)
-	d.sql.Exec(`ALTER TABLE sent ADD COLUMN channel VARCHAR(20) NOT NULL DEFAULT 'whatsmeow'`)
-	d.sql.Exec(`ALTER TABLE packages ADD COLUMN meta_limit INT NOT NULL DEFAULT 0`)
-	d.sql.Exec(`ALTER TABLE meta_accounts ADD COLUMN user_id BIGINT NOT NULL DEFAULT 0`)
-	d.sql.Exec(`ALTER TABLE meta_accounts ADD COLUMN parent_id BIGINT NOT NULL DEFAULT 0`)
-	d.sql.Exec(`ALTER TABLE received ADD INDEX idx_received_phone (phone)`)
-	d.sql.Exec(`ALTER TABLE received ADD INDEX idx_received_is_read (is_read)`)
-	d.sql.Exec(`CREATE TABLE IF NOT EXISTS wa_groups (jid VARCHAR(128) PRIMARY KEY, name VARCHAR(255) NOT NULL DEFAULT '', updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`)
+	d.safeAddColumn("received", "sender_phone", "VARCHAR(64) NOT NULL DEFAULT ''")
+	d.safeAddColumn("received", "sender_name", "VARCHAR(255) NOT NULL DEFAULT ''")
+	d.safeAddColumn("received", "channel", "VARCHAR(20) NOT NULL DEFAULT 'whatsmeow'")
+	d.safeAddColumn("sent", "channel", "VARCHAR(20) NOT NULL DEFAULT 'whatsmeow'")
+	d.safeAddColumn("packages", "meta_limit", "INT NOT NULL DEFAULT 0")
+	d.safeAddColumn("meta_accounts", "user_id", "BIGINT NOT NULL DEFAULT 0")
+	d.safeAddColumn("meta_accounts", "parent_id", "BIGINT NOT NULL DEFAULT 0")
+	d.safeAddColumn("autoreplies", "user_id", "BIGINT NOT NULL DEFAULT 0")
+	d.sql.Exec(`CREATE TABLE IF NOT EXISTS wa_session_owners (phone VARCHAR(64) PRIMARY KEY, user_id BIGINT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`)
+	d.safeAddColumn("received", "wa_phone", "VARCHAR(64) NOT NULL DEFAULT ''")
+	d.safeAddColumn("sent", "wa_phone", "VARCHAR(64) NOT NULL DEFAULT ''")
 	d.migrateInstanceLog()
 	d.migrateStatuses()
 	d.migrateMeta()
@@ -171,35 +185,64 @@ func (d *DB) migrate() error {
 }
 
 // AutoReply CRUD
-func (d *DB) AddAutoReply(keyword, match, reply string, useAI bool, aiKeyID int64, accountID string, trainingID int64) (int64, error) {
+func (d *DB) AddAutoReply(userID int64, keyword, match, reply string, useAI bool, aiKeyID int64, accountID string, trainingID int64) (int64, error) {
 	ai := 0; if useAI { ai = 1 }
-	res, err := d.sql.Exec(`INSERT INTO autoreplies (keyword,match_type,reply,is_active,use_ai,ai_key_id,account_id,training_id) VALUES (?,?,?,1,?,?,?,?)`, keyword, match, reply, ai, aiKeyID, accountID, trainingID)
+	res, err := d.sql.Exec(`INSERT INTO autoreplies (user_id,keyword,match_type,reply,is_active,use_ai,ai_key_id,account_id,training_id) VALUES (?,?,?,?,1,?,?,?,?)`, userID, keyword, match, reply, ai, aiKeyID, accountID, trainingID)
 	if err != nil { return 0, err }
 	return res.LastInsertId()
 }
-func (d *DB) DeleteAutoReply(id int64) error { _, err := d.sql.Exec(`DELETE FROM autoreplies WHERE id=?`, id); return err }
-func (d *DB) ToggleAutoReply(id int64) error { _, err := d.sql.Exec(`UPDATE autoreplies SET is_active=1-is_active WHERE id=?`, id); return err }
-func (d *DB) GetAutoReply(id int64) (*AutoReply, error) {
+func (d *DB) DeleteAutoReply(userID int64, id int64) error {
+	if userID == 0 {
+		_, err := d.sql.Exec(`DELETE FROM autoreplies WHERE id=?`, id)
+		return err
+	}
+	_, err := d.sql.Exec(`DELETE FROM autoreplies WHERE id=? AND user_id=?`, id, userID)
+	return err
+}
+func (d *DB) ToggleAutoReply(userID int64, id int64) error {
+	if userID == 0 {
+		_, err := d.sql.Exec(`UPDATE autoreplies SET is_active=1-is_active WHERE id=?`, id)
+		return err
+	}
+	_, err := d.sql.Exec(`UPDATE autoreplies SET is_active=1-is_active WHERE id=? AND user_id=?`, id, userID)
+	return err
+}
+func (d *DB) GetAutoReply(userID int64, id int64) (*AutoReply, error) {
 	var a AutoReply; var active int
-	err := d.sql.QueryRow(`SELECT id,keyword,match_type,reply,is_active,use_ai,ai_key_id,IFNULL(account_id,''),IFNULL(training_id,0),created_at FROM autoreplies WHERE id=?`, id).Scan(&a.ID, &a.Keyword, &a.Match, &a.Reply, &active, &a.UseAI, &a.AiKeyID, &a.AccountID, &a.TrainingID, &a.Created)
+	var err error
+	if userID == 0 {
+		err = d.sql.QueryRow(`SELECT id,keyword,match_type,reply,is_active,use_ai,ai_key_id,IFNULL(account_id,''),IFNULL(training_id,0),IFNULL(user_id,0),created_at FROM autoreplies WHERE id=?`, id).Scan(&a.ID, &a.Keyword, &a.Match, &a.Reply, &active, &a.UseAI, &a.AiKeyID, &a.AccountID, &a.TrainingID, &a.UserID, &a.Created)
+	} else {
+		err = d.sql.QueryRow(`SELECT id,keyword,match_type,reply,is_active,use_ai,ai_key_id,IFNULL(account_id,''),IFNULL(training_id,0),IFNULL(user_id,0),created_at FROM autoreplies WHERE id=? AND user_id=?`, id, userID).Scan(&a.ID, &a.Keyword, &a.Match, &a.Reply, &active, &a.UseAI, &a.AiKeyID, &a.AccountID, &a.TrainingID, &a.UserID, &a.Created)
+	}
 	a.IsActive = active == 1
 	if err != nil { return nil, err }
 	return &a, nil
 }
-func (d *DB) UpdateAutoReply(id int64, keyword, match, reply string, useAI bool, aiKeyID int64, accountID string, trainingID int64) error {
+func (d *DB) UpdateAutoReply(userID int64, id int64, keyword, match, reply string, useAI bool, aiKeyID int64, accountID string, trainingID int64) error {
 	use := 0
 	if useAI { use = 1 }
-	_, err := d.sql.Exec(`UPDATE autoreplies SET keyword=?, match_type=?, reply=?, use_ai=?, ai_key_id=?, account_id=?, training_id=? WHERE id=?`, keyword, match, reply, use, aiKeyID, accountID, trainingID, id)
+	if userID == 0 {
+		_, err := d.sql.Exec(`UPDATE autoreplies SET keyword=?, match_type=?, reply=?, use_ai=?, ai_key_id=?, account_id=?, training_id=? WHERE id=?`, keyword, match, reply, use, aiKeyID, accountID, trainingID, id)
+		return err
+	}
+	_, err := d.sql.Exec(`UPDATE autoreplies SET keyword=?, match_type=?, reply=?, use_ai=?, ai_key_id=?, account_id=?, training_id=? WHERE id=? AND user_id=?`, keyword, match, reply, use, aiKeyID, accountID, trainingID, id, userID)
 	return err
 }
-func (d *DB) ListAutoReplies() ([]AutoReply, error) {
-	rows, err := d.sql.Query(`SELECT id,keyword,match_type,reply,is_active,use_ai,ai_key_id,IFNULL(account_id,''),IFNULL(training_id,0),created_at FROM autoreplies ORDER BY id DESC`)
+func (d *DB) ListAutoReplies(userID int64) ([]AutoReply, error) {
+	var rows *sql.Rows
+	var err error
+	if userID == 0 {
+		rows, err = d.sql.Query(`SELECT id,keyword,match_type,reply,is_active,use_ai,ai_key_id,IFNULL(account_id,''),IFNULL(training_id,0),IFNULL(user_id,0),created_at FROM autoreplies ORDER BY id DESC`)
+	} else {
+		rows, err = d.sql.Query(`SELECT id,keyword,match_type,reply,is_active,use_ai,ai_key_id,IFNULL(account_id,''),IFNULL(training_id,0),IFNULL(user_id,0),created_at FROM autoreplies WHERE user_id=? ORDER BY id DESC`, userID)
+	}
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []AutoReply
 	for rows.Next() {
 		var a AutoReply; var active int
-		if err := rows.Scan(&a.ID,&a.Keyword,&a.Match,&a.Reply,&active,&a.UseAI,&a.AiKeyID,&a.AccountID,&a.TrainingID,&a.Created); err != nil { return nil, err }
+		if err := rows.Scan(&a.ID,&a.Keyword,&a.Match,&a.Reply,&active,&a.UseAI,&a.AiKeyID,&a.AccountID,&a.TrainingID,&a.UserID,&a.Created); err != nil { return nil, err }
 		a.IsActive = active==1
 		out = append(out, a)
 	}
@@ -210,7 +253,7 @@ func (d *DB) FindReply(incoming string) (string, bool) {
 	return r.Reply, ok
 }
 func (d *DB) FindReplyFullForAccount(incoming string, accountPhone string) (AutoReply, bool) {
-	rules, _ := d.ListAutoReplies()
+	rules, _ := d.ListAutoReplies(0)
 	msg := strings.ToLower(strings.TrimSpace(incoming))
 	for _, r := range rules {
 		if !r.IsActive { continue }
@@ -250,7 +293,7 @@ func (d *DB) FindReplyFullForAccount(incoming string, accountPhone string) (Auto
 	return AutoReply{}, false
 }
 func (d *DB) FindReplyFull(incoming string) (AutoReply, bool) {
-	rules, _ := d.ListAutoReplies()
+	rules, _ := d.ListAutoReplies(0)
 	msg := strings.ToLower(strings.TrimSpace(incoming))
 	for _, r := range rules {
 		if !r.IsActive { continue }
@@ -279,6 +322,10 @@ func (d *DB) LogSent(phone, message, status, channel string) {
 	if channel == "" { channel = "whatsmeow" }
 	d.sql.Exec(`INSERT INTO sent (phone,message,status,channel) VALUES (?,?,?,?)`, phone, message, status, channel)
 }
+func (d *DB) LogSentForWA(waPhone, phone, message, status, channel string) {
+	if channel == "" { channel = "whatsmeow" }
+	d.sql.Exec(`INSERT INTO sent (wa_phone,phone,message,status,channel) VALUES (?,?,?,?,?)`, waPhone, phone, message, status, channel)
+}
 func (d *DB) ListSent(limit int) ([]SentMessage, error) { return d.ListSentPaginated(1, limit) }
 func (d *DB) ListSentPaginated(page, perPage int) ([]SentMessage, error) {
 	offset := (page-1)*perPage
@@ -297,6 +344,11 @@ func (d *DB) LogReceived(phone, name, message string, isGroup bool, senderPhone,
 	if channel == "" { channel = "whatsmeow" }
 	d.sql.Exec(`INSERT INTO received (phone,name,message,is_group,sender_phone,sender_name,channel) VALUES (?,?,?,?,?,?,?)`, phone, name, message, g, senderPhone, senderName, channel)
 }
+func (d *DB) LogReceivedForWA(waPhone, phone, name, message string, isGroup bool, senderPhone, senderName, channel string) {
+	g := 0; if isGroup { g = 1 }
+	if channel == "" { channel = "whatsmeow" }
+	d.sql.Exec(`INSERT INTO received (wa_phone,phone,name,message,is_group,sender_phone,sender_name,channel) VALUES (?,?,?,?,?,?,?,?)`, waPhone, phone, name, message, g, senderPhone, senderName, channel)
+}
 func (d *DB) ListReceived(limit int) ([]ReceivedMessage, error) { return d.ListReceivedPaginated(1, limit) }
 func (d *DB) ListReceivedPaginated(page, perPage int) ([]ReceivedMessage, error) {
 	offset := (page-1)*perPage
@@ -309,30 +361,44 @@ func (d *DB) ListReceivedPaginated(page, perPage int) ([]ReceivedMessage, error)
 }
 func (d *DB) CountReceived() int { var n int; d.sql.QueryRow(`SELECT COUNT(*) FROM received`).Scan(&n); return n }
 
-func (d *DB) GroupInboxPaginated(page, perPage int) ([]InboxConversation, error) {
+func (d *DB) GroupInboxPaginated(userID int64, page, perPage int) ([]InboxConversation, error) {
 	offset := (page - 1) * perPage
-	rows, err := d.sql.Query(`SELECT r.phone, COALESCE(g.name, MAX(r.name)) as name, MAX(r.is_group) as is_group, COUNT(CASE WHEN r.is_read=0 THEN 1 END) as unread, MAX(r.channel) as channel FROM received r LEFT JOIN wa_groups g ON r.phone = g.jid GROUP BY r.phone ORDER BY MAX(r.id) DESC LIMIT ? OFFSET ?`, perPage, offset)
+	var rows *sql.Rows
+	var err error
+	baseSent := `SELECT phone, '' as name, 0 as is_group, 1 as is_read, channel, created_at FROM sent`
+	if userID == 0 {
+		rows, err = d.sql.Query(`SELECT t.phone, COALESCE(g.name, MAX(t.name)) as name, MAX(t.is_group) as is_group, COUNT(CASE WHEN t.is_read=0 THEN 1 END) as unread, MAX(t.channel) as channel, MAX(t.created_at) as last_time FROM (SELECT phone, name, is_group, is_read, channel, created_at FROM received UNION ALL `+baseSent+`) t LEFT JOIN wa_groups g ON t.phone = g.jid GROUP BY t.phone ORDER BY last_time DESC LIMIT ? OFFSET ?`, perPage, offset)
+	} else {
+		baseRecv := `SELECT r.phone, r.name, r.is_group, r.is_read, r.channel, r.created_at FROM received r INNER JOIN wa_session_owners o ON r.wa_phone = o.phone AND o.user_id = ?`
+		baseSentU := `SELECT s.phone, '' as name, 0 as is_group, 1 as is_read, s.channel, s.created_at FROM sent s INNER JOIN wa_session_owners o ON s.wa_phone = o.phone AND o.user_id = ?`
+		rows, err = d.sql.Query(`SELECT t.phone, COALESCE(g.name, MAX(t.name)) as name, MAX(t.is_group) as is_group, COUNT(CASE WHEN t.is_read=0 THEN 1 END) as unread, MAX(t.channel) as channel, MAX(t.created_at) as last_time FROM (`+baseRecv+` UNION ALL `+baseSentU+`) t LEFT JOIN wa_groups g ON t.phone = g.jid GROUP BY t.phone ORDER BY last_time DESC LIMIT ? OFFSET ?`, userID, userID, perPage, offset)
+	}
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []InboxConversation
 	for rows.Next() {
-		var c InboxConversation; var g int
-		if err := rows.Scan(&c.Phone, &c.Name, &g, &c.Unread, &c.Channel); err != nil { return nil, err }
+		var c InboxConversation; var g int; var lastTime string
+		if err := rows.Scan(&c.Phone, &c.Name, &g, &c.Unread, &c.Channel, &lastTime); err != nil { return nil, err }
 		c.IsGroup = g == 1
-		d.sql.QueryRow(`SELECT message, created_at FROM received WHERE phone=? ORDER BY id DESC LIMIT 1`, c.Phone).Scan(&c.LastMsg, &c.LastTime)
+		c.LastTime = lastTime
+		d.sql.QueryRow(`SELECT message, created_at FROM received WHERE phone=? UNION ALL SELECT message, created_at FROM sent WHERE phone=? ORDER BY created_at DESC LIMIT 1`, c.Phone, c.Phone).Scan(&c.LastMsg, &c.LastTime)
 		out = append(out, c)
 	}
 	return out, nil
 }
 
-func (d *DB) CountInbox() int {
+func (d *DB) CountInbox(userID int64) int {
 	var n int
-	d.sql.QueryRow(`SELECT COUNT(DISTINCT phone) FROM received`).Scan(&n)
+	if userID == 0 {
+		d.sql.QueryRow(`SELECT COUNT(DISTINCT phone) FROM (SELECT phone FROM received UNION ALL SELECT phone FROM sent) t`).Scan(&n)
+	} else {
+		d.sql.QueryRow(`SELECT COUNT(DISTINCT t.phone) FROM (SELECT r.phone FROM received r INNER JOIN wa_session_owners o ON r.wa_phone = o.phone AND o.user_id = ? UNION ALL SELECT s.phone FROM sent s INNER JOIN wa_session_owners o ON s.wa_phone = o.phone AND o.user_id = ?) t`, userID, userID).Scan(&n)
+	}
 	return n
 }
 
-func (d *DB) GroupInbox() ([]InboxConversation, error) {
-	return d.GroupInboxPaginated(1, 100)
+func (d *DB) GroupInbox(userID int64) ([]InboxConversation, error) {
+	return d.GroupInboxPaginated(userID, 1, 100)
 }
 
 func (d *DB) ChatHistory(phone string, limit int) ([]ChatMessage, error) {
@@ -396,6 +462,16 @@ func (d *DB) GetSetting(name, def string) string {
 func (d *DB) SetSetting(name, value string) error {
 	_, err := d.sql.Exec(`INSERT INTO settings (name,value) VALUES (?,?) ON DUPLICATE KEY UPDATE value=VALUES(value)`, name, value)
 	return err
+}
+
+func (d *DB) SaveSessionOwner(phone string, userID int64) {
+	d.sql.Exec(`INSERT INTO wa_session_owners (phone, user_id) VALUES (?,?) ON DUPLICATE KEY UPDATE user_id=VALUES(user_id)`, phone, userID)
+}
+
+func (d *DB) GetSessionOwner(phone string) int64 {
+	var uid int64
+	d.sql.QueryRow(`SELECT user_id FROM wa_session_owners WHERE phone=?`, phone).Scan(&uid)
+	return uid
 }
 
 func (d *DB) SaveSession(token string, userID int64) {

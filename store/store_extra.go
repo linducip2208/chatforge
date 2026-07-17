@@ -1,6 +1,9 @@
 package store
 
 import (
+	"crypto/sha256"
+	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"time"
@@ -11,6 +14,7 @@ type Contact struct {
 	Name    string
 	Phone   string
 	Groups  string
+	UserID  int64
 	Created string
 }
 type Group struct {
@@ -18,6 +22,7 @@ type Group struct {
 	Name     string
 	Count    int
 	Language string
+	UserID   int64
 	Created  string
 }
 type Template struct {
@@ -69,6 +74,7 @@ type Campaign struct {
 	Status          string
 	Interval        int
 	SentTo          string
+	UserID          int64
 	Created         string
 }
 type Scheduled struct {
@@ -80,6 +86,7 @@ type Scheduled struct {
 	Repeat     int
 	Status     string
 	AccountIDs string
+	UserID     int64
 	Created    string
 }
 type LogEntry struct {
@@ -119,78 +126,126 @@ func (d *DB) migrateExtra() error {
 	d.sql.Exec(`ALTER TABLE campaigns ADD COLUMN media_type VARCHAR(20) NOT NULL DEFAULT '' AFTER numbers`)
 	d.sql.Exec(`ALTER TABLE campaigns ADD COLUMN media_url VARCHAR(1024) NOT NULL DEFAULT '' AFTER media_type`)
 	d.sql.Exec(`ALTER TABLE campaigns ADD COLUMN tags VARCHAR(512) NOT NULL DEFAULT '' AFTER ` + "`groups`")
+	d.safeAddColumn("contacts", "user_id", "BIGINT NOT NULL DEFAULT 0")
+	d.safeAddColumn("contact_groups", "user_id", "BIGINT NOT NULL DEFAULT 0")
+	d.safeAddColumn("campaigns", "user_id", "BIGINT NOT NULL DEFAULT 0")
+	d.safeAddColumn("scheduled", "user_id", "BIGINT NOT NULL DEFAULT 0")
+	d.safeAddColumn("templates", "user_id", "BIGINT NOT NULL DEFAULT 0")
+	d.safeAddColumn("api_keys", "user_id", "BIGINT NOT NULL DEFAULT 0")
+	d.safeAddColumn("tags", "user_id", "BIGINT NOT NULL DEFAULT 0")
+	d.safeAddColumn("canned_responses", "user_id", "BIGINT NOT NULL DEFAULT 0")
 	return nil
 }
 
 // ---- Contacts ----
-func (d *DB) AddContact(name, phone, groups string) (int64, error) {
-	res, err := d.sql.Exec("INSERT INTO contacts (name, phone, `groups`) VALUES (?, ?, ?)", name, phone, groups)
+func (d *DB) AddContact(userID int64, name, phone, groups string) (int64, error) {
+	res, err := d.sql.Exec("INSERT INTO contacts (user_id, name, phone, `groups`) VALUES (?, ?, ?, ?)", userID, name, phone, groups)
 	if err != nil { return 0, err }
 	return res.LastInsertId()
 }
-func (d *DB) UpdateContact(id int64, name, phone, groups string) error {
-	_, err := d.sql.Exec("UPDATE contacts SET name=?, phone=?, `groups`=? WHERE id=?", name, phone, groups, id)
+func (d *DB) UpdateContact(userID int64, id int64, name, phone, groups string) error {
+	if userID == 0 {
+		_, err := d.sql.Exec("UPDATE contacts SET name=?, phone=?, `groups`=? WHERE id=?", name, phone, groups, id)
+		return err
+	}
+	_, err := d.sql.Exec("UPDATE contacts SET name=?, phone=?, `groups`=? WHERE id=? AND user_id=?", name, phone, groups, id, userID)
 	return err
 }
-func (d *DB) GetContact(id int64) (*Contact, error) {
+func (d *DB) GetContact(userID int64, id int64) (*Contact, error) {
 	var c Contact
-	err := d.sql.QueryRow(`SELECT id, name, phone, `+"`groups`"+`, created_at FROM contacts WHERE id=?`, id).Scan(&c.ID, &c.Name, &c.Phone, &c.Groups, &c.Created)
+	var err error
+	if userID == 0 {
+		err = d.sql.QueryRow(`SELECT id, name, phone, `+"`groups`"+`, IFNULL(user_id,0), created_at FROM contacts WHERE id=?`, id).Scan(&c.ID, &c.Name, &c.Phone, &c.Groups, &c.UserID, &c.Created)
+	} else {
+		err = d.sql.QueryRow(`SELECT id, name, phone, `+"`groups`"+`, IFNULL(user_id,0), created_at FROM contacts WHERE id=? AND user_id=?`, id, userID).Scan(&c.ID, &c.Name, &c.Phone, &c.Groups, &c.UserID, &c.Created)
+	}
 	if err != nil { return nil, err }
 	return &c, nil
 }
-func (d *DB) DeleteContact(id int64) error {
-	_, err := d.sql.Exec(`DELETE FROM contacts WHERE id=?`, id)
+func (d *DB) DeleteContact(userID int64, id int64) error {
+	if userID == 0 {
+		_, err := d.sql.Exec(`DELETE FROM contacts WHERE id=?`, id)
+		return err
+	}
+	_, err := d.sql.Exec(`DELETE FROM contacts WHERE id=? AND user_id=?`, id, userID)
 	return err
 }
-func (d *DB) FindContactByPhone(phone string) (*Contact, error) {
+func (d *DB) FindContactByPhone(userID int64, phone string) (*Contact, error) {
 	var c Contact
-	err := d.sql.QueryRow(`SELECT id, name, phone, `+"`groups`"+`, created_at FROM contacts WHERE phone=?`, phone).Scan(&c.ID, &c.Name, &c.Phone, &c.Groups, &c.Created)
+	var err error
+	if userID == 0 {
+		err = d.sql.QueryRow(`SELECT id, name, phone, `+"`groups`"+`, IFNULL(user_id,0), created_at FROM contacts WHERE phone=?`, phone).Scan(&c.ID, &c.Name, &c.Phone, &c.Groups, &c.UserID, &c.Created)
+	} else {
+		err = d.sql.QueryRow(`SELECT id, name, phone, `+"`groups`"+`, IFNULL(user_id,0), created_at FROM contacts WHERE phone=? AND user_id=?`, phone, userID).Scan(&c.ID, &c.Name, &c.Phone, &c.Groups, &c.UserID, &c.Created)
+	}
 	if err != nil { return nil, err }
 	return &c, nil
 }
-func (d *DB) ListContacts() ([]Contact, error) {
-	rows, err := d.sql.Query("SELECT id, name, phone, `groups`, created_at FROM contacts ORDER BY id DESC")
+func (d *DB) ListContacts(userID int64) ([]Contact, error) {
+	var rows *sql.Rows
+	var err error
+	if userID == 0 {
+		rows, err = d.sql.Query("SELECT id, name, phone, `groups`, IFNULL(user_id,0), created_at FROM contacts ORDER BY id DESC")
+	} else {
+		rows, err = d.sql.Query("SELECT id, name, phone, `groups`, IFNULL(user_id,0), created_at FROM contacts WHERE user_id=? ORDER BY id DESC", userID)
+	}
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []Contact
 	for rows.Next() {
 		var c Contact
-		rows.Scan(&c.ID, &c.Name, &c.Phone, &c.Groups, &c.Created)
+		rows.Scan(&c.ID, &c.Name, &c.Phone, &c.Groups, &c.UserID, &c.Created)
 		out = append(out, c)
 	}
 	return out, nil
 }
-func (d *DB) ContactsByGroup(gid string) ([]Contact, error) {
-	rows, err := d.sql.Query("SELECT id, name, phone, `groups`, created_at FROM contacts WHERE `groups` LIKE ? ORDER BY name", "%"+gid+"%")
+func (d *DB) ContactsByGroup(userID int64, gid string) ([]Contact, error) {
+	var rows *sql.Rows
+	var err error
+	if userID == 0 {
+		rows, err = d.sql.Query("SELECT id, name, phone, `groups`, IFNULL(user_id,0), created_at FROM contacts WHERE `groups` LIKE ? ORDER BY name", "%"+gid+"%")
+	} else {
+		rows, err = d.sql.Query("SELECT id, name, phone, `groups`, IFNULL(user_id,0), created_at FROM contacts WHERE `groups` LIKE ? AND user_id=? ORDER BY name", "%"+gid+"%", userID)
+	}
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []Contact
 	for rows.Next() {
 		var c Contact
-		rows.Scan(&c.ID, &c.Name, &c.Phone, &c.Groups, &c.Created)
+		rows.Scan(&c.ID, &c.Name, &c.Phone, &c.Groups, &c.UserID, &c.Created)
 		out = append(out, c)
 	}
 	return out, nil
 }
 
 // ---- Groups ----
-func (d *DB) AddGroup(name string) (int64, error) {
-	res, err := d.sql.Exec(`INSERT INTO contact_groups (name) VALUES (?)`, name)
+func (d *DB) AddGroup(userID int64, name string) (int64, error) {
+	res, err := d.sql.Exec(`INSERT INTO contact_groups (user_id, name) VALUES (?, ?)`, userID, name)
 	if err != nil { return 0, err }
 	return res.LastInsertId()
 }
-func (d *DB) DeleteGroup(id int64) error {
-	_, err := d.sql.Exec(`DELETE FROM contact_groups WHERE id=?`, id)
+func (d *DB) DeleteGroup(userID int64, id int64) error {
+	if userID == 0 {
+		_, err := d.sql.Exec(`DELETE FROM contact_groups WHERE id=?`, id)
+		return err
+	}
+	_, err := d.sql.Exec(`DELETE FROM contact_groups WHERE id=? AND user_id=?`, id, userID)
 	return err
 }
-func (d *DB) ListGroups() ([]Group, error) {
-	rows, err := d.sql.Query(`SELECT g.id, g.name, COUNT(c.id), IFNULL(g.language,''), g.created_at FROM contact_groups g LEFT JOIN contacts c ON FIND_IN_SET(g.id, REPLACE(c.`+"`groups`"+`, ' ', '')) GROUP BY g.id ORDER BY g.id DESC`)
+func (d *DB) ListGroups(userID int64) ([]Group, error) {
+	var rows *sql.Rows
+	var err error
+	if userID == 0 {
+		rows, err = d.sql.Query(`SELECT g.id, g.name, COUNT(c.id), IFNULL(g.language,''), IFNULL(g.user_id,0), g.created_at FROM contact_groups g LEFT JOIN contacts c ON FIND_IN_SET(g.id, REPLACE(c.`+"`groups`"+`, ' ', '')) GROUP BY g.id ORDER BY g.id DESC`)
+	} else {
+		rows, err = d.sql.Query(`SELECT g.id, g.name, COUNT(c.id), IFNULL(g.language,''), IFNULL(g.user_id,0), g.created_at FROM contact_groups g LEFT JOIN contacts c ON FIND_IN_SET(g.id, REPLACE(c.`+"`groups`"+`, ' ', '')) AND c.user_id=g.user_id WHERE g.user_id=? GROUP BY g.id ORDER BY g.id DESC`, userID)
+	}
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []Group
 	for rows.Next() {
 		var g Group
-		rows.Scan(&g.ID, &g.Name, &g.Count, &g.Language, &g.Created)
+		rows.Scan(&g.ID, &g.Name, &g.Count, &g.Language, &g.UserID, &g.Created)
 		out = append(out, g)
 	}
 	return out, nil
@@ -252,14 +307,24 @@ func (d *DB) ListTemplates() ([]Template, error) {
 }
 
 // ---- API Keys ----
+func sha256Hex(s string) string {
+	h := sha256.Sum256([]byte(s))
+	return hex.EncodeToString(h[:])
+}
 func (d *DB) AddAPIKey(name, secret string) (int64, error) {
-	res, err := d.sql.Exec(`INSERT INTO api_keys (name, secret) VALUES (?, ?)`, name, secret)
+	hash := sha256Hex(secret)
+	res, err := d.sql.Exec(`INSERT INTO api_keys (name, secret) VALUES (?, ?)`, name, hash)
 	if err != nil { return 0, err }
 	return res.LastInsertId()
 }
 func (d *DB) DeleteAPIKey(id int64) error { return d.del("api_keys", id) }
 func (d *DB) ValidAPIKey(secret string) bool {
-	var n int; d.sql.QueryRow(`SELECT COUNT(*) FROM api_keys WHERE secret=?`, secret).Scan(&n); return n > 0
+	hash := sha256Hex(secret)
+	var n int
+	d.sql.QueryRow(`SELECT COUNT(*) FROM api_keys WHERE secret=?`, secret).Scan(&n)
+	if n > 0 { return true }
+	d.sql.QueryRow(`SELECT COUNT(*) FROM api_keys WHERE secret=?`, hash).Scan(&n)
+	return n > 0
 }
 func (d *DB) ListAPIKeys() ([]APIKey, error) {
 	rows, err := d.sql.Query(`SELECT id, name, secret, created_at FROM api_keys ORDER BY id DESC`)
@@ -269,6 +334,10 @@ func (d *DB) ListAPIKeys() ([]APIKey, error) {
 	for rows.Next() {
 		var a APIKey
 		rows.Scan(&a.ID, &a.Name, &a.Secret, &a.Created)
+		// mask the hash for display
+		if len(a.Secret) == 64 {
+			a.Secret = a.Secret[:8] + "..." + a.Secret[56:]
+		}
 		out = append(out, a)
 	}
 	return out, nil
@@ -307,13 +376,17 @@ func (d *DB) WebhooksForEvent(event string) ([]Webhook, error) {
 }
 
 // ---- Campaigns ----
-func (d *DB) AddCampaign(name, groups, numbers, mediaType, mediaURL, message string, total int, accountIDs, sendMode string, interval int, metaAccountID int64, metaTemplate, tags string) (int64, error) {
-	res, err := d.sql.Exec("INSERT INTO campaigns (name, `groups`, tags, numbers, media_type, media_url, message, total, status, account_ids, send_mode, meta_account_id, meta_template, msg_interval) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)", name, groups, tags, numbers, mediaType, mediaURL, message, total, accountIDs, sendMode, metaAccountID, metaTemplate, interval)
+func (d *DB) AddCampaign(userID int64, name, groups, numbers, mediaType, mediaURL, message string, total int, accountIDs, sendMode string, interval int, metaAccountID int64, metaTemplate, tags string) (int64, error) {
+	res, err := d.sql.Exec("INSERT INTO campaigns (user_id, name, `groups`, tags, numbers, media_type, media_url, message, total, status, account_ids, send_mode, meta_account_id, meta_template, msg_interval) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)", userID, name, groups, tags, numbers, mediaType, mediaURL, message, total, accountIDs, sendMode, metaAccountID, metaTemplate, interval)
 	if err != nil { return 0, err }
 	return res.LastInsertId()
 }
-func (d *DB) UpdateCampaignStatus(id int64, status string) error {
-	_, err := d.sql.Exec(`UPDATE campaigns SET status=? WHERE id=?`, status, id)
+func (d *DB) UpdateCampaignStatus(userID int64, id int64, status string) error {
+	if userID == 0 {
+		_, err := d.sql.Exec(`UPDATE campaigns SET status=? WHERE id=?`, status, id)
+		return err
+	}
+	_, err := d.sql.Exec(`UPDATE campaigns SET status=? WHERE id=? AND user_id=?`, status, id, userID)
 	return err
 }
 func (d *DB) IncCampaignSent(id int64) error {
@@ -324,39 +397,59 @@ func (d *DB) AppendCampaignSentTo(id int64, phone string) error {
 	_, err := d.sql.Exec(`UPDATE campaigns SET sent_to=CONCAT(IFNULL(sent_to,''),?) WHERE id=?`, phone+",", id)
 	return err
 }
-func (d *DB) DeleteCampaign(id int64) error { _, err := d.sql.Exec(`DELETE FROM campaigns WHERE id=?`, id); return err }
-func (d *DB) ListCampaigns() ([]Campaign, error) {
-	rows, err := d.sql.Query("SELECT id, name, `groups`, IFNULL(tags,''), IFNULL(numbers,''), IFNULL(media_type,''), IFNULL(media_url,''), message, total, sent, status, IFNULL(account_id,''), IFNULL(account_ids,''), IFNULL(send_mode,'round_robin'), IFNULL(meta_account_id,0), IFNULL(meta_template,''), IFNULL(msg_interval,3), IFNULL(sent_to,''), created_at FROM campaigns ORDER BY id DESC")
+func (d *DB) DeleteCampaign(userID int64, id int64) error {
+	if userID == 0 {
+		_, err := d.sql.Exec(`DELETE FROM campaigns WHERE id=?`, id)
+		return err
+	}
+	_, err := d.sql.Exec(`DELETE FROM campaigns WHERE id=? AND user_id=?`, id, userID)
+	return err
+}
+func (d *DB) ListCampaigns(userID int64) ([]Campaign, error) {
+	var rows *sql.Rows
+	var err error
+	if userID == 0 {
+		rows, err = d.sql.Query("SELECT id, name, `groups`, IFNULL(tags,''), IFNULL(numbers,''), IFNULL(media_type,''), IFNULL(media_url,''), message, total, sent, status, IFNULL(account_id,''), IFNULL(account_ids,''), IFNULL(send_mode,'round_robin'), IFNULL(meta_account_id,0), IFNULL(meta_template,''), IFNULL(msg_interval,3), IFNULL(sent_to,''), IFNULL(user_id,0), created_at FROM campaigns ORDER BY id DESC")
+	} else {
+		rows, err = d.sql.Query("SELECT id, name, `groups`, IFNULL(tags,''), IFNULL(numbers,''), IFNULL(media_type,''), IFNULL(media_url,''), message, total, sent, status, IFNULL(account_id,''), IFNULL(account_ids,''), IFNULL(send_mode,'round_robin'), IFNULL(meta_account_id,0), IFNULL(meta_template,''), IFNULL(msg_interval,3), IFNULL(sent_to,''), IFNULL(user_id,0), created_at FROM campaigns WHERE user_id=? ORDER BY id DESC", userID)
+	}
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []Campaign
 	for rows.Next() {
 		var c Campaign
-		rows.Scan(&c.ID, &c.Name, &c.Groups, &c.Tags, &c.Numbers, &c.MediaType, &c.MediaURL, &c.Message, &c.Total, &c.Sent, &c.Status, &c.AccountID, &c.AccountIDs, &c.SendMode, &c.MetaAccountID, &c.MetaTemplate, &c.Interval, &c.SentTo, &c.Created)
+		rows.Scan(&c.ID, &c.Name, &c.Groups, &c.Tags, &c.Numbers, &c.MediaType, &c.MediaURL, &c.Message, &c.Total, &c.Sent, &c.Status, &c.AccountID, &c.AccountIDs, &c.SendMode, &c.MetaAccountID, &c.MetaTemplate, &c.Interval, &c.SentTo, &c.UserID, &c.Created)
 		out = append(out, c)
 	}
 	return out, nil
 }
 func (d *DB) PendingCampaigns() ([]Campaign, error) {
-	rows, err := d.sql.Query("SELECT id, name, `groups`, IFNULL(tags,''), IFNULL(numbers,''), IFNULL(media_type,''), IFNULL(media_url,''), message, total, sent, status, IFNULL(account_id,''), IFNULL(account_ids,''), IFNULL(send_mode,'round_robin'), IFNULL(meta_account_id,0), IFNULL(meta_template,''), IFNULL(msg_interval,3), IFNULL(sent_to,''), created_at FROM campaigns WHERE status='running' OR status='pending'")
+	rows, err := d.sql.Query("SELECT id, name, `groups`, IFNULL(tags,''), IFNULL(numbers,''), IFNULL(media_type,''), IFNULL(media_url,''), message, total, sent, status, IFNULL(account_id,''), IFNULL(account_ids,''), IFNULL(send_mode,'round_robin'), IFNULL(meta_account_id,0), IFNULL(meta_template,''), IFNULL(msg_interval,3), IFNULL(sent_to,''), IFNULL(user_id,0), created_at FROM campaigns WHERE status='running' OR status='pending'")
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []Campaign
 	for rows.Next() {
 		var c Campaign
-		rows.Scan(&c.ID, &c.Name, &c.Groups, &c.Tags, &c.Numbers, &c.MediaType, &c.MediaURL, &c.Message, &c.Total, &c.Sent, &c.Status, &c.AccountID, &c.AccountIDs, &c.SendMode, &c.MetaAccountID, &c.MetaTemplate, &c.Interval, &c.SentTo, &c.Created)
+		rows.Scan(&c.ID, &c.Name, &c.Groups, &c.Tags, &c.Numbers, &c.MediaType, &c.MediaURL, &c.Message, &c.Total, &c.Sent, &c.Status, &c.AccountID, &c.AccountIDs, &c.SendMode, &c.MetaAccountID, &c.MetaTemplate, &c.Interval, &c.SentTo, &c.UserID, &c.Created)
 		out = append(out, c)
 	}
 	return out, nil
 }
 
 // ---- Scheduled ----
-func (d *DB) AddScheduled(name, phone, message, sendAt string, repeat int, accountIDs string) (int64, error) {
-	res, err := d.sql.Exec(`INSERT INTO scheduled (name, phone, message, send_at, repeat_min, status, account_ids) VALUES (?, ?, ?, ?, ?, 'pending', ?)`, name, phone, message, sendAt, repeat, accountIDs)
+func (d *DB) AddScheduled(userID int64, name, phone, message, sendAt string, repeat int, accountIDs string) (int64, error) {
+	res, err := d.sql.Exec(`INSERT INTO scheduled (user_id, name, phone, message, send_at, repeat_min, status, account_ids) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)`, userID, name, phone, message, sendAt, repeat, accountIDs)
 	if err != nil { return 0, err }
 	return res.LastInsertId()
 }
-func (d *DB) DeleteScheduled(id int64) error { _, err := d.sql.Exec(`DELETE FROM scheduled WHERE id=?`, id); return err }
+func (d *DB) DeleteScheduled(userID int64, id int64) error {
+	if userID == 0 {
+		_, err := d.sql.Exec(`DELETE FROM scheduled WHERE id=?`, id)
+		return err
+	}
+	_, err := d.sql.Exec(`DELETE FROM scheduled WHERE id=? AND user_id=?`, id, userID)
+	return err
+}
 func (d *DB) MarkScheduledSent(id int64) error {
 	_, err := d.sql.Exec(`UPDATE scheduled SET status='sent' WHERE id=?`, id)
 	return err
@@ -366,25 +459,25 @@ func (d *DB) RescheduleAfter(id int64, minutes int) error {
 	return err
 }
 func (d *DB) ListScheduled() ([]Scheduled, error) {
-	rows, err := d.sql.Query(`SELECT id, name, phone, message, send_at, repeat_min, status, IFNULL(account_ids,''), created_at FROM scheduled ORDER BY id DESC`)
+	rows, err := d.sql.Query(`SELECT id, name, phone, message, send_at, repeat_min, status, IFNULL(account_ids,''), IFNULL(user_id,0), created_at FROM scheduled ORDER BY id DESC`)
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []Scheduled
 	for rows.Next() {
 		var s Scheduled
-		rows.Scan(&s.ID, &s.Name, &s.Phone, &s.Message, &s.SendAt, &s.Repeat, &s.Status, &s.AccountIDs, &s.Created)
+		rows.Scan(&s.ID, &s.Name, &s.Phone, &s.Message, &s.SendAt, &s.Repeat, &s.Status, &s.AccountIDs, &s.UserID, &s.Created)
 		out = append(out, s)
 	}
 	return out, nil
 }
 func (d *DB) DueScheduled() ([]Scheduled, error) {
-	rows, err := d.sql.Query(`SELECT id, name, phone, message, send_at, repeat_min, status, IFNULL(account_ids,''), created_at FROM scheduled WHERE status='pending' AND send_at <= NOW()`)
+	rows, err := d.sql.Query(`SELECT id, name, phone, message, send_at, repeat_min, status, IFNULL(account_ids,''), IFNULL(user_id,0), created_at FROM scheduled WHERE status='pending' AND send_at <= NOW()`)
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []Scheduled
 	for rows.Next() {
 		var s Scheduled
-		rows.Scan(&s.ID, &s.Name, &s.Phone, &s.Message, &s.SendAt, &s.Repeat, &s.Status, &s.AccountIDs, &s.Created)
+		rows.Scan(&s.ID, &s.Name, &s.Phone, &s.Message, &s.SendAt, &s.Repeat, &s.Status, &s.AccountIDs, &s.UserID, &s.Created)
 		out = append(out, s)
 	}
 	return out, nil

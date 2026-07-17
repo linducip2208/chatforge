@@ -68,6 +68,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("open mysql db: %v", err)
 	}
+	db.EnsureDefaultRoles()
 
 	engine, err = wa.New(filepath.Join(dataDir, "session.db"), db)
 	if err != nil {
@@ -114,26 +115,62 @@ func main() {
 	mux.HandleFunc("/inbox/mark-read", authMiddleware(handleInboxMarkRead))
 	mux.HandleFunc("/inbox/search", authMiddleware(handleInboxSearch))
 	mux.HandleFunc("/autoreply", p("autoreply"))
-	mux.HandleFunc("/settings", authMiddleware(handleSettings))
+	mux.HandleFunc("/settings", authMiddleware(requireAdmin(handleSettings)))
 	mux.HandleFunc("/admin/users/impersonate", authMiddleware(handleImpersonate))
 	mux.HandleFunc("/exit-impersonation", handleExitImpersonation)
 	mux.HandleFunc("/contacts", p("contacts"))
 	mux.HandleFunc("/contacts/groups", p("groups"))
 	mux.HandleFunc("/contacts/unsub", p("unsub"))
-	mux.HandleFunc("/contacts/add", authMiddleware(crudPost(func(r *http.Request) { db.AddContact(r.FormValue("name"), r.FormValue("phone"), joinVals(r, "groups")) }, "/contacts")))
-	mux.HandleFunc("/contacts/delete", authMiddleware(crudDel(func(id int64) { db.DeleteContact(id) }, "/contacts")))
+	mux.HandleFunc("/contacts/add", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			uid := getUserID(r)
+			if uid > 0 && db.CountUserContacts(uid) >= db.GetUserContactLimit(uid) {
+				http.Redirect(w, r, "/contacts?msg=Contact+limit+reached.+Upgrade+your+plan.", http.StatusSeeOther)
+				return
+			}
+			db.AddContact(uid, r.FormValue("name"), r.FormValue("phone"), joinVals(r, "groups"))
+		}
+		http.Redirect(w, r, "/contacts", http.StatusSeeOther)
+	}))
+	mux.HandleFunc("/contacts/delete", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+		if id > 0 {
+			db.DeleteContact(getUserID(r), id)
+		}
+		http.Redirect(w, r, "/contacts", http.StatusSeeOther)
+	}))
 	mux.HandleFunc("/contacts/import", authMiddleware(handleContactImport))
 	mux.HandleFunc("/contacts/export", authMiddleware(handleContactExport))
 	mux.HandleFunc("/contacts/bulk-delete", authMiddleware(handleContactBulkDelete))
-	mux.HandleFunc("/groups/add", authMiddleware(crudPost(func(r *http.Request) { db.AddGroup(r.FormValue("name")) }, "/contacts/groups")))
-	mux.HandleFunc("/groups/delete", authMiddleware(crudDel(func(id int64) { db.DeleteGroup(id) }, "/contacts/groups")))
+	mux.HandleFunc("/groups/add", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			uid := getUserID(r)
+			db.AddGroup(uid, r.FormValue("name"))
+		}
+		http.Redirect(w, r, "/contacts/groups", http.StatusSeeOther)
+	}))
+	mux.HandleFunc("/groups/delete", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+		if id > 0 {
+			db.DeleteGroup(getUserID(r), id)
+		}
+		http.Redirect(w, r, "/contacts/groups", http.StatusSeeOther)
+	}))
 	mux.HandleFunc("/unsub/add", authMiddleware(crudPost(func(r *http.Request) { db.AddUnsub(r.FormValue("phone")) }, "/contacts/unsub")))
 	mux.HandleFunc("/unsub/delete", authMiddleware(crudDel(func(id int64) { db.DeleteUnsub(id) }, "/contacts/unsub")))
 	mux.HandleFunc("/broadcast", authMiddleware(handleBroadcast))
-	mux.HandleFunc("/broadcast/stop", authMiddleware(crudDel(func(id int64) { db.UpdateCampaignStatus(id, "stopped") }, "/broadcast")))
+	mux.HandleFunc("/broadcast/stop", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+		if id > 0 { db.UpdateCampaignStatus(getUserID(r), id, "stopped") }
+		http.Redirect(w, r, "/broadcast", http.StatusSeeOther)
+	}))
 	mux.HandleFunc("/broadcast/pause", authMiddleware(handleCampaignPause))
 	mux.HandleFunc("/broadcast/retry", authMiddleware(handleCampaignRetry))
-	mux.HandleFunc("/broadcast/delete", authMiddleware(crudDel(func(id int64) { db.DeleteCampaign(id) }, "/broadcast")))
+	mux.HandleFunc("/broadcast/delete", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+		if id > 0 { db.DeleteCampaign(getUserID(r), id) }
+		http.Redirect(w, r, "/broadcast", http.StatusSeeOther)
+	}))
 	mux.HandleFunc("/drips", authMiddleware(handleDrips))
 	mux.HandleFunc("/drips/add", authMiddleware(handleDripAdd))
 	mux.HandleFunc("/drips/step/add", authMiddleware(handleDripStepAdd))
@@ -177,10 +214,11 @@ func main() {
 		// WA notif to customer
 		phone := r.FormValue("phone")
 		if phone != "" {
-			s := engine.FirstSession()
+			uid := getUserID(r)
+			s := engine.FirstSession(uid)
 			if s != nil {
 				msg := fmt.Sprintf("Order #%d: *%s*\nStatus: %s", id, r.FormValue("product"), status)
-				engine.SendFrom(s.Phone, phone, msg)
+				engine.SendFrom(uid, s.Phone, phone, msg)
 			}
 		}
 		http.Redirect(w, r, "/store/orders", http.StatusSeeOther)
@@ -256,12 +294,24 @@ func main() {
 	mux.HandleFunc("/meta/analytics", authMiddleware(p("meta_analytics")))
 	mux.HandleFunc("/meta/webhook", authMiddleware(p("meta_webhook")))
 		mux.HandleFunc("/scheduled", authMiddleware(handleScheduled))
-	mux.HandleFunc("/scheduled/delete", authMiddleware(crudDel(func(id int64) { db.DeleteScheduled(id) }, "/scheduled")))
+	mux.HandleFunc("/scheduled/delete", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+		if id > 0 { db.DeleteScheduled(getUserID(r), id) }
+		http.Redirect(w, r, "/scheduled", http.StatusSeeOther)
+	}))
 	mux.HandleFunc("/templates", p("templates"))
 	mux.HandleFunc("/templates/add", authMiddleware(crudPost(func(r *http.Request) { db.AddTemplate(r.FormValue("name"), r.FormValue("content")) }, "/templates")))
 	mux.HandleFunc("/templates/delete", authMiddleware(crudDel(func(id int64) { db.DeleteTemplate(id) }, "/templates")))
 	mux.HandleFunc("/apikeys", p("apikeys"))
-	mux.HandleFunc("/apikeys/add", authMiddleware(crudPost(func(r *http.Request) { db.AddAPIKey(r.FormValue("name"), randSecret()) }, "/apikeys")))
+	mux.HandleFunc("/apikeys/add", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			secret := randSecret()
+			db.AddAPIKey(r.FormValue("name"), secret)
+			http.Redirect(w, r, "/apikeys?msg=API+Key+dibuat:+("+template.URLQueryEscaper(secret)+")+simpan+sekarang,+tidak+akan+ditampilkan+lagi", http.StatusSeeOther)
+			return
+		}
+		http.Redirect(w, r, "/apikeys", http.StatusSeeOther)
+	}))
 	mux.HandleFunc("/apikeys/delete", authMiddleware(crudDel(func(id int64) { db.DeleteAPIKey(id) }, "/apikeys")))
 	mux.HandleFunc("/webhooks", p("webhooks"))
 	mux.HandleFunc("/webhooks/add", authMiddleware(crudPost(func(r *http.Request) { db.AddWebhook(r.FormValue("name"), r.FormValue("url"), r.FormValue("event")) }, "/webhooks")))
@@ -318,6 +368,7 @@ type pageData struct {
 	// i18n
 	LangCode, LangName, LangFlag string
 	Languages                    []langInfo
+	IsAdmin                      bool
 	WaConnectedDesc              template.HTML
 	WaScanHint                   template.HTML
 	// multi-account
@@ -343,6 +394,11 @@ type pageData struct {
 	EditAccountID   string
 	EditTrainingID  int64
 	EditRole        string
+	EditPrice         string
+	EditSendLimit     int
+	EditDeviceLimit   int
+	EditWaAccountLimit int
+	EditContactLimit  int
 	WelcomeEnabled  bool
 	WelcomeMessage  string
 	FallbackEnabled bool
@@ -536,7 +592,7 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 
 	status, phone := engine.Status()
 	uid := getUserID(r)
-	ars, _ := db.ListAutoReplies()
+	ars, _ := db.ListAutoReplies(uid)
 	sent, _ := db.ListSentPaginated(1, 20)
 	received, _ := db.ListReceivedPaginated(1, 20)
 
@@ -567,6 +623,7 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		if u, err := db.GetUserByID(uid); err == nil {
 			d.Role = u.Role
 		}
+		d.IsAdmin = db.HasPermission(uid, "manage_users")
 	}
 	d.Accounts = engine.Accounts(uid)
 	d.AccountLimit = engine.AccountLimit(uid)
@@ -639,11 +696,11 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 	// load entity lists per page (only what's needed)
 	switch page {
 	case "contacts":
-		d.Contacts, _ = db.ListContacts()
-		d.Groups, _ = db.ListGroups()
+		d.Contacts, _ = db.ListContacts(uid)
+		d.Groups, _ = db.ListGroups(uid)
 		d.Tags, _ = db.ListTags()
 	case "groups":
-		d.Groups, _ = db.ListGroups()
+		d.Groups, _ = db.ListGroups(uid)
 	case "unsub":
 		d.Unsubs, _ = db.ListUnsub()
 	case "templates":
@@ -651,14 +708,14 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 	case "apikeys":
 		d.APIKeys, _ = db.ListAPIKeys()
 	case "autoreply":
-		d.AiKeys, _ = db.ListAiKeys()
+		d.AiKeys, _ = db.ListAiKeys(uid)
 		d.Knowledges, _ = db.ListKnowledge()
 		d.AiTrainings, _ = db.ListAiTrainings()
 	case "webhooks":
 		d.Webhooks, _ = db.ListWebhooks()
 	case "broadcast":
-		d.Campaigns, _ = db.ListCampaigns()
-		d.Groups, _ = db.ListGroups()
+		d.Campaigns, _ = db.ListCampaigns(uid)
+		d.Groups, _ = db.ListGroups(uid)
 		d.MetaAccounts, _ = db.ListMetaAccounts()
 		d.MetaTemplates, _ = db.ListMetaTemplates()
 	case "drips":
@@ -669,7 +726,7 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.LClicks, _ = db.ListLinkClicks()
 	case "abtests":
 		d.ABTests, _ = db.ListABTests()
-		d.Campaigns, _ = db.ListCampaigns()
+		d.Campaigns, _ = db.ListCampaigns(uid)
 	case "subscribe":
 		d.Packages, _ = db.ListPackages()
 		d.PaymentGateways, _ = db.ListPaymentGateways()
@@ -692,8 +749,6 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Reminders, _ = db.ListReminders()
 	case "analytics":
 		d.AgentMetrics = db.AgentMetrics()
-	case "blacklist":
-		d.Blacklist, _ = db.ListBlacklist()
 	case "csat":
 		d.CSATAvg = db.CSATAverage(30)
 		d.CSATCount = db.CSATCount()
@@ -702,11 +757,11 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Users, _ = db.ListUsers()
 	case "recurring":
 		d.Recurrings, _ = db.ListRecurring()
-		d.Groups, _ = db.ListGroups()
+		d.Groups, _ = db.ListGroups(uid)
 	case "uploads":
 		d.Files = db.ListUploads("public/uploads")
 	case "customers":
-		d.Contacts, _ = db.ListContacts()
+		d.Contacts, _ = db.ListContacts(uid)
 	case "calendar":
 		d.CalEvents = db.GetCalendarEvents()
 	case "macros":
@@ -727,8 +782,8 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.SentPages = pageNums(d.SentPage, (d.SentTotal+d.SentPerPage-1)/d.SentPerPage)
 	case "inbox":
 		d.PageNum = pageFromQuery(r)
-		d.InboxConversations, _ = db.GroupInboxPaginated(d.PageNum, 10)
-		d.InboxTotal = db.CountInbox()
+		d.InboxConversations, _ = db.GroupInboxPaginated(uid, d.PageNum, 10)
+		d.InboxTotal = db.CountInbox(uid)
 		d.InboxPages = pageNums(d.PageNum, (d.InboxTotal+9)/10)
 		d.Statuses, _ = db.ListStatuses()
 		d.Canned, _ = db.ListCanned()
@@ -764,7 +819,7 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 	case "ussd":
 		d.Ussds, _ = db.ListUssd()
 	case "ai_keys":
-		d.AiKeys, _ = db.ListAiKeys()
+		d.AiKeys, _ = db.ListAiKeys(uid)
 	case "ai_plugins":
 		d.AiPlugins, _ = db.ListAiPlugins()
 	case "admin_users":
@@ -816,7 +871,7 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.EditID = eid
 		switch page {
 		case "contacts":
-			if c, err := db.GetContact(eid); err == nil {
+			if c, err := db.GetContact(uid, eid); err == nil {
 				d.EditName = c.Name; d.EditPhone = c.Phone; d.EditGroups = c.Groups
 			}
 		case "templates":
@@ -824,7 +879,7 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 				d.EditName = t.Name; d.EditContent = t.Content
 			}
 		case "autoreply":
-			if a, err := db.GetAutoReply(eid); err == nil {
+			if a, err := db.GetAutoReply(uid, eid); err == nil {
 				d.EditKeyword = a.Keyword; d.EditMatch = a.Match; d.EditReply = a.Reply; d.EditAccountID = a.AccountID
 				d.EditUseAI = a.UseAI; d.EditAiKeyID = a.AiKeyID; d.EditTrainingID = a.TrainingID
 			}
@@ -841,6 +896,12 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		case "admin_roles":
 			if r, err := db.GetRole(eid); err == nil {
 				d.EditName = r.Name; d.EditContent = r.Permissions
+			}
+		case "admin_packages":
+			if p, err := db.GetPackage(eid); err == nil {
+				d.EditName = p.Name; d.EditPrice = p.Price
+				d.EditSendLimit = p.SendLimit; d.EditDeviceLimit = p.DeviceLimit
+				d.EditWaAccountLimit = p.WaAccountLimit; d.EditContactLimit = p.ContactLimit
 			}
 		}
 	}
@@ -943,7 +1004,7 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.MetaAccounts, _ = db.ListMetaAccounts()
 	case "meta_campaigns":
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Meta Campaigns", "Meta", "Campaign via Cloud API", "la-bullhorn"
-		d.Campaigns, _ = db.ListCampaigns()
+		d.Campaigns, _ = db.ListCampaigns(uid)
 	case "meta_inbox":
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Meta Inbox", "Meta", "Meta Live Chat", "la-comments"
 	case "meta_logs":
@@ -1050,6 +1111,15 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 			}
 			return template.HTML(buf.String())
 		},
+		"dict": func(values ...interface{}) map[string]interface{} {
+			if len(values)%2 != 0 { return nil }
+			dict := make(map[string]interface{}, len(values)/2)
+			for i := 0; i < len(values); i += 2 {
+				key, _ := values[i].(string)
+				dict[key] = values[i+1]
+			}
+			return dict
+		},
 	}).Parse(templates))
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -1146,7 +1216,10 @@ func handleWaAdd(w http.ResponseWriter, r *http.Request) {
 func handleWaLogout(w http.ResponseWriter, r *http.Request) {
 	id := r.FormValue("id")
 	if id != "" {
-		_ = engine.LogoutAccount(id)
+		uid := getUserID(r)
+		if uid == 0 || engine.GetSessionUserID(id) == uid || engine.GetSessionUserID(id) == 0 {
+			_ = engine.LogoutAccount(id)
+		}
 	}
 	http.Redirect(w, r, "/wa", http.StatusSeeOther)
 }
@@ -1177,7 +1250,12 @@ func handleSend(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/send?msg="+template.URLQueryEscaper(T("send_connect_first")), http.StatusSeeOther)
 		return
 	}
-	if err := engine.SendFrom(strings.TrimPrefix(r.FormValue("account_phone"), "+"), phone, msgtemplate.Render(message, msgtemplate.Vars{Phone: phone})); err != nil {
+	uid := getUserID(r)
+	if uid > 0 && db.CountSentByUser(uid) >= db.GetUserSendLimit(uid) {
+		http.Redirect(w, r, "/send?msg="+template.URLQueryEscaper("Send limit reached. Upgrade your plan."), http.StatusSeeOther)
+		return
+	}
+	if err := engine.SendFrom(uid, strings.TrimPrefix(r.FormValue("account_phone"), "+"), phone, msgtemplate.Render(message, msgtemplate.Vars{Phone: phone})); err != nil {
 		http.Redirect(w, r, "/send?msg="+template.URLQueryEscaper(err.Error()), http.StatusSeeOther)
 		return
 	}
@@ -1209,7 +1287,8 @@ func handleSendMedia(w http.ResponseWriter, r *http.Request) {
 	if err != nil { http.Redirect(w, r, "/send?msg=Save+error", http.StatusSeeOther); return }
 	io.Copy(f, file)
 	f.Close()
-	if err := engine.SendMedia(accountPhone, phone, mediaType, dest, caption); err != nil {
+	uid := getUserID(r)
+	if err := engine.SendMedia(uid, accountPhone, phone, mediaType, dest, caption); err != nil {
 		http.Redirect(w, r, "/send?msg="+template.URLQueryEscaper(err.Error()), http.StatusSeeOther)
 		return
 	}
@@ -1221,7 +1300,8 @@ func handleInboxChat(w http.ResponseWriter, r *http.Request) {
 		message := r.FormValue("message")
 		accountPhone := strings.TrimPrefix(r.FormValue("account_phone"), "+")
 		if phone != "" && message != "" {
-	if err := engine.SendFrom(accountPhone, phone, message); err != nil {
+			uid := getUserID(r)
+			if err := engine.SendFrom(uid, accountPhone, phone, message); err != nil {
 				http.Redirect(w, r, "/inbox/chat?phone="+phone+"&msg="+template.URLQueryEscaper(err.Error()), http.StatusSeeOther)
 				return
 			}
@@ -1270,7 +1350,8 @@ func handleInboxSend(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, `{"ok":false,"error":"phone and message required"}`)
 		return
 	}
-	if err := engine.SendFrom(accountPhone, phone, message); err != nil {
+	uid := getUserID(r)
+	if err := engine.SendFrom(uid, accountPhone, phone, message); err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprintf(w, `{"ok":false,"error":%q}`, err.Error())
 		return
@@ -1334,7 +1415,13 @@ func handleInboxSendMeta(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"ok":false,"error":"meta account not found"}`)
 		return
 	}
-	mc := meta.New(acc.PhoneNumberID, acc.AccessToken, acc.VerifyToken)
+	uid := getUserID(r)
+	if uid != 0 && acc.UserID != 0 && acc.UserID != uid {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"ok":false,"error":"forbidden"}`)
+		return
+	}
+	mc := meta.New(acc.PhoneNumberID, decryptOrPlain(acc.AccessToken), acc.VerifyToken)
 	_, err = mc.SendText(phone, message)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
@@ -1388,14 +1475,19 @@ func handleAutoReplyAdd(w http.ResponseWriter, r *http.Request) {
 	if match == "" {
 		match = "contains"
 	}
-	_, _ = db.AddAutoReply(keyword, match, reply, useAI, aiKeyID, joinVals(r, "account_ids"), func()int64{t,_:=strconv.ParseInt(r.FormValue("training_id"),10,64);return t}())
+	aid := joinVals(r, "account_ids"); uid := getUserID(r)
+	if !engine.ValidateAccountIDs(uid, aid) {
+		http.Redirect(w, r, "/autoreply?msg="+template.URLQueryEscaper("Nomor tidak valid"), http.StatusSeeOther)
+		return
+	}
+	_, _ = db.AddAutoReply(uid, keyword, match, reply, useAI, aiKeyID, aid, func()int64{t,_:=strconv.ParseInt(r.FormValue("training_id"),10,64);return t}())
 	http.Redirect(w, r, "/autoreply", http.StatusSeeOther)
 }
 
 func handleAutoReplyDelete(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
 	if id > 0 {
-		_ = db.DeleteAutoReply(id)
+		_ = db.DeleteAutoReply(getUserID(r), id)
 	}
 	http.Redirect(w, r, "/autoreply", http.StatusSeeOther)
 }
@@ -1403,7 +1495,7 @@ func handleAutoReplyDelete(w http.ResponseWriter, r *http.Request) {
 func handleAutoReplyToggle(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
 	if id > 0 {
-		_ = db.ToggleAutoReply(id)
+		_ = db.ToggleAutoReply(getUserID(r), id)
 	}
 	http.Redirect(w, r, "/autoreply", http.StatusSeeOther)
 }
@@ -1417,7 +1509,7 @@ func handleAutoReplyEdit(w http.ResponseWriter, r *http.Request) {
 			useAI := r.FormValue("use_ai") == "on" || r.FormValue("use_ai") == "1"
 			aiKeyID, _ := strconv.ParseInt(r.FormValue("ai_key_id"), 10, 64)
 			if match == "" { match = "contains" }
-			_ = db.UpdateAutoReply(id, keyword, match, reply, useAI, aiKeyID, joinVals(r, "account_ids"), func()int64{t,_:=strconv.ParseInt(r.FormValue("training_id"),10,64);return t}())
+			_ = db.UpdateAutoReply(getUserID(r), id, keyword, match, reply, useAI, aiKeyID, joinVals(r, "account_ids"), func()int64{t,_:=strconv.ParseInt(r.FormValue("training_id"),10,64);return t}())
 		}
 		http.Redirect(w, r, "/autoreply", http.StatusSeeOther)
 		return
@@ -1428,7 +1520,7 @@ func handleContactEdit(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
 	if r.Method == http.MethodPost {
 		if id > 0 {
-			_ = db.UpdateContact(id, r.FormValue("name"), r.FormValue("phone"), joinVals(r, "groups"))
+			_ = db.UpdateContact(getUserID(r), id, r.FormValue("name"), r.FormValue("phone"), joinVals(r, "groups"))
 		}
 		http.Redirect(w, r, "/contacts", http.StatusSeeOther)
 		return
@@ -1537,6 +1629,12 @@ func randSecret() string {
 	return hex.EncodeToString(b)
 }
 
+func decryptOrPlain(s string) string {
+	if s == "" { return s }
+	if d, err := secret.Decrypt(s); err == nil && d != "" { return d }
+	return s
+}
+
 // ---- Broadcast (campaign) ----
 
 func handleBroadcast(w http.ResponseWriter, r *http.Request) {
@@ -1548,6 +1646,11 @@ func handleBroadcast(w http.ResponseWriter, r *http.Request) {
 	message := r.FormValue("message")
 	groups := joinVals(r, "groups")
 	accountID := joinVals(r, "account_ids")
+	uid := getUserID(r)
+	if !engine.ValidateAccountIDs(uid, accountID) {
+		http.Redirect(w, r, "/broadcast?msg="+template.URLQueryEscaper("Nomor pengirim tidak valid"), http.StatusSeeOther)
+		return
+	}
 	sendMode := r.FormValue("send_mode")
 	if sendMode != "round_robin" && sendMode != "random" { sendMode = "round_robin" }
 	numbers := strings.TrimSpace(r.FormValue("numbers"))
@@ -1558,7 +1661,7 @@ func handleBroadcast(w http.ResponseWriter, r *http.Request) {
 	// count unique recipients from groups + direct numbers
 	seen := map[string]bool{}
 	for _, gid := range strings.Split(groups, ",") {
-		list, _ := db.ContactsByGroup(strings.TrimSpace(gid))
+		list, _ := db.ContactsByGroup(uid, strings.TrimSpace(gid))
 		for _, c := range list {
 			if c.Phone != "" { seen[c.Phone] = true }
 		}
@@ -1612,20 +1715,21 @@ func handleBroadcast(w http.ResponseWriter, r *http.Request) {
 	}
 	interval, _ := strconv.Atoi(r.FormValue("interval"))
 	if interval <= 0 { interval = 300 }
-	_, _ = db.AddCampaign(name, groups, normalizedNumbers, mediaType, mediaURL, message, len(seen), accountID, sendMode, interval, metaAccountID, metaTemplate, tags)
+	_, _ = db.AddCampaign(uid, name, groups, normalizedNumbers, mediaType, mediaURL, message, len(seen), accountID, sendMode, interval, metaAccountID, metaTemplate, tags)
 	http.Redirect(w, r, "/broadcast", http.StatusSeeOther)
 }
 
 func handleCampaignPause(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
 	if id > 0 {
-		camps, _ := db.ListCampaigns()
+		uid := getUserID(r)
+		camps, _ := db.ListCampaigns(uid)
 		for _, c := range camps {
 			if c.ID == id {
 				if c.Status == "paused" {
-					db.UpdateCampaignStatus(id, "running")
+					db.UpdateCampaignStatus(uid, id, "running")
 				} else if c.Status == "running" {
-					db.UpdateCampaignStatus(id, "paused")
+					db.UpdateCampaignStatus(uid, id, "paused")
 				}
 				break
 			}
@@ -1637,11 +1741,12 @@ func handleCampaignPause(w http.ResponseWriter, r *http.Request) {
 func handleCampaignRetry(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
 	if id > 0 {
-		camps, _ := db.ListCampaigns()
+		uid := getUserID(r)
+		camps, _ := db.ListCampaigns(uid)
 		for _, c := range camps {
 			if c.ID == id {
 				// clone campaign as new pending
-				db.AddCampaign(c.Name+" (retry)", c.Groups, c.Numbers, c.MediaType, c.MediaURL, c.Message, c.Total, c.AccountIDs, c.SendMode, c.Interval, c.MetaAccountID, c.MetaTemplate, c.Tags)
+				db.AddCampaign(uid, c.Name+" (retry)", c.Groups, c.Numbers, c.MediaType, c.MediaURL, c.Message, c.Total, c.AccountIDs, c.SendMode, c.Interval, c.MetaAccountID, c.MetaTemplate, c.Tags)
 				break
 			}
 		}
@@ -1661,7 +1766,7 @@ func handleDripAdd(w http.ResponseWriter, r *http.Request) {
 	}
 	name := r.FormValue("name")
 	if name == "" { name = "Drip Campaign" }
-	db.AddDrip(name)
+	db.AddDrip(getUserID(r), name)
 	http.Redirect(w, r, "/drips", http.StatusSeeOther)
 }
 func handleDripStepAdd(w http.ResponseWriter, r *http.Request) {
@@ -1738,9 +1843,10 @@ func handleInboxClose(w http.ResponseWriter, r *http.Request) {
 		phone := r.FormValue("phone")
 		db.CloseConversation(phone)
 		// send CSAT survey
-		if s := engine.FirstSession(); s != nil {
+		uid := getUserID(r)
+		if s := engine.FirstSession(uid); s != nil {
 			msg := "Terima kasih! Bagaimana pengalaman Anda? Balas dengan rating 1-5 ⭐"
-			engine.SendFrom(s.Phone, phone, msg)
+			engine.SendFrom(uid, s.Phone, phone, msg)
 		}
 	}
 	http.Redirect(w, r, "/inbox", http.StatusSeeOther)
@@ -1808,8 +1914,8 @@ func handleWidgetChat(w http.ResponseWriter, r *http.Request) {
 	if msg != "" && phone != "" {
 		db.LogReceived(phone, "Web Visitor", msg, false, "", "", "widget")
 		engine.Notify(phone)
-		if s := engine.FirstSession(); s != nil {
-			engine.SendFrom(s.Phone, phone, "Terima kasih! Tim kami akan segera membalas.")
+		if s := engine.FirstSession(0); s != nil {
+			engine.SendFrom(0, s.Phone, phone, "Terima kasih! Tim kami akan segera membalas.")
 		}
 	}
 	w.WriteHeader(200)
@@ -1825,7 +1931,7 @@ func handleInboxLabel(w http.ResponseWriter, r *http.Request) {
 func handleInboxFilter(w http.ResponseWriter, r *http.Request) {
 	ft := strings.TrimPrefix(r.URL.Path, "/inbox/filter/")
 	w.Header().Set("Content-Type", "application/json")
-	items := db.InboxFiltered(ft)
+	items := db.InboxFiltered(getUserID(r), ft)
 	if items == nil { fmt.Fprint(w, "[]"); return }
 	json.NewEncoder(w).Encode(items)
 }
@@ -1857,7 +1963,7 @@ func handleTranslate(w http.ResponseWriter, r *http.Request) {
 	to := r.FormValue("to")
 	if text == "" || to == "" { http.Error(w, "text and to required", 400); return }
 	// use first AI key for translation
-	keys, _ := db.ListAiKeys()
+	keys, _ := db.ListAiKeys(getUserID(r))
 	if len(keys) == 0 { fmt.Fprint(w, text); return }
 	ak := keys[0]
 	dec, _ := secret.Decrypt(ak.APIKey)
@@ -1884,7 +1990,7 @@ func handleMacroExecute(w http.ResponseWriter, r *http.Request) {
 		case "reply":
 			sig := db.GetSetting("agent_signature", "")
 			msg := parts[1]; if sig != "" { msg += "\n\n" + sig }
-			if s := engine.FirstSession(); s != nil { engine.SendFrom(s.Phone, phone, msg) }
+			if s := engine.FirstSession(uid); s != nil { engine.SendFrom(uid, s.Phone, phone, msg) }
 		case "close": db.CloseConversation(phone)
 		}
 	}
@@ -1928,8 +2034,11 @@ func handleMetaSend(w http.ResponseWriter, r *http.Request) {
 		accID, _ := strconv.ParseInt(r.FormValue("account_id"), 10, 64)
 		acc, err := db.GetMetaAccount(accID)
 		if err == nil {
-			mc := meta.New(acc.PhoneNumberID, acc.AccessToken, acc.VerifyToken)
-			mc.SendText(r.FormValue("phone"), r.FormValue("message"))
+			uid := getUserID(r)
+			if uid == 0 || acc.UserID == 0 || acc.UserID == uid {
+				mc := meta.New(acc.PhoneNumberID, decryptOrPlain(acc.AccessToken), acc.VerifyToken)
+				mc.SendText(r.FormValue("phone"), r.FormValue("message"))
+			}
 			http.Redirect(w, r, "/meta/send?msg=Sent", http.StatusSeeOther)
 			return
 		}
@@ -1981,8 +2090,8 @@ func handleCheckout(w http.ResponseWriter, r *http.Request) {
 	invoiceID := store.GenInvoiceID()
 
 	cfg := payment.GatewayConfig{
-		APIKey: gw.APIKey, APISecret: gw.APISecret,
-		WebhookSecret: gw.WebhookSecret, BaseURL: gw.BaseURL, Currency: currency,
+		APIKey: decryptOrPlain(gw.APIKey), APISecret: decryptOrPlain(gw.APISecret),
+		WebhookSecret: decryptOrPlain(gw.WebhookSecret), BaseURL: gw.BaseURL, Currency: currency,
 	}
 	pg, err := payment.New(gw.Provider, cfg)
 	if err != nil {
@@ -2018,8 +2127,8 @@ func handlePaymentCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	if gw == nil { http.Error(w, "Unknown gateway", 400); return }
 	cfg := payment.GatewayConfig{
-		APIKey: gw.APIKey, APISecret: gw.APISecret,
-		WebhookSecret: gw.WebhookSecret, BaseURL: gw.BaseURL, Currency: gw.Currency,
+		APIKey: decryptOrPlain(gw.APIKey), APISecret: decryptOrPlain(gw.APISecret),
+		WebhookSecret: decryptOrPlain(gw.WebhookSecret), BaseURL: gw.BaseURL, Currency: gw.Currency,
 	}
 	pg, err := payment.New(provider, cfg)
 	if err != nil { http.Error(w, err.Error(), 500); return }
@@ -2077,7 +2186,8 @@ func handleContactImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Preload all existing groups into a name→id map
-	existingGroups, _ := db.ListGroups()
+	uid := getUserID(r)
+	existingGroups, _ := db.ListGroups(uid)
 	gnameToID := map[string]int64{}
 	for _, g := range existingGroups { gnameToID[strings.ToLower(strings.TrimSpace(g.Name))] = g.ID }
 
@@ -2099,7 +2209,7 @@ func handleContactImport(w http.ResponseWriter, r *http.Request) {
 				key := strings.ToLower(gn)
 				gid, ok := gnameToID[key]
 				if !ok {
-					id, err := db.AddGroup(gn)
+					id, err := db.AddGroup(uid, gn)
 					if err == nil {
 						gnameToID[key] = id
 						gid = id
@@ -2110,13 +2220,13 @@ func handleContactImport(w http.ResponseWriter, r *http.Request) {
 		}
 		gidStr := strings.Join(gids, ",")
 		// Deduplicate by phone
-		existing, _ := db.FindContactByPhone(phone)
+		existing, _ := db.FindContactByPhone(uid, phone)
 		if existing != nil {
 			skipped++
 			continue
 		}
 		if name == "" { name = phone }
-		if _, err := db.AddContact(name, phone, gidStr); err == nil {
+		if _, err := db.AddContact(uid, name, phone, gidStr); err == nil {
 			imported++
 		}
 	}
@@ -2126,7 +2236,7 @@ func handleContactImport(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleContactExport(w http.ResponseWriter, r *http.Request) {
-	contacts, _ := db.ListContacts()
+	contacts, _ := db.ListContacts(getUserID(r))
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
 	w.Header().Set("Content-Disposition", "attachment; filename=contacts.csv")
 	w.Write([]byte("\xEF\xBB\xBF")) // BOM for Excel
@@ -2145,10 +2255,11 @@ func handleContactBulkDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	r.ParseForm()
 	count := 0
+	uid := getUserID(r)
 	for _, idStr := range r.Form["ids"] {
 		id, err := strconv.ParseInt(idStr, 10, 64)
 		if err != nil { continue }
-		db.DeleteContact(id)
+		db.DeleteContact(uid, id)
 		count++
 	}
 	http.Redirect(w, r, fmt.Sprintf("/contacts?msg=Deleted+%d+contacts", count), http.StatusSeeOther)
@@ -2171,8 +2282,12 @@ func handleScheduled(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sendAt = strings.Replace(sendAt, "T", " ", 1) + ":00"
-	accountIDs := joinVals(r, "account_ids")
-	_, _ = db.AddScheduled(name, phone, message, sendAt, repeat, accountIDs)
+	accountIDs := joinVals(r, "account_ids"); uid := getUserID(r)
+	if !engine.ValidateAccountIDs(uid, accountIDs) {
+		http.Redirect(w, r, "/scheduled?msg="+template.URLQueryEscaper("Nomor pengirim tidak valid"), http.StatusSeeOther)
+		return
+	}
+	_, _ = db.AddScheduled(uid, name, phone, message, sendAt, repeat, accountIDs)
 	http.Redirect(w, r, "/scheduled", http.StatusSeeOther)
 }
 
@@ -2251,7 +2366,7 @@ func handleMetaWebhook(w http.ResponseWriter, r *http.Request) {
 				}
 
 				// Auto-reply for Meta
-				mc := meta.New(acc.PhoneNumberID, acc.AccessToken, acc.VerifyToken)
+				mc := meta.New(acc.PhoneNumberID, decryptOrPlain(acc.AccessToken), acc.VerifyToken)
 				if ar, found := db.FindReplyFullForAccount(text, ""); found && ar.IsActive {
 					reply := msgtemplate.Render(ar.Reply, msgtemplate.Vars{Phone: m.From, Name: "", Message: text})
 					if ar.UseAI && ar.AiKeyID > 0 {

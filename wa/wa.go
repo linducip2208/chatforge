@@ -103,12 +103,15 @@ func (e *Engine) UserAccountLimit(userID int64) int {
 func (e *Engine) connectDevice(dev *wmstore.Device) *session {
 	client := whatsmeow.NewClient(dev, e.log)
 	id := "unknown"
+	var phone string
 	if dev.ID != nil {
 		id = dev.ID.String()
+		phone = dev.ID.User
 	}
 	s := &session{id: id, client: client, status: "connecting", createdAt: time.Now()}
 	if dev.ID != nil {
-		s.Phone = dev.ID.User
+		s.Phone = phone
+		s.userID = e.db.GetSessionOwner(phone)
 	}
 	e.mu.Lock()
 	e.sessions[id] = s
@@ -159,13 +162,14 @@ func (e *Engine) AddAccount(userID int64) (string, error) {
 				e.mu.Lock()
 				s.qr = ""
 				s.status = "connected"
-				// re-key session under the real device id
 				if client.Store.ID != nil {
 					newID := client.Store.ID.String()
 					s.Phone = client.Store.ID.User
+					s.userID = userID
 					delete(e.sessions, id)
 					s.id = newID
 					e.sessions[newID] = s
+					e.db.SaveSessionOwner(s.Phone, userID)
 				}
 				e.mu.Unlock()
 			case "timeout":
@@ -318,6 +322,44 @@ func (e *Engine) LogoutAccount(id string) error {
 	return nil
 }
 
+// AccountBelongsToUser checks whether the given phone number belongs to the user.
+func (e *Engine) AccountBelongsToUser(userID int64, phone string) bool {
+	if userID == 0 { return true }
+	phone = strings.TrimPrefix(phone, "+")
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	for _, s := range e.sessions {
+		if s.Phone == phone {
+			if s.userID == 0 { return true }
+			return s.userID == userID
+		}
+	}
+	return false
+}
+
+// GetSessionUserID returns the userID of a session by its internal ID.
+func (e *Engine) GetSessionUserID(id string) int64 {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	if s, ok := e.sessions[id]; ok {
+		return s.userID
+	}
+	return 0
+}
+
+// ValidateAccountIDs checks that all account phone numbers in the comma-separated list belong to the user.
+func (e *Engine) ValidateAccountIDs(userID int64, accountIDs string) bool {
+	if userID == 0 || accountIDs == "" { return true }
+	for _, phone := range strings.Split(accountIDs, ",") {
+		phone = strings.TrimSpace(phone)
+		if phone == "" { continue }
+		if !e.AccountBelongsToUser(userID, phone) {
+			return false
+		}
+	}
+	return true
+}
+
 // firstConnected returns any connected session (for sending).
 func (e *Engine) userAllowedOnWAServer(userID int64) bool {
 	servers, _ := e.db.ListWaServers()
@@ -339,19 +381,20 @@ func (e *Engine) userAllowedOnWAServer(userID int64) bool {
 	}
 	return false
 }
-func (e *Engine) firstConnected() *session {
+func (e *Engine) firstConnected(userID int64) *session {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	for _, s := range e.sessions {
 		if s.status == "connected" {
+			if userID != 0 && s.userID != 0 && s.userID != userID { continue }
 			return s
 		}
 	}
 	return nil
 }
 
-func (e *Engine) FirstSession() *session {
-	return e.firstConnected()
+func (e *Engine) FirstSession(userID int64) *session {
+	return e.firstConnected(userID)
 }
 
 func (e *Engine) handleEvent(s *session, rawEvt interface{}) {
@@ -384,6 +427,18 @@ func (e *Engine) handleEvent(s *session, rawEvt interface{}) {
 // onMessage: log + auto reply. Matching logic UNCHANGED.
 func (e *Engine) onMessage(s *session, evt *events.Message) {
 	if evt.Info.IsFromMe {
+		text := extractText(evt.Message)
+		if text != "" {
+			to := evt.Info.Chat.User
+			name := evt.Info.PushName
+			e.db.LogSentForWA(s.Phone, to, text, "sent", "phone_sync")
+			e.db.Log("send", "sent", fmt.Sprintf("outgoing (phone) -> %s: %s", to, text))
+			e.dispatchWebhooks("sent", to, name, text, "private")
+			select {
+			case e.notifyCh <- to:
+			default:
+			}
+		}
 		return
 	}
 	isStatus := evt.Info.Chat == waTypes.StatusBroadcastJID
@@ -418,7 +473,7 @@ func (e *Engine) onMessage(s *session, evt *events.Message) {
 				}
 			}
 		}
-		e.db.LogReceived(groupJID, groupName, text, true, senderPhone, name, "whatsmeow")
+		e.db.LogReceivedForWA(s.Phone, groupJID, groupName, text, true, senderPhone, name, "whatsmeow")
 		e.db.Log("received", "group", fmt.Sprintf("[%s] %s → %s: %s", groupName, name, groupJID, text))
 		select {
 		case e.notifyCh <- groupJID:
@@ -427,7 +482,7 @@ func (e *Engine) onMessage(s *session, evt *events.Message) {
 		e.dispatchWebhooks("received", senderPhone, name, text, "group")
 		e.log.Infof("group msg: %s → %s: %s", name, groupName, text)
 	} else {
-		e.db.LogReceived(senderPhone, name, text, false, "", "", "whatsmeow"); e.db.Log("received", "private", fmt.Sprintf("%s (%s): %s", name, senderPhone, text))
+		e.db.LogReceivedForWA(s.Phone, senderPhone, name, text, false, "", "", "whatsmeow"); e.db.Log("received", "private", fmt.Sprintf("%s (%s): %s", name, senderPhone, text))
 		// spam detection
 		if e.db.TrackSpam(senderPhone, fmt.Sprintf("%x", text[:minInt(len(text), 20)])) {
 			e.db.AddBlacklist(senderPhone, "auto: spam detected")
@@ -615,7 +670,7 @@ skipAIAll:
 		if rule.UseAI && rule.AiKeyID > 0 {
 			// force own key check
 			if e.db.GetSetting("force_own_key", "0") == "1" {
-				if keys, _ := e.db.ListAiKeys(); len(keys) == 0 { goto afterAI }
+				if keys, _ := e.db.ListAiKeys(0); len(keys) == 0 { goto afterAI }
 			}
 			// training campaign override
 			sysPrompt := ""
@@ -687,12 +742,12 @@ afterAI:
 	}
 }
 
-func (e *Engine) Send(phone, message string) error {
-	return e.SendFrom("", phone, message)
+func (e *Engine) Send(userID int64, phone, message string) error {
+	return e.SendFrom(userID, "", phone, message)
 }
 
-func (e *Engine) SendFrom(accountPhone, phone, message string) error {
-	s := e.findSession(accountPhone)
+func (e *Engine) SendFrom(userID int64, accountPhone, phone, message string) error {
+	s := e.findSession(userID, accountPhone)
 	if s == nil {
 		return fmt.Errorf("not connected")
 	}
@@ -711,19 +766,20 @@ func (e *Engine) SendFrom(accountPhone, phone, message string) error {
 		jid = waTypes.NewJID(digits, waTypes.DefaultUserServer)
 	}
 	if err := e.sendVia(s, jid, message); err != nil {
-		e.db.LogSent(phone, message, "failed", "whatsmeow"); e.db.Log("send", "failed", fmt.Sprintf("FAILED -> %s: %s", phone, message))
+		e.db.LogSentForWA(s.Phone, phone, message, "failed", "whatsmeow"); e.db.Log("send", "failed", fmt.Sprintf("FAILED -> %s: %s", phone, message))
 		return err
 	}
-	e.db.LogSent(phone, message, "sent", "whatsmeow"); e.db.Log("send", "sent", fmt.Sprintf("outgoing -> %s: %s", phone, message))
+	e.db.LogSentForWA(s.Phone, phone, message, "sent", "whatsmeow"); e.db.Log("send", "sent", fmt.Sprintf("outgoing -> %s: %s", phone, message))
 	e.dispatchWebhooks("sent", phone, "", message, "private")
 	return nil
 }
 
-func (e *Engine) findSession(accountPhone string) *session {
+func (e *Engine) findSession(userID int64, accountPhone string) *session {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	for _, s := range e.sessions {
 		if s.status != "connected" { continue }
+		if userID != 0 && s.userID != 0 && s.userID != userID { continue }
 		if accountPhone != "" {
 			if s.Phone == accountPhone { return s }
 		} else {
@@ -740,7 +796,7 @@ type SenderSelector struct {
 }
 
 func (sel *SenderSelector) Next(e *Engine) *session {
-	if len(sel.Phones) == 0 { return e.firstConnected() }
+	if len(sel.Phones) == 0 { return e.firstConnected(0) }
 	var phone string
 	switch sel.Mode {
 	case "round_robin":
@@ -756,11 +812,11 @@ func (sel *SenderSelector) Next(e *Engine) *session {
 			return s
 		}
 	}
-	return e.firstConnected()
+	return e.firstConnected(0)
 }
 
-func (e *Engine) SendMedia(accountPhone, phone, mediaType, filePath, caption string) error {
-	s := e.findSession(accountPhone)
+func (e *Engine) SendMedia(userID int64, accountPhone, phone, mediaType, filePath, caption string) error {
+	s := e.findSession(userID, accountPhone)
 	if s == nil { return fmt.Errorf("not connected") }
 	digits := onlyDigits(phone)
 	if digits == "" { return fmt.Errorf("invalid phone") }
@@ -815,10 +871,10 @@ func (e *Engine) SendMedia(accountPhone, phone, mediaType, filePath, caption str
 	}
 	_, err = s.client.SendMessage(ctx, jid, &msg)
 	if err != nil {
-		e.db.LogSent(digits, caption+" [media]", "failed", "whatsmeow")
+		e.db.LogSentForWA(s.Phone, digits, caption+" [media]", "failed", "whatsmeow")
 		return err
 	}
-	e.db.LogSent(digits, caption+" [media]", "sent", "whatsmeow")
+	e.db.LogSentForWA(s.Phone, digits, caption+" [media]", "sent", "whatsmeow")
 	e.dispatchWebhooks("sent", digits, "", caption+" [media]", "private")
 	return nil
 }

@@ -35,9 +35,17 @@ func registerAdminRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/ai/keys", ap("ai_keys"))
 	mux.HandleFunc("/ai/keys/add", acp(func(r *http.Request) {
 		enc, _ := secret.Encrypt(r.FormValue("apikey"))
-		db.AddAiKey(r.FormValue("name"), r.FormValue("provider"), r.FormValue("model"), enc, r.FormValue("base_url"), r.FormValue("system_prompt"))
+		uid, _ := strconv.ParseInt(r.Header.Get("X-User-ID"), 10, 64)
+		db.AddAiKey(uid, r.FormValue("name"), r.FormValue("provider"), r.FormValue("model"), enc, r.FormValue("base_url"), r.FormValue("system_prompt"))
 	}, "/ai/keys"))
-	mux.HandleFunc("/ai/keys/delete", acd(func(id int64) { db.DeleteAiKey(id) }, "/ai/keys"))
+	mux.HandleFunc("/ai/keys/delete", a(func(w http.ResponseWriter, r *http.Request) {
+		id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+		if id > 0 {
+			uid, _ := strconv.ParseInt(r.Header.Get("X-User-ID"), 10, 64)
+			db.DeleteAiKey(uid, id)
+		}
+		http.Redirect(w, r, "/ai/keys", http.StatusSeeOther)
+	}))
 	// Knowledge base
 	mux.HandleFunc("/knowledge", ap("knowledge"))
 	mux.HandleFunc("/knowledge/add", acp(func(r *http.Request) {
@@ -129,8 +137,51 @@ func registerAdminRoutes(mux *http.ServeMux) {
 		hd, _ := strconv.Atoi(r.FormValue("hidden"))
 		fm, _ := strconv.Atoi(r.FormValue("footermark"))
 		ml, _ := strconv.Atoi(r.FormValue("meta_limit"))
-		db.AddPackage(r.FormValue("name"), r.FormValue("price"), s, rc, dv, us, ws, wr, wa, co, sc, kl, wl, al, ml, sv, hd, fm)
+		dl, _ := strconv.Atoi(r.FormValue("drip_limit"))
+		rl, _ := strconv.Atoi(r.FormValue("recurring_limit"))
+		fl, _ := strconv.Atoi(r.FormValue("form_limit"))
+		tl, _ := strconv.Atoi(r.FormValue("template_limit"))
+		cl, _ := strconv.Atoi(r.FormValue("canned_limit"))
+		mcl, _ := strconv.Atoi(r.FormValue("macro_limit"))
+		akl, _ := strconv.Atoi(r.FormValue("ai_key_limit"))
+		knl, _ := strconv.Atoi(r.FormValue("knowledge_limit"))
+		db.AddPackage(r.FormValue("name"), r.FormValue("price"), s, rc, dv, us, ws, wr, wa, co, sc, kl, wl, al, ml, dl, rl, fl, tl, cl, mcl, akl, knl, sv, hd, fm)
 	}, "/admin/packages"))
+	mux.HandleFunc("/admin/packages/edit", a(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Redirect(w, r, "/admin/packages", http.StatusSeeOther)
+			return
+		}
+		id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+		if id > 0 {
+			s, _ := strconv.Atoi(r.FormValue("send_limit"))
+			rc, _ := strconv.Atoi(r.FormValue("receive_limit"))
+			dv, _ := strconv.Atoi(r.FormValue("device_limit"))
+			us, _ := strconv.Atoi(r.FormValue("ussd_limit"))
+			ws, _ := strconv.Atoi(r.FormValue("wa_send_limit"))
+			wr, _ := strconv.Atoi(r.FormValue("wa_receive_limit"))
+			wa, _ := strconv.Atoi(r.FormValue("wa_account_limit"))
+			co, _ := strconv.Atoi(r.FormValue("contact_limit"))
+			sc, _ := strconv.Atoi(r.FormValue("scheduled_limit"))
+			kl, _ := strconv.Atoi(r.FormValue("key_limit"))
+			wl, _ := strconv.Atoi(r.FormValue("webhook_limit"))
+			al, _ := strconv.Atoi(r.FormValue("action_limit"))
+			ml, _ := strconv.Atoi(r.FormValue("meta_limit"))
+			dl, _ := strconv.Atoi(r.FormValue("drip_limit"))
+			rl, _ := strconv.Atoi(r.FormValue("recurring_limit"))
+			fl, _ := strconv.Atoi(r.FormValue("form_limit"))
+			tl, _ := strconv.Atoi(r.FormValue("template_limit"))
+			cl, _ := strconv.Atoi(r.FormValue("canned_limit"))
+			mcl, _ := strconv.Atoi(r.FormValue("macro_limit"))
+			akl, _ := strconv.Atoi(r.FormValue("ai_key_limit"))
+			knl, _ := strconv.Atoi(r.FormValue("knowledge_limit"))
+			sv := joinVals(r, "services")
+			hd, _ := strconv.Atoi(r.FormValue("hidden"))
+			fm, _ := strconv.Atoi(r.FormValue("footermark"))
+			db.UpdatePackage(id, r.FormValue("name"), r.FormValue("price"), s, rc, dv, us, ws, wr, wa, co, sc, kl, wl, al, ml, dl, rl, fl, tl, cl, mcl, akl, knl, sv, hd, fm)
+		}
+		http.Redirect(w, r, "/admin/packages", http.StatusSeeOther)
+	}))
 	mux.HandleFunc("/admin/packages/delete", acd(func(id int64) { db.DeletePackage(id) }, "/admin/packages"))
 	mux.HandleFunc("/admin/vouchers", ap("admin_vouchers"))
 	mux.HandleFunc("/admin/vouchers/add", acp(func(r *http.Request) {
@@ -187,10 +238,22 @@ func registerAdminRoutes(mux *http.ServeMux) {
 			http.Redirect(w, r, "/admin/meta?msg=Meta+limit+reached", http.StatusSeeOther)
 			return
 		}
-		db.AddMetaAccount(r.FormValue("name"), r.FormValue("phone_number_id"), r.FormValue("access_token"), r.FormValue("app_id"), r.FormValue("app_secret"), r.FormValue("verify_token"), uid, 0)
+		encToken, _ := secret.Encrypt(r.FormValue("access_token"))
+		encSecret, _ := secret.Encrypt(r.FormValue("app_secret"))
+		db.AddMetaAccount(r.FormValue("name"), r.FormValue("phone_number_id"), encToken, r.FormValue("app_id"), encSecret, r.FormValue("verify_token"), uid, 0)
 		http.Redirect(w, r, "/admin/meta", http.StatusSeeOther)
 	}))
-	mux.HandleFunc("/admin/meta/delete", acd(func(id int64) { db.DeleteMetaAccount(id) }, "/admin/meta"))
+	mux.HandleFunc("/admin/meta/delete", a(func(w http.ResponseWriter, r *http.Request) {
+		id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+		if id > 0 {
+			uid, _ := strconv.ParseInt(r.Header.Get("X-User-ID"), 10, 64)
+			acc, err := db.GetMetaAccount(id)
+			if err == nil && (acc.UserID == 0 || acc.UserID == uid || uid == 0) {
+				db.DeleteMetaAccount(id)
+			}
+		}
+		http.Redirect(w, r, "/admin/meta", http.StatusSeeOther)
+	}))
 
 	mux.HandleFunc("/admin/metatemplates", ap("admin_metatemplates"))
 	mux.HandleFunc("/admin/metatemplates/add", acp(func(r *http.Request) {
@@ -202,7 +265,10 @@ func registerAdminRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/admin/gateways-pay", ap("admin_paygateways"))
 	mux.HandleFunc("/admin/gateways-pay/add", a(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
-			db.AddPaymentGateway(r.FormValue("name"), r.FormValue("provider"), r.FormValue("api_key"), r.FormValue("api_secret"), r.FormValue("webhook_secret"), r.FormValue("base_url"), r.FormValue("currency"), r.FormValue("config"))
+			encKey, _ := secret.Encrypt(r.FormValue("api_key"))
+			encSecret, _ := secret.Encrypt(r.FormValue("api_secret"))
+			encWebhook, _ := secret.Encrypt(r.FormValue("webhook_secret"))
+			db.AddPaymentGateway(r.FormValue("name"), r.FormValue("provider"), encKey, encSecret, encWebhook, r.FormValue("base_url"), r.FormValue("currency"), r.FormValue("config"))
 			http.Redirect(w, r, "/admin/gateways-pay", http.StatusSeeOther)
 		}
 	}))

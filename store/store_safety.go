@@ -36,6 +36,7 @@ func (d *DB) migrateSafety() error {
 			return err
 		}
 	}
+	d.safeAddColumn("blacklist", "user_id", "BIGINT NOT NULL DEFAULT 0")
 	return nil
 }
 

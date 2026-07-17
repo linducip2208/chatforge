@@ -1,6 +1,7 @@
 package store
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 )
@@ -59,7 +60,7 @@ func (d *DB) GetConversationLabel(phone string) string {
 	d.sql.QueryRow(`SELECT label FROM agent_assignments WHERE phone=?`, phone).Scan(&l)
 	return l
 }
-func (d *DB) InboxFiltered(filter string) []map[string]string {
+func (d *DB) InboxFiltered(userID int64, filter string) []map[string]string {
 	where := ""
 	switch filter {
 	case "unread":
@@ -69,7 +70,13 @@ func (d *DB) InboxFiltered(filter string) []map[string]string {
 	case "week":
 		where = " AND r.created_at > DATE_SUB(NOW(), INTERVAL 7 DAY)"
 	}
-	rows, err := d.sql.Query(`SELECT r.phone, COALESCE(g.name, MAX(r.name)) as name, MAX(r.is_group) as is_group, COUNT(CASE WHEN r.is_read=0 THEN 1 END) as unread, MAX(r.channel) as channel, IFNULL(a.label,'') as label FROM received r LEFT JOIN wa_groups g ON r.phone = g.jid LEFT JOIN agent_assignments a ON a.phone=r.phone WHERE 1=1` + where + ` GROUP BY r.phone ORDER BY MAX(r.id) DESC LIMIT 50`)
+	var rows *sql.Rows
+	var err error
+	if userID == 0 {
+		rows, err = d.sql.Query(`SELECT r.phone, COALESCE(g.name, MAX(r.name)) as name, MAX(r.is_group) as is_group, COUNT(CASE WHEN r.is_read=0 THEN 1 END) as unread, MAX(r.channel) as channel, IFNULL(a.label,'') as label FROM received r LEFT JOIN wa_groups g ON r.phone = g.jid LEFT JOIN agent_assignments a ON a.phone=r.phone WHERE 1=1` + where + ` GROUP BY r.phone ORDER BY MAX(r.id) DESC LIMIT 50`)
+	} else {
+		rows, err = d.sql.Query(`SELECT r.phone, COALESCE(g.name, MAX(r.name)) as name, MAX(r.is_group) as is_group, COUNT(CASE WHEN r.is_read=0 THEN 1 END) as unread, MAX(r.channel) as channel, IFNULL(a.label,'') as label FROM received r INNER JOIN wa_session_owners o ON r.wa_phone = o.phone AND o.user_id = ? LEFT JOIN wa_groups g ON r.phone = g.jid LEFT JOIN agent_assignments a ON a.phone=r.phone WHERE 1=1` + where + ` GROUP BY r.phone ORDER BY MAX(r.id) DESC LIMIT 50`, userID)
+	}
 	if err != nil { return nil }
 	defer rows.Close()
 	var out []map[string]string
