@@ -1,5 +1,12 @@
 package store
 
+import (
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+)
+
 type CustomerProfile struct {
 	Phone       string
 	Name        string
@@ -74,6 +81,65 @@ func (d *DB) BackupDB(outPath string) error {
 }
 
 var execBackup = func(path string) error {
-	// Placeholder - actual implementation uses mysqldump
-	return nil
+	dsn := os.Getenv("CHATGO_MYSQL")
+	if dsn == "" {
+		dsn = "root:@tcp(127.0.0.1:3306)/chatgo?charset=utf8mb4"
+	}
+	// parse DSN: user:pass@tcp(host:port)/dbname?params
+	user := "root"
+	pass := ""
+	host := "127.0.0.1"
+	port := "3306"
+	dbname := "chatgo"
+
+	if idx := strings.Index(dsn, ":"); idx >= 0 {
+		user = dsn[:idx]
+		rest := dsn[idx+1:]
+		if idx2 := strings.Index(rest, "@"); idx2 >= 0 {
+			pass = rest[:idx2]
+			rest = rest[idx2+1:]
+			if strings.HasPrefix(rest, "tcp(") {
+				rest = rest[4:]
+				if idx3 := strings.Index(rest, ")"); idx3 >= 0 {
+					hp := rest[:idx3]
+					rest = rest[idx3+1:]
+					if idx4 := strings.Index(hp, ":"); idx4 >= 0 {
+						host = hp[:idx4]
+						port = hp[idx4+1:]
+					} else {
+						host = hp
+					}
+				}
+			}
+			if strings.HasPrefix(rest, "/") {
+				rest = rest[1:]
+				if idx5 := strings.Index(rest, "?"); idx5 >= 0 {
+					dbname = rest[:idx5]
+				} else {
+					dbname = rest
+				}
+			}
+		}
+	}
+
+	os.MkdirAll(filepath.Dir(path), 0755)
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	cmd := exec.Command("mysqldump",
+		"-u"+user,
+		"-p"+pass,
+		"-h"+host,
+		"-P"+port,
+		"--single-transaction",
+		"--routines",
+		"--triggers",
+		dbname,
+	)
+	cmd.Stdout = f
+	cmd.Stderr = f
+	return cmd.Run()
 }
