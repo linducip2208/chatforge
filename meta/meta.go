@@ -442,6 +442,44 @@ func (c *Client) ListProducts() ([]map[string]interface{}, error) {
 	return result.Data, nil
 }
 
+func (c *Client) UploadMedia(mediaURL string) (string, error) {
+	// Download media from URL
+	resp, err := c.HTTP.Get(mediaURL)
+	if err != nil { return "", fmt.Errorf("download failed: %v", err) }
+	defer resp.Body.Close()
+	data, err := io.ReadAll(resp.Body)
+	if err != nil { return "", err }
+
+	// Upload to Meta
+	uploadURL := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/media", c.PhoneNumberID)
+	req, err := http.NewRequest("POST", uploadURL, bytes.NewReader(data))
+	if err != nil { return "", err }
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	req.Header.Set("Content-Type", resp.Header.Get("Content-Type"))
+	upResp, err := c.HTTP.Do(req)
+	if err != nil { return "", err }
+	defer upResp.Body.Close()
+	rb, _ := io.ReadAll(upResp.Body)
+	var result struct{ ID string `json:"id"` }
+	json.Unmarshal(rb, &result)
+	if result.ID == "" { return "", fmt.Errorf("upload failed: %s", string(rb)) }
+	return result.ID, nil
+}
+
+func (c *Client) SendMediaByID(to, mediaType, mediaID, caption string) (string, error) {
+	body := map[string]interface{}{
+		"messaging_product": "whatsapp",
+		"recipient_type":    "individual",
+		"to":                to,
+		"type":              mediaType,
+		mediaType: map[string]string{
+			"id":      mediaID,
+			"caption": caption,
+		},
+	}
+	return c.doPost("/messages", body)
+}
+
 func (c *Client) DeleteProduct(productID string) error {
 	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/products/%s", c.PhoneNumberID, productID)
 	req, _ := http.NewRequest("DELETE", url, nil)

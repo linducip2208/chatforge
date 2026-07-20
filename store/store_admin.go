@@ -52,6 +52,7 @@ type Package struct {
 	KnowledgeLimit int
 	Duration       int
 	Services       string
+	PlanFeatures   string
 	Hidden         int
 	Footermark     int
 	Created        string
@@ -195,6 +196,7 @@ func (d *DB) migrateAdmin() error {
 	d.safeAddColumn("packages", "drip_limit", "INT NOT NULL DEFAULT 1")
 	d.safeAddColumn("packages", "recurring_limit", "INT NOT NULL DEFAULT 1")
 	d.safeAddColumn("packages", "duration", "INT NOT NULL DEFAULT 30")
+	d.safeAddColumn("packages", "plan_features", "JSON NOT NULL DEFAULT '{}'")
 	d.sql.Exec(`CREATE TABLE IF NOT EXISTS voucher_usage (id BIGINT AUTO_INCREMENT PRIMARY KEY, voucher_code VARCHAR(64) NOT NULL, user_id BIGINT NOT NULL, package_id BIGINT NOT NULL, redeemed_at DATETIME NOT NULL, INDEX idx_vu_code (voucher_code), INDEX idx_vu_user (user_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`)
 	d.safeAddColumn("packages", "form_limit", "INT NOT NULL DEFAULT 1")
 	d.safeAddColumn("packages", "template_limit", "INT NOT NULL DEFAULT 5")
@@ -306,6 +308,13 @@ func (d *DB) GetUserMacroLimit(userID int64) int    { return d.getUserLimit(user
 func (d *DB) GetUserAiKeyLimit(userID int64) int    { return d.getUserLimit(userID, "ai_key_limit") }
 func (d *DB) GetUserKnowledgeLimit(userID int64) int { return d.getUserLimit(userID, "knowledge_limit") }
 func (d *DB) GetUserMetaLimit(userID int64) int     { return d.getUserLimit(userID, "meta_limit") }
+
+func (d *DB) GetUserPlanFeature(userID int64, feature string) bool {
+	pkg := d.getActivePackage(userID)
+	if pkg == nil { return false }
+	if pkg.PlanFeatures == "" || pkg.PlanFeatures == "{}" { return true } // no restrictions
+	return strings.Contains(pkg.PlanFeatures, `"`+feature+`":true`) || strings.Contains(pkg.PlanFeatures, `"`+feature+`":1`)
+}
 
 func (d *DB) RecordAiUsage(userID int64, tokens int, provider, model string) {
 	d.sql.Exec(`INSERT INTO ai_usage (user_id, tokens, provider, model) VALUES (?,?,?,?)`, userID, tokens, provider, model)
