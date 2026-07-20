@@ -579,6 +579,165 @@ func (c *Client) SendPaymentRequest(to, paymentToken, amount, currency string) (
 	return c.doPost("/messages", body)
 }
 
+// ── Business Profile ──
+
+func (c *Client) GetBusinessProfile() (map[string]interface{}, error) {
+	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/settings/business/profile?fields=about,address,description,email,profile_picture_url,websites,vertical", c.PhoneNumberID)
+	resp, err := c.HTTP.Get(url)
+	if err != nil { return nil, err }
+	defer resp.Body.Close()
+	rb, _ := io.ReadAll(resp.Body)
+	var result map[string]interface{}
+	json.Unmarshal(rb, &result)
+	return result, nil
+}
+
+func (c *Client) UpdateBusinessProfile(about, email, website, description, vertical string) error {
+	components := []map[string]string{}
+	if about != "" { components = append(components, map[string]string{"type": "about", "text": about}) }
+	if email != "" { components = append(components, map[string]string{"type": "email", "text": email}) }
+	if website != "" { components = append(components, map[string]string{"type": "website", "text": website}) }
+	if description != "" { components = append(components, map[string]string{"type": "description", "text": description}) }
+	if vertical != "" { components = append(components, map[string]string{"type": "vertical", "text": vertical}) }
+	body := map[string]interface{}{"components": components}
+	_, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/settings/business/profile", c.PhoneNumberID), body)
+	return err
+}
+
+// ── QR Code ──
+
+func (c *Client) GenerateQRCode(message string) (map[string]interface{}, error) {
+	body := map[string]interface{}{
+		"message":  message,
+		"image_format": "PNG",
+	}
+	resp, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/message_qrdls", c.PhoneNumberID), body)
+	if err != nil { return nil, err }
+	var result map[string]interface{}
+	json.Unmarshal([]byte(resp), &result)
+	return result, nil
+}
+
+// ── Health Status ──
+
+func (c *Client) GetHealthStatus() (string, error) {
+	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s", c.PhoneNumberID)
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	resp, err := c.HTTP.Do(req)
+	if err != nil { return "", err }
+	defer resp.Body.Close()
+	rb, _ := io.ReadAll(resp.Body)
+	var result struct{ HealthStatus struct{ Entity string `json:"entity"` } `json:"health_status"` }
+	json.Unmarshal(rb, &result)
+	return result.HealthStatus.Entity, nil
+}
+
+// ── Message Insights ──
+
+func (c *Client) GetMessageInsights(messageID string) (map[string]interface{}, error) {
+	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/messages?fields=id,message_status,timestamp,type", messageID)
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	resp, err := c.HTTP.Do(req)
+	if err != nil { return nil, err }
+	defer resp.Body.Close()
+	rb, _ := io.ReadAll(resp.Body)
+	var result map[string]interface{}
+	json.Unmarshal(rb, &result)
+	return result, nil
+}
+
+// ── Rate Limit ──
+
+func (c *Client) GetRateLimit() (map[string]interface{}, error) {
+	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/settings/business/rate_limits", c.PhoneNumberID)
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	resp, err := c.HTTP.Do(req)
+	if err != nil { return nil, err }
+	defer resp.Body.Close()
+	rb, _ := io.ReadAll(resp.Body)
+	var result map[string]interface{}
+	json.Unmarshal(rb, &result)
+	return result, nil
+}
+
+// ── Reply with Context ──
+
+func (c *Client) SendReply(to, replyToMessageID, message string) (string, error) {
+	body := map[string]interface{}{
+		"messaging_product": "whatsapp",
+		"to":                to,
+		"type":              "text",
+		"text":              map[string]string{"body": message, "preview_url": "false"},
+		"context":           map[string]string{"message_id": replyToMessageID},
+	}
+	return c.doPost("/messages", body)
+}
+
+// ── Reaction ──
+
+func (c *Client) SendReaction(to, messageID, emoji string) (string, error) {
+	body := map[string]interface{}{
+		"messaging_product": "whatsapp",
+		"to":                to,
+		"type":              "reaction",
+		"reaction":          map[string]string{"message_id": messageID, "emoji": emoji},
+	}
+	return c.doPost("/messages", body)
+}
+
+// ── Location Message ──
+
+func (c *Client) SendLocation(to, name, address string, lat, lng float64) (string, error) {
+	body := map[string]interface{}{
+		"messaging_product": "whatsapp",
+		"recipient_type":    "individual",
+		"to":                to,
+		"type":              "location",
+		"location":          map[string]interface{}{"latitude": fmt.Sprintf("%.6f", lat), "longitude": fmt.Sprintf("%.6f", lng), "name": name, "address": address},
+	}
+	return c.doPost("/messages", body)
+}
+
+// ── Contact Card ──
+
+func (c *Client) SendContacts(to string, contacts []map[string]interface{}) (string, error) {
+	body := map[string]interface{}{
+		"messaging_product": "whatsapp",
+		"recipient_type":    "individual",
+		"to":                to,
+		"type":              "contacts",
+		"contacts":          contacts,
+	}
+	return c.doPost("/messages", body)
+}
+
+// ── Webhook Subscribe ──
+
+func (c *Client) SubscribeWebhook(fields []string) error {
+	body := map[string]interface{}{"fields": fields}
+	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/subscribed_apps", c.PhoneNumberID)
+	_, err := c.doPostWithURL(url, body)
+	return err
+}
+
+// ── Business Verification ──
+
+func (c *Client) GetVerificationStatus(businessID string) (string, error) {
+	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s?fields=verification_status", businessID)
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	resp, err := c.HTTP.Do(req)
+	if err != nil { return "", err }
+	defer resp.Body.Close()
+	rb, _ := io.ReadAll(resp.Body)
+	var result struct{ VerificationStatus string `json:"verification_status"` }
+	json.Unmarshal(rb, &result)
+	return result.VerificationStatus, nil
+}
+
 func (c *Client) DeleteProduct(productID string) error {
 	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/products/%s", c.PhoneNumberID, productID)
 	req, _ := http.NewRequest("DELETE", url, nil)
