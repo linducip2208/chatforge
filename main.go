@@ -369,6 +369,9 @@ func main() {
 	mux.HandleFunc("/autoreply/toggle", authMiddleware(handleAutoReplyToggle))
 	mux.HandleFunc("/autoreply/edit", authMiddleware(handleAutoReplyEdit))
 	mux.HandleFunc("/upgrade", authMiddleware(func(w http.ResponseWriter, r *http.Request) { render(w, r, "upgrade") }))
+	mux.HandleFunc("/pro/", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		render(w, r, "upgrade")
+	}))
 
 	// Contact edit
 	mux.HandleFunc("/contacts/edit", authMiddleware(handleContactEdit))
