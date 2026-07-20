@@ -738,6 +738,134 @@ func (c *Client) GetVerificationStatus(businessID string) (string, error) {
 	return result.VerificationStatus, nil
 }
 
+// ── Flows Data Exchange (callback endpoint) ──
+
+func (c *Client) SetFlowEndpoint(flowID, endpointURL string) error {
+	body := map[string]string{"endpoint_uri": endpointURL}
+	_, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/whatsapp_flows/%s", c.PhoneNumberID, flowID), body)
+	return err
+}
+
+func (c *Client) GetFlowAnalytics(flowID string) (map[string]interface{}, error) {
+	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/whatsapp_flows/%s?fields=id,name,status,categories,validation_errors,message_template,analytics", c.PhoneNumberID, flowID)
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	resp, err := c.HTTP.Do(req)
+	if err != nil { return nil, err }
+	defer resp.Body.Close()
+	rb, _ := io.ReadAll(resp.Body)
+	var result map[string]interface{}
+	json.Unmarshal(rb, &result)
+	return result, nil
+}
+
+// ── Embedded Signup (OAuth) ──
+
+type EmbeddedSignupConfig struct {
+	AppID     string
+	AppSecret string
+}
+
+func (c *Client) GenerateOAuthURL(configID, redirectURI, state string) string {
+	return fmt.Sprintf("https://www.facebook.com/v22.0/dialog/oauth?client_id=%s&redirect_uri=%s&state=%s&config_id=%s&response_type=code&override_default_response_type=true", c.PhoneNumberID, redirectURI, state, configID)
+}
+
+func (c *Client) ExchangeOAuthCode(code string, config EmbeddedSignupConfig) (map[string]interface{}, error) {
+	url := fmt.Sprintf("https://graph.facebook.com/v22.0/oauth/access_token?client_id=%s&client_secret=%s&code=%s&redirect_uri=https://%s/auth/callback", config.AppID, config.AppSecret, code, config.AppID)
+	req, _ := http.NewRequest("GET", url, nil)
+	resp, err := c.HTTP.Do(req)
+	if err != nil { return nil, err }
+	defer resp.Body.Close()
+	rb, _ := io.ReadAll(resp.Body)
+	var result map[string]interface{}
+	json.Unmarshal(rb, &result)
+	return result, nil
+}
+
+func (c *Client) DebugToken(accessToken string) (map[string]interface{}, error) {
+	url := fmt.Sprintf("https://graph.facebook.com/v22.0/debug_token?input_token=%s&access_token=%s", accessToken, c.AccessToken)
+	req, _ := http.NewRequest("GET", url, nil)
+	resp, err := c.HTTP.Do(req)
+	if err != nil { return nil, err }
+	defer resp.Body.Close()
+	rb, _ := io.ReadAll(resp.Body)
+	var result map[string]interface{}
+	json.Unmarshal(rb, &result)
+	return result, nil
+}
+
+// ── Carousel / Catalog Messages ──
+
+func (c *Client) SendCarousel(to string, products []map[string]string) (string, error) {
+	sections := make([]map[string]interface{}, 0)
+	rows := make([]map[string]interface{}, 0)
+	for i, p := range products {
+		rows = append(rows, map[string]interface{}{
+			"id":          fmt.Sprintf("p%d", i),
+			"title":       p["title"],
+			"description": p["description"],
+		})
+	}
+	sections = append(sections, map[string]interface{}{
+		"title": "Produk Kami",
+		"rows":  rows,
+	})
+	interactive := map[string]interface{}{
+		"type": "catalog_message",
+		"body": map[string]string{"text": "Pilih produk:"},
+		"action": map[string]interface{}{
+			"name":     "catalog_message",
+			"sections": sections,
+		},
+	}
+	return c.SendInteractive(to, interactive)
+}
+
+// ── Quality Score ──
+
+func (c *Client) GetQualityScore() (map[string]interface{}, error) {
+	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s?fields=name,quality_rating,message_limit,current_limit,health_status", c.PhoneNumberID)
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	resp, err := c.HTTP.Do(req)
+	if err != nil { return nil, err }
+	defer resp.Body.Close()
+	rb, _ := io.ReadAll(resp.Body)
+	var result map[string]interface{}
+	json.Unmarshal(rb, &result)
+	return result, nil
+}
+
+// ── WABA Migration ──
+
+func (c *Client) RegisterPhoneNumber(pin string) error {
+	body := map[string]string{
+		"messaging_product": "whatsapp",
+		"pin":               pin,
+	}
+	_, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/register", c.PhoneNumberID), body)
+	return err
+}
+
+func (c *Client) DeregisterPhoneNumber() error {
+	body := map[string]string{"messaging_product": "whatsapp"}
+	_, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/deregister", c.PhoneNumberID), body)
+	return err
+}
+
+func (c *Client) GetPhoneNumberStatus() (map[string]interface{}, error) {
+	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s?fields=id,display_phone_number,verified_name,code_verification_status,quality_rating,platform_type,throughput,health_status", c.PhoneNumberID)
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	resp, err := c.HTTP.Do(req)
+	if err != nil { return nil, err }
+	defer resp.Body.Close()
+	rb, _ := io.ReadAll(resp.Body)
+	var result map[string]interface{}
+	json.Unmarshal(rb, &result)
+	return result, nil
+}
+
 func (c *Client) DeleteProduct(productID string) error {
 	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/products/%s", c.PhoneNumberID, productID)
 	req, _ := http.NewRequest("DELETE", url, nil)
