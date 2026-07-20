@@ -110,9 +110,7 @@ func (d *DB) DuplicateFlowRaw(id, uid int64) (int64, error) {
 // For pro flow engine: load all active flows for a user
 func (d *DB) LoadActiveFlows(uid int64) ([]ChatFlow, error) {
 	rows, err := d.sql.Query("SELECT id, user_id, name, `trigger`, nodes, edges, active, created_at, updated_at FROM chat_flows WHERE user_id=? AND active=1 ORDER BY updated_at DESC", uid)
-	if err != nil {
-		return nil, err
-	}
+	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []ChatFlow
 	for rows.Next() {
@@ -121,6 +119,83 @@ func (d *DB) LoadActiveFlows(uid int64) ([]ChatFlow, error) {
 		rows.Scan(&f.ID, &f.UserID, &f.Name, &trig, &f.NodesJSON, &f.EdgesJSON, &f.Active, &f.CreatedAt, &f.UpdatedAt)
 		f.Trigger = string(trig)
 		out = append(out, f)
+	}
+	return out, nil
+}
+
+func (d *DB) migrateFlowStats() error {
+	d.sql.Exec(`CREATE TABLE IF NOT EXISTS flow_stats (flow_id BIGINT NOT NULL PRIMARY KEY, trigger_count INT DEFAULT 0, completion_count INT DEFAULT 0) ENGINE=InnoDB`)
+	d.sql.Exec(`CREATE TABLE IF NOT EXISTS flow_node_hits (flow_id BIGINT NOT NULL, node_id VARCHAR(64) NOT NULL, hit_count INT DEFAULT 0, PRIMARY KEY(flow_id, node_id)) ENGINE=InnoDB`)
+	d.sql.Exec(`CREATE TABLE IF NOT EXISTS flow_counters (counter_key VARCHAR(255) NOT NULL PRIMARY KEY, count_value INT DEFAULT 0) ENGINE=InnoDB`)
+	return nil
+}
+func (d *DB) IncFlowTrigger(fid int64) { d.sql.Exec(`INSERT INTO flow_stats (flow_id,trigger_count) VALUES (?,1) ON DUPLICATE KEY UPDATE trigger_count=trigger_count+1`, fid) }
+func (d *DB) IncFlowComplete(fid int64) { d.sql.Exec(`INSERT INTO flow_stats (flow_id,completion_count) VALUES (?,1) ON DUPLICATE KEY UPDATE completion_count=completion_count+1`, fid) }
+func (d *DB) IncNodeHit(fid int64, nid string) { d.sql.Exec(`INSERT INTO flow_node_hits (flow_id,node_id,hit_count) VALUES (?,?,1) ON DUPLICATE KEY UPDATE hit_count=hit_count+1`, fid, nid) }
+func (d *DB) GetFlowStats(fid int64) (tc, cc int, nh map[string]int) {
+	nh = map[string]int{}
+	d.sql.QueryRow(`SELECT IFNULL(trigger_count,0),IFNULL(completion_count,0) FROM flow_stats WHERE flow_id=?`, fid).Scan(&tc, &cc)
+	rows, _ := d.sql.Query(`SELECT node_id, hit_count FROM flow_node_hits WHERE flow_id=?`, fid)
+	if rows != nil { defer rows.Close(); for rows.Next() { var nid string; var h int; rows.Scan(&nid, &h); nh[nid] = h } }
+	return
+}
+func (d *DB) IncFlowCounter(key string) int {
+	d.sql.Exec(`INSERT INTO flow_counters (counter_key,count_value) VALUES (?,1) ON DUPLICATE KEY UPDATE count_value=count_value+1`, key)
+	var c int; d.sql.QueryRow(`SELECT count_value FROM flow_counters WHERE counter_key=?`, key).Scan(&c); return c
+}
+
+// Flow version history
+func (d *DB) migrateFlowVersions() error {
+	d.sql.Exec(`CREATE TABLE IF NOT EXISTS flow_versions (id BIGINT AUTO_INCREMENT PRIMARY KEY, flow_id BIGINT NOT NULL, name VARCHAR(255), nodes JSON, edges JSON, saved_at DATETIME DEFAULT CURRENT_TIMESTAMP, INDEX idx_fv_flow(flow_id)) ENGINE=InnoDB`)
+	return nil
+}
+func (d *DB) SaveFlowVersion(fid int64, name, nodes, edges string) error {
+	_, err := d.sql.Exec(`INSERT INTO flow_versions (flow_id, name, nodes, edges) VALUES (?,?,?,?)`, fid, name, nodes, edges)
+	return err
+}
+func (d *DB) GetFlowVersions(fid int64) ([]map[string]interface{}, error) {
+	rows, err := d.sql.Query(`SELECT id, name, saved_at FROM flow_versions WHERE flow_id=? ORDER BY id DESC LIMIT 20`, fid)
+	if err != nil { return nil, err }
+	defer rows.Close()
+	var out []map[string]interface{}
+	for rows.Next() {
+		var id int64; var name, savedAt string
+		rows.Scan(&id, &name, &savedAt)
+		out = append(out, map[string]interface{}{"id": id, "name": name, "saved_at": savedAt})
+	}
+	return out, nil
+}
+func (d *DB) RollbackFlow(fid, versionID int64) error {
+	var nodes, edges string
+	err := d.sql.QueryRow(`SELECT nodes, edges FROM flow_versions WHERE id=? AND flow_id=?`, versionID, fid).Scan(&nodes, &edges)
+	if err != nil { return err }
+	_, err = d.sql.Exec(`UPDATE chat_flows SET nodes=?, edges=?, updated_at=NOW() WHERE id=?`, nodes, edges, fid)
+	return err
+}
+
+// Marketplace
+func (d *DB) migrateFlowMarket() error {
+	d.safeAddColumn("chat_flows", "public", "TINYINT DEFAULT 0")
+	d.safeAddColumn("chat_flows", "downloads", "INT DEFAULT 0")
+	return nil
+}
+func (d *DB) PublishFlow(fid, uid int64) error {
+	_, err := d.sql.Exec(`UPDATE chat_flows SET public=1 WHERE id=? AND user_id=?`, fid, uid)
+	return err
+}
+func (d *DB) UnpublishFlow(fid, uid int64) error {
+	_, err := d.sql.Exec(`UPDATE chat_flows SET public=0 WHERE id=? AND user_id=?`, fid, uid)
+	return err
+}
+func (d *DB) ListPublicFlows() ([]ChatFlow, error) {
+	rows, err := d.sql.Query("SELECT id, user_id, name, `trigger`, nodes, edges, active, created_at, updated_at FROM chat_flows WHERE public=1 ORDER BY downloads DESC LIMIT 50")
+	if err != nil { return nil, err }
+	defer rows.Close()
+	var out []ChatFlow
+	for rows.Next() {
+		var f ChatFlow; var trig []byte
+		rows.Scan(&f.ID, &f.UserID, &f.Name, &trig, &f.NodesJSON, &f.EdgesJSON, &f.Active, &f.CreatedAt, &f.UpdatedAt)
+		f.Trigger = string(trig); out = append(out, f)
 	}
 	return out, nil
 }

@@ -192,6 +192,9 @@ func (d *DB) migrate() error {
 	d.migratePlus()
 	d.migrateFinal()
 	d.migrateFlow()
+	d.migrateFlowStats()
+	d.migrateFlowVersions()
+	d.migrateFlowMarket()
 	return nil
 }
 
