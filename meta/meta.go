@@ -274,6 +274,113 @@ func (c *Client) SendMedia(to, mediaType, mediaURL, caption string) (string, err
 	}
 }
 
+// ── WhatsApp Flows (Meta native forms) ──
+
+func (c *Client) SendFlow(to, flowID, flowToken string) (string, error) {
+	body := map[string]interface{}{
+		"messaging_product": "whatsapp",
+		"recipient_type":    "individual",
+		"to":                to,
+		"type":              "flow",
+		"flow": map[string]interface{}{
+			"id":           flowID,
+			"token":        flowToken,
+			"type":         "NAVIGATE",
+			"mode":         "PUBLISHED",
+		},
+	}
+	return c.doPost("/messages", body)
+}
+
+func (c *Client) CreateFlow(name string, categories []string, screens []map[string]interface{}) (string, error) {
+	body := map[string]interface{}{
+		"name":                name,
+		"categories":          categories,
+		"endpoint_uri":        fmt.Sprintf("https://%s/flow_callback", strings.TrimPrefix(c.baseURL(), "https://graph.facebook.com/v22.0/")),
+		"screens":             screens,
+	}
+	resp, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/whatsapp_flows", c.PhoneNumberID), body)
+	return resp, err
+}
+
+func (c *Client) UpdateFlowStatus(flowID, status string) error {
+	body := map[string]string{"status": status}
+	_, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/whatsapp_flows/%s", c.PhoneNumberID, flowID), body)
+	return err
+}
+
+func (c *Client) ListFlows() ([]map[string]interface{}, error) {
+	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/whatsapp_flows?fields=id,name,status,categories", c.PhoneNumberID)
+	resp, err := c.HTTP.Get(url)
+	if err != nil { return nil, err }
+	defer resp.Body.Close()
+	rb, _ := io.ReadAll(resp.Body)
+	var result struct{ Data []map[string]interface{} `json:"data"` }
+	json.Unmarshal(rb, &result)
+	return result.Data, nil
+}
+
+// ── Template Management ──
+
+type Template struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Language string `json:"language"`
+	Category string `json:"category"`
+	Status   string `json:"status"`
+}
+
+func (c *Client) CreateTemplate(name, language, category string, components []map[string]interface{}) (string, error) {
+	body := map[string]interface{}{
+		"name":       name,
+		"language":   language,
+		"category":   category,
+		"components": components,
+	}
+	resp, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/message_templates", c.PhoneNumberID), body)
+	return resp, err
+}
+
+func (c *Client) GetTemplateStatus(templateName string) (string, error) {
+	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/message_templates?name=%s&fields=name,status", c.PhoneNumberID, templateName)
+	resp, err := c.HTTP.Get(url)
+	if err != nil { return "", err }
+	defer resp.Body.Close()
+	rb, _ := io.ReadAll(resp.Body)
+	var result struct{ Data []Template `json:"data"` }
+	json.Unmarshal(rb, &result)
+	if len(result.Data) > 0 { return result.Data[0].Status, nil }
+	return "not_found", nil
+}
+
+func (c *Client) DeleteTemplate(templateName string) error {
+	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/message_templates?name=%s", c.PhoneNumberID, templateName)
+	req, _ := http.NewRequest("DELETE", url, nil)
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	resp, err := c.HTTP.Do(req)
+	if err != nil { return err }
+	resp.Body.Close()
+	return nil
+}
+
+// ── Helpers ──
+
+func (c *Client) doPostWithURL(url string, body interface{}) (string, error) {
+	b, _ := json.Marshal(body)
+	req, err := http.NewRequest("POST", url, bytes.NewReader(b))
+	if err != nil { return "", err }
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.HTTP.Do(req)
+	if err != nil { return "", err }
+	defer resp.Body.Close()
+	rb, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode >= 400 {
+		return "", fmt.Errorf("Meta API error %d: %s", resp.StatusCode, string(rb))
+	}
+	return string(rb), nil
+}
+
 func (c *Client) SendPoll(to, question string, options []string) (string, error) {
 	rows := make([]map[string]interface{}, 0)
 	for i, opt := range options {
