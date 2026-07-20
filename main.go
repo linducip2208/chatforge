@@ -2635,7 +2635,12 @@ func handleMetaWebhook(w http.ResponseWriter, r *http.Request) {
 					if replies, matched := wa.MetaFlowCallback(acc.UserID, acc.PhoneNumberID, m.From, text, ""); matched {
 						for _, reply := range replies {
 							if reply.MediaURL != "" {
-								mc.SendMedia(m.From, reply.MediaType, reply.MediaURL, reply.Text)
+								// Upload to Meta first for reliability
+								if mediaID, err := mc.UploadMedia(reply.MediaURL); err == nil {
+									mc.SendMediaByID(m.From, reply.MediaType, mediaID, reply.Text)
+								} else {
+									mc.SendMedia(m.From, reply.MediaType, reply.MediaURL, reply.Text)
+								}
 							} else if reply.Text != "" {
 								mc.SendText(m.From, reply.Text)
 							}
