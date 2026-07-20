@@ -21,6 +21,7 @@ import (
 	"chatgo/meta"
 	"chatgo/msgtemplate"
 	"chatgo/payment"
+	"chatgo/pseo"
 	"chatgo/secret"
 	"chatgo/store"
 	"chatgo/wa"
@@ -79,6 +80,10 @@ func main() {
 	}
 	engine.StartLoops()
 
+	pseo.Init(getEnv("APP_NAME", "ChatGo"), appURL(), "6281296052010")
+	pseo.InitIndexNow()
+	setupProEngine()
+
 	mux := http.NewServeMux()
 	noDirFS := func(dir string) http.Handler {
 		fs := http.FileServer(http.Dir(dir))
@@ -92,6 +97,16 @@ func main() {
 	mux.Handle("/assets/", http.StripPrefix("/assets/", noDirFS("web/assets")))
 	mux.Handle("/web/", http.StripPrefix("/web/", noDirFS("web")))
 	mux.Handle("/screens/", http.StripPrefix("/screens/", noDirFS("public/marketing/screens")))
+
+	// Sitemap, robots.txt, IndexNow key
+	mux.HandleFunc("/sitemap.xml", pseo.HandleSitemap)
+	mux.HandleFunc("/sitemaps/", pseo.HandleSitemapPage)
+	mux.HandleFunc("/robots.txt", pseo.HandleRobots)
+	mux.HandleFunc("/indexnow-key.txt", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		fmt.Fprint(w, pseo.GetIndexNowKey())
+	})
+
 	mux.HandleFunc("/", handleHome)
 	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) { render(w, r, "login") })
 	mux.HandleFunc("/login/post", loginUser)
@@ -130,22 +145,15 @@ func main() {
 	mux.HandleFunc("/contacts", p("contacts"))
 	mux.HandleFunc("/contacts/groups", p("groups"))
 	mux.HandleFunc("/contacts/unsub", p("unsub"))
-	mux.HandleFunc("/contacts/add", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
-			uid := getUserID(r)
-			if uid > 0 && db.CountUserContacts(uid) >= db.GetUserContactLimit(uid) {
-				http.Redirect(w, r, "/contacts?msg=Contact+limit+reached.+Upgrade+your+plan.", http.StatusSeeOther)
-				return
-			}
-			id, _ := db.AddContact(uid, r.FormValue("name"), r.FormValue("phone"), joinVals(r, "groups"))
-			var tagIDs []int64
-			for _, s := range r.Form["tag_ids"] {
-				if tid, err := strconv.ParseInt(s, 10, 64); err == nil { tagIDs = append(tagIDs, tid) }
-			}
-			if len(tagIDs) > 0 { db.SetContactTags(id, tagIDs) }
+	mux.HandleFunc("/contacts/add", authMiddleware(limitGuard("contact", func(r *http.Request) {
+		uid := getUserID(r)
+		id, _ := db.AddContact(uid, r.FormValue("name"), r.FormValue("phone"), joinVals(r, "groups"))
+		var tagIDs []int64
+		for _, s := range r.Form["tag_ids"] {
+			if tid, err := strconv.ParseInt(s, 10, 64); err == nil { tagIDs = append(tagIDs, tid) }
 		}
-		http.Redirect(w, r, "/contacts", http.StatusSeeOther)
-	}))
+		if len(tagIDs) > 0 { db.SetContactTags(id, tagIDs) }
+	}, "/contacts")))
 	mux.HandleFunc("/contacts/delete", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
 		if id > 0 {
@@ -196,7 +204,7 @@ func main() {
 	mux.HandleFunc("/tags/delete", authMiddleware(crudDel(func(id int64) { db.DeleteTag(id) }, "/tags")))
 	mux.HandleFunc("/contacts/tags", authMiddleware(handleContactTags))
 	mux.HandleFunc("/canned", authMiddleware(handleCanned))
-	mux.HandleFunc("/canned/add", authMiddleware(crudPost(func(r *http.Request) { db.AddCanned(r.FormValue("shortcut"), r.FormValue("name"), r.FormValue("message")) }, "/canned")))
+	mux.HandleFunc("/canned/add", authMiddleware(limitGuard("canned", func(r *http.Request) { db.AddCanned(r.FormValue("shortcut"), r.FormValue("name"), r.FormValue("message")) }, "/canned")))
 	mux.HandleFunc("/canned/delete", authMiddleware(crudDel(func(id int64) { db.DeleteCanned(id) }, "/canned")))
 	mux.HandleFunc("/inbox/assign", authMiddleware(handleInboxAssign))
 	mux.HandleFunc("/inbox/close", authMiddleware(handleInboxClose))
@@ -238,7 +246,7 @@ func main() {
 		http.Redirect(w, r, "/store/orders", http.StatusSeeOther)
 	}))
 	mux.HandleFunc("/forms", authMiddleware(p("forms")))
-	mux.HandleFunc("/forms/add", authMiddleware(crudPost(func(r *http.Request) { db.AddForm(r.FormValue("name"), r.FormValue("fields")) }, "/forms")))
+	mux.HandleFunc("/forms/add", authMiddleware(limitGuard("form", func(r *http.Request) { db.AddForm(r.FormValue("name"), r.FormValue("fields")) }, "/forms")))
 	mux.HandleFunc("/forms/delete", authMiddleware(crudDel(func(id int64) { db.DeleteForm(id) }, "/forms")))
 	mux.HandleFunc("/forms/submissions", authMiddleware(p("submissions")))
 	mux.HandleFunc("/reminders", authMiddleware(p("reminders")))
@@ -269,8 +277,15 @@ func main() {
 	mux.HandleFunc("/inbox/transfer", authMiddleware(handleInboxTransfer))
 	mux.HandleFunc("/recurring", authMiddleware(p("recurring")))
 	mux.HandleFunc("/recurring/add", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		dow, _ := strconv.Atoi(r.FormValue("day_of_week")); hr, _ := strconv.Atoi(r.FormValue("hour"))
-		db.AddRecurring(r.FormValue("name"), joinVals(r, "groups"), r.FormValue("message"), dow, hr)
+		if r.Method == http.MethodPost {
+			uid := getUserID(r)
+			if db.CountUserRecurring(uid) >= db.GetUserRecurringLimit(uid) {
+				http.Redirect(w, r, "/recurring?msg=Recurring+limit+reached.+Upgrade+your+plan.", http.StatusSeeOther)
+				return
+			}
+			dow, _ := strconv.Atoi(r.FormValue("day_of_week")); hr, _ := strconv.Atoi(r.FormValue("hour"))
+			db.AddRecurring(r.FormValue("name"), joinVals(r, "groups"), r.FormValue("message"), dow, hr)
+		}
 		http.Redirect(w, r, "/recurring", http.StatusSeeOther)
 	}))
 	mux.HandleFunc("/recurring/delete", authMiddleware(crudDel(func(id int64) { db.DeleteRecurring(id) }, "/recurring")))
@@ -296,7 +311,7 @@ func main() {
 	mux.HandleFunc("/backup", authMiddleware(handleBackup))
 	mux.HandleFunc("/translate", authMiddleware(handleTranslate))
 	mux.HandleFunc("/macros", authMiddleware(p("macros")))
-	mux.HandleFunc("/macros/add", authMiddleware(crudPost(func(r *http.Request) { db.AddMacro(r.FormValue("name"), r.FormValue("actions")) }, "/macros")))
+	mux.HandleFunc("/macros/add", authMiddleware(limitGuard("macro", func(r *http.Request) { db.AddMacro(r.FormValue("name"), r.FormValue("actions")) }, "/macros")))
 	mux.HandleFunc("/macros/delete", authMiddleware(crudDel(func(id int64) { db.DeleteMacro(id) }, "/macros")))
 	mux.HandleFunc("/macros/execute", authMiddleware(handleMacroExecute))
 	mux.HandleFunc("/merge", authMiddleware(p("merge")))
@@ -320,11 +335,16 @@ func main() {
 		http.Redirect(w, r, "/scheduled", http.StatusSeeOther)
 	}))
 	mux.HandleFunc("/templates", p("templates"))
-	mux.HandleFunc("/templates/add", authMiddleware(crudPost(func(r *http.Request) { db.AddTemplate(r.FormValue("name"), r.FormValue("content")) }, "/templates")))
+	mux.HandleFunc("/templates/add", authMiddleware(limitGuard("template", func(r *http.Request) { db.AddTemplate(r.FormValue("name"), r.FormValue("content")) }, "/templates")))
 	mux.HandleFunc("/templates/delete", authMiddleware(crudDel(func(id int64) { db.DeleteTemplate(id) }, "/templates")))
 	mux.HandleFunc("/apikeys", p("apikeys"))
 	mux.HandleFunc("/apikeys/add", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
+			uid := getUserID(r)
+			if db.CountUserApiKeys(uid) >= db.GetUserKeyLimit(uid) {
+				http.Redirect(w, r, "/apikeys?msg=API+Key+limit+reached.+Upgrade+your+plan.", http.StatusSeeOther)
+				return
+			}
 			secret := randSecret()
 			db.AddAPIKey(r.FormValue("name"), secret)
 			http.Redirect(w, r, "/apikeys?msg=API+Key+dibuat:+("+template.URLQueryEscaper(secret)+")+simpan+sekarang,+tidak+akan+ditampilkan+lagi", http.StatusSeeOther)
@@ -334,11 +354,12 @@ func main() {
 	}))
 	mux.HandleFunc("/apikeys/delete", authMiddleware(crudDel(func(id int64) { db.DeleteAPIKey(id) }, "/apikeys")))
 	mux.HandleFunc("/webhooks", p("webhooks"))
-	mux.HandleFunc("/webhooks/add", authMiddleware(crudPost(func(r *http.Request) { db.AddWebhook(r.FormValue("name"), r.FormValue("url"), r.FormValue("event")) }, "/webhooks")))
+	mux.HandleFunc("/webhooks/add", authMiddleware(limitGuard("webhook", func(r *http.Request) { db.AddWebhook(r.FormValue("name"), r.FormValue("url"), r.FormValue("event")) }, "/webhooks")))
 	mux.HandleFunc("/webhooks/delete", authMiddleware(crudDel(func(id int64) { db.DeleteWebhook(id) }, "/webhooks")))
 	mux.HandleFunc("/logger", p("logger"))
 	mux.HandleFunc("/logger/clear", authMiddleware(func(w http.ResponseWriter, r *http.Request) { db.ClearLog(); http.Redirect(w, r, "/logger", http.StatusSeeOther) }))
 	registerAdminRoutes(mux)
+	initProRoutes(mux)
 	mux.HandleFunc("/lang/", handleLang)
 	mux.HandleFunc("/qr.png", handleQRImage)
 	mux.HandleFunc("/status", handleStatus)
@@ -347,6 +368,7 @@ func main() {
 	mux.HandleFunc("/autoreply/delete", authMiddleware(handleAutoReplyDelete))
 	mux.HandleFunc("/autoreply/toggle", authMiddleware(handleAutoReplyToggle))
 	mux.HandleFunc("/autoreply/edit", authMiddleware(handleAutoReplyEdit))
+	mux.HandleFunc("/upgrade", authMiddleware(func(w http.ResponseWriter, r *http.Request) { render(w, r, "upgrade") }))
 
 	// Contact edit
 	mux.HandleFunc("/contacts/edit", authMiddleware(handleContactEdit))
@@ -368,7 +390,7 @@ func main() {
 	if v := os.Getenv("CHATGO_ADDR"); v != "" {
 		addr = v
 	}
-	fmt.Printf("\n  ChatGo running at http://%s\n\n", getEnv("APP_NAME", "chatgo"), addr)
+	fmt.Printf("\n  %s running at http://%s\n\n", getEnv("APP_NAME", "ChatGo"), addr)
 	var handler http.Handler = mux
 	handler = csrfMiddleware(handler)
 	log.Fatal(http.ListenAndServe(addr, handler))
@@ -515,6 +537,7 @@ type pageData struct {
 	IsImpersonating    bool
 	UserPackage        string
 	UserPackageServices string
+	UserPackageExpire   string
 	AiKeys        []store.AiKey
 	AiPlugins     []store.AiPlugin
 	AiTrainings   []store.AiTraining
@@ -706,13 +729,23 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 	// load user's active subscription and package
 	d.UserPackage = ""
 	d.UserPackageServices = ""
+	d.UserPackageExpire = ""
 	if uid > 0 {
 		if sub, err := db.GetActiveSubscription(uid); err == nil {
+			d.UserPackageExpire = sub.Expire
 			pkgID, _ := strconv.ParseInt(sub.Pkg, 10, 64)
-			if pkg, err := db.GetPackage(pkgID); err == nil {
+			var pkg *store.Package
+			if pkgID > 0 {
+				pkg, _ = db.GetPackage(pkgID)
+			} else {
+				pkg, _ = db.GetPackageByName(sub.Pkg)
+			}
+			if pkg != nil {
 				d.UserPackage = pkg.Name
 				d.UserPackageServices = pkg.Services
 			}
+		} else {
+			d.UserPackage = "Free"
 		}
 	}
 
@@ -1168,6 +1201,10 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 
 func handleHome(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
+		if isPSEOPath(r.URL.Path) {
+			pseo.HandlePSEO(w, r)
+			return
+		}
 		http.NotFound(w, r)
 		return
 	}
@@ -1185,6 +1222,23 @@ func handleHome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	render(w, r, "home")
+}
+
+func isPSEOPath(path string) bool {
+	prefixes := []string{
+		"/best-", "/alternatives-to-", "/compare/",
+		"/whatsapp-marketing-untuk-", "/beli-aplikasi-",
+		"/source-code-", "/aplikasi-whatsapp-",
+		"/jual-aplikasi-", "/jual-source-code-",
+		"/harga-source-code-", "/jasa-whatsapp-",
+		"/cara-", "/chatbot-", "/panduan-",
+	}
+	for _, p := range prefixes {
+		if strings.HasPrefix(path, p) {
+			return true
+		}
+	}
+	return false
 }
 
 func pageHandler(page string) http.HandlerFunc {
@@ -1671,6 +1725,52 @@ func crudDel(fn func(int64), redirect string) http.HandlerFunc {
 	}
 }
 
+func limitGuard(resource string, fn func(*http.Request), redirect string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Redirect(w, r, redirect, http.StatusSeeOther)
+			return
+		}
+		uid := getUserID(r)
+		var count, limit int
+		switch resource {
+		case "template":
+			count, limit = db.CountUserTemplates(uid), db.GetUserTemplateLimit(uid)
+		case "canned":
+			count, limit = db.CountUserCanned(uid), db.GetUserCannedLimit(uid)
+		case "drip":
+			count, limit = db.CountUserDrips(uid), db.GetUserDripLimit(uid)
+		case "scheduled":
+			count, limit = db.CountUserScheduled(uid), db.GetUserScheduledLimit(uid)
+		case "webhook":
+			count, limit = db.CountUserWebhooks(uid), db.GetUserWebhookLimit(uid)
+		case "recurring":
+			count, limit = db.CountUserRecurring(uid), db.GetUserRecurringLimit(uid)
+		case "form":
+			count, limit = db.CountUserForms(uid), db.GetUserFormLimit(uid)
+		case "macro":
+			count, limit = db.CountUserMacros(uid), db.GetUserMacroLimit(uid)
+		case "ai_key":
+			count, limit = db.CountUserAiKeys(uid), db.GetUserAiKeyLimit(uid)
+		case "knowledge":
+			count, limit = db.CountUserKnowledge(uid), db.GetUserKnowledgeLimit(uid)
+		case "meta":
+			count, limit = db.CountMetaByUser(uid), db.GetUserMetaLimit(uid)
+		case "contact":
+			count, limit = db.CountUserContacts(uid), db.GetUserContactLimit(uid)
+		default:
+			http.Redirect(w, r, redirect, http.StatusSeeOther)
+			return
+		}
+		if count >= limit {
+			http.Redirect(w, r, redirect+"?msg=Limit+reached.+Upgrade+your+plan.", http.StatusSeeOther)
+			return
+		}
+		fn(r)
+		http.Redirect(w, r, redirect, http.StatusSeeOther)
+	}
+}
+
 func joinVals(r *http.Request, field string) string {
 	_ = r.ParseForm()
 	vals := r.Form[field]
@@ -1818,9 +1918,14 @@ func handleDripAdd(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/drips", http.StatusSeeOther)
 		return
 	}
+	uid := getUserID(r)
+	if db.CountUserDrips(uid) >= db.GetUserDripLimit(uid) {
+		http.Redirect(w, r, "/drips?msg=Drip+limit+reached.+Upgrade+your+plan.", http.StatusSeeOther)
+		return
+	}
 	name := r.FormValue("name")
 	if name == "" { name = "Drip Campaign" }
-	db.AddDrip(getUserID(r), name)
+	db.AddDrip(uid, name)
 	http.Redirect(w, r, "/drips", http.StatusSeeOther)
 }
 func handleDripStepAdd(w http.ResponseWriter, r *http.Request) {
@@ -2202,8 +2307,25 @@ func handleCheckout(w http.ResponseWriter, r *http.Request) {
 	uid := getUserID(r)
 	packageID, _ := strconv.ParseInt(r.FormValue("package_id"), 10, 64)
 	gatewayID, _ := strconv.ParseInt(r.FormValue("gateway_id"), 10, 64)
-	if uid == 0 || packageID == 0 || gatewayID == 0 {
+	voucher := r.FormValue("voucher")
+
+	if uid == 0 || packageID == 0 {
 		http.Redirect(w, r, "/subscribe?msg=Invalid", http.StatusSeeOther)
+		return
+	}
+
+	// Redeem free voucher (no payment needed)
+	if voucher != "" {
+		if _, err := db.RedeemVoucher(uid, voucher); err == nil {
+			http.Redirect(w, r, "/?msg=Subscription+activated+via+voucher!", http.StatusSeeOther)
+			return
+		}
+		http.Redirect(w, r, "/subscribe?msg=Invalid+voucher+code", http.StatusSeeOther)
+		return
+	}
+
+	if gatewayID == 0 {
+		http.Redirect(w, r, "/subscribe?msg=Select+a+payment+method", http.StatusSeeOther)
 		return
 	}
 	pkg, err := db.GetPackage(packageID)
@@ -2404,17 +2526,22 @@ func handleScheduled(w http.ResponseWriter, r *http.Request) {
 		render(w, r, "scheduled")
 		return
 	}
+	uid := getUserID(r)
+	if db.CountUserScheduled(uid) >= db.GetUserScheduledLimit(uid) {
+		http.Redirect(w, r, "/scheduled?msg=Scheduled+limit+reached.+Upgrade+your+plan.", http.StatusSeeOther)
+		return
+	}
 	name := r.FormValue("name")
 	phone := r.FormValue("phone")
 	message := r.FormValue("message")
-	sendAt := r.FormValue("send_at") // "2006-01-02T15:04"
+	sendAt := r.FormValue("send_at")
 	repeat, _ := strconv.Atoi(r.FormValue("repeat"))
 	if name == "" || phone == "" || message == "" || sendAt == "" {
 		http.Redirect(w, r, "/scheduled", http.StatusSeeOther)
 		return
 	}
 	sendAt = strings.Replace(sendAt, "T", " ", 1) + ":00"
-	accountIDs := joinVals(r, "account_ids"); uid := getUserID(r)
+	accountIDs := joinVals(r, "account_ids")
 	if !engine.ValidateAccountIDs(uid, accountIDs) {
 		http.Redirect(w, r, "/scheduled?msg="+template.URLQueryEscaper("Nomor pengirim tidak valid"), http.StatusSeeOther)
 		return

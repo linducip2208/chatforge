@@ -5,7 +5,7 @@ const templates = `
 <html lang="{{.LangCode}}">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{.Title}} &middot; {{.AppName}}</title>
 <link rel="icon" href="/assets/theme/default-favicon.png">
 <link rel="stylesheet" href="/assets/_assets/css/libs/line-awesome.min.css">
@@ -70,6 +70,86 @@ const templates = `
    .demo-box .demo-title{font-weight:700;color:#152e4d;font-size:0.8rem;margin-bottom:8px}
    .demo-box .demo-row{font-size:0.75rem;color:#5e6b7e;padding:3px 0;font-family:'Courier New',monospace}
    .demo-box .demo-row strong{color:#152e4d}
+   /* ===== BS5 -> BS4 utility compatibility ===== */
+   .me-1{margin-right:.25rem!important}.me-2{margin-right:.5rem!important}.me-3{margin-right:1rem!important}.me-4{margin-right:1.5rem!important}
+   .ms-1{margin-left:.25rem!important}.ms-2{margin-left:.5rem!important}.ms-3{margin-left:1rem!important}.ms-4{margin-left:1.5rem!important}
+   .ms-auto{margin-left:auto!important}.me-auto{margin-right:auto!important}
+   .pe-1{padding-right:.25rem!important}.pe-2{padding-right:.5rem!important}.pe-3{padding-right:1rem!important}
+   .ps-1{padding-left:.25rem!important}.ps-2{padding-left:.5rem!important}.ps-3{padding-left:1rem!important}
+   .gap-1{gap:.25rem!important}.gap-2{gap:.5rem!important}.gap-3{gap:1rem!important}
+   .min-w-0{min-width:0!important}
+   .fw-bold{font-weight:700!important}.fw-semibold{font-weight:600!important}
+   .text-end{text-align:right!important}.text-start{text-align:left!important}
+   .form-select{display:block;width:100%;height:calc(1.5em + .75rem + 2px);padding:.375rem 1.75rem .375rem .75rem;font-size:.9375rem;line-height:1.5;color:#12263f;vertical-align:middle;background:#fff url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'%3e%3cpath fill='%2395aac9' d='M2 0L0 2h4zm0 5L0 3h4z'/%3e%3c/svg%3e") right .75rem center/8px 10px no-repeat;border:1px solid #d2ddec;border-radius:.375rem;-webkit-appearance:none;appearance:none}
+   .form-select:focus{border-color:#2c7be5;outline:0;box-shadow:0 0 0 3px rgba(44,123,229,.12)}
+   .form-select-sm{height:calc(1.5em + .5rem + 2px);padding-top:.25rem;padding-bottom:.25rem;padding-left:.5rem;font-size:.8125rem}
+   .bg-primary.bg-opacity-10{background-color:rgba(44,123,229,.12)!important}
+   .bg-success.bg-opacity-10{background-color:rgba(0,217,126,.12)!important}
+   .bg-warning.bg-opacity-10{background-color:rgba(246,195,67,.15)!important}
+   .bg-danger.bg-opacity-10{background-color:rgba(230,55,87,.12)!important}
+   .bg-info.bg-opacity-10{background-color:rgba(57,160,237,.12)!important}
+   .bg-secondary.bg-opacity-10{background-color:rgba(110,120,140,.12)!important}
+   /* ===== Responsive base ===== */
+   img,canvas,svg,video{max-width:100%;height:auto}
+   .table-responsive{-webkit-overflow-scrolling:touch}
+   .card-header{flex-wrap:wrap;gap:6px;height:auto;min-height:60px}
+   /* Tablet <=1024px */
+   @media(max-width:1024px){
+     .container-fluid{padding-left:16px;padding-right:16px}
+     .header-title{font-size:1.35rem}
+     .card-body{padding:1.15rem}
+     .table th,.table td{padding:.6rem .75rem}
+   }
+   /* Mobile <768px — Dashkit collapses sidebar into top hamburger bar */
+   @media(max-width:767.98px){
+     .main-content{padding-top:4px}
+     .header{margin-bottom:14px}
+     .header-body{padding-top:16px;padding-bottom:16px}
+     .header-title{font-size:1.15rem}
+     .header-pretitle{font-size:.64rem}
+     .container-fluid{padding-left:12px;padding-right:12px}
+     .card{border-radius:10px;margin-bottom:14px}
+     .card-header{padding:10px 14px}
+     .card-header-title{font-size:.95rem}
+     .card-body{padding:1rem}
+     h1,.h1{font-size:1.35rem}h2,.h2{font-size:1.2rem}h3,.h3{font-size:1.05rem}
+     .table th,.table td{padding:8px 10px;font-size:12.5px}
+     .btn{min-height:38px}
+     .btn-sm,.btn-group-sm>.btn{min-height:32px}
+     .form-control,.form-select,select.custom-select,textarea{font-size:16px!important}
+     .form-control-sm{font-size:14px!important}
+     .modal-dialog{margin:10px}
+     .pagination{gap:3px}
+     .pagination a,.pagination span{padding:5px 10px;font-size:12px}
+     .nav-tabs .nav-link{padding:8px 10px;font-size:13px}
+     .alert{padding:10px 14px;font-size:13.5px}
+     #qrimg{width:220px;height:220px}
+     .navbar-vertical .nav-link{padding:10px 20px}
+     .dropdown-menu{font-size:14px}
+   }
+   /* Very small <=400px */
+   @media(max-width:400px){
+     .header-title{font-size:1.02rem}
+     .container-fluid{padding-left:10px;padding-right:10px}
+     .table th,.table td{font-size:12px;padding:7px 8px}
+     #qrimg{width:180px;height:180px}
+     .btn{font-size:13px}
+   }
+   /* Touch targets (WCAG 2.5.5) */
+   @media(pointer:coarse){
+     .btn{min-height:42px}
+     .navbar-vertical .nav-link,.dropdown-item{min-height:42px;display:flex;align-items:center}
+     .page-link{min-width:38px;min-height:38px;display:inline-flex;align-items:center;justify-content:center}
+   }
+   /* Accessibility: reduced motion */
+   @media(prefers-reduced-motion:reduce){
+     *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+   }
+   /* Print */
+   @media print{
+     #sidebar,#topbar,.pagination,.btn{display:none!important}
+     .main-content{margin-left:0!important}
+   }
    @media(max-width:767px){
      .auth-left{min-width:100%;padding:32px 24px;min-height:auto}
      .auth-left::before,.auth-left::after{display:none}
@@ -94,7 +174,7 @@ const templates = `
       <div class="ms-auto"></div>
       <div class="navbar-user d-flex align-items-center me-2">
         <div class="dropdown me-3">
-          <a href="#" class="dropdown-toggle text-muted" role="button" data-bs-toggle="dropdown" style="text-decoration:none">
+          <a href="#" class="dropdown-toggle text-muted" role="button" data-toggle="dropdown" style="text-decoration:none">
             <span class="flag-icon flag-icon-{{.LangFlag}} lang-flag"></span>{{.LangName}}
           </a>
           <div class="dropdown-menu dropdown-menu-end">
@@ -111,7 +191,7 @@ const templates = `
           <span class="badge badge-soft-danger"><span class="status-dot" style="background:#e63757"></span> {{T "status_disconnected"}}</span>
         {{end}}
         <div class="dropdown ms-3">
-          <a href="#" class="dropdown-toggle text-muted" role="button" data-bs-toggle="dropdown" style="text-decoration:none">
+          <a href="#" class="dropdown-toggle text-muted" role="button" data-toggle="dropdown" style="text-decoration:none">
             <i class="la la-user-circle la-lg"></i>
           </a>
           <div class="dropdown-menu dropdown-menu-end">
@@ -212,6 +292,33 @@ if(a){var t=a.offsetTop-s.offsetHeight/2;if(t>0)s.scrollTop=t}
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#sidebarCollapse"><span class="navbar-toggler-icon"></span></button>
     <a class="navbar-brand" href="/"><img src="{{.AppLogo}}" class="navbar-brand-img mx-auto" alt="{{.AppName}}" onerror="this.outerHTML='<span style=&quot;color:#fff;font-weight:800;font-size:20px&quot;>{{.AppName}}</span>'"></a>
     <div class="collapse navbar-collapse" id="sidebarCollapse">
+
+<div class="d-md-none px-3 pt-3 pb-2" style="border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:8px">
+  <div class="mb-2 text-center">
+    {{if eq .Status "connected"}}
+      <span class="badge badge-soft-success"><span class="status-dot" style="background:#00d97e"></span> {{T "status_connected"}} +{{.Phone}}</span>
+    {{else if eq .Status "qr"}}
+      <span class="badge badge-soft-warning"><span class="status-dot" style="background:#f6c343"></span> {{T "status_scanqr"}}</span>
+    {{else}}
+      <span class="badge badge-soft-danger"><span class="status-dot" style="background:#e63757"></span> {{T "status_disconnected"}}</span>
+    {{end}}
+  </div>
+  <div class="d-flex mb-2" style="gap:8px">
+    <a class="btn btn-sm btn-primary flex-fill" href="/wa"><i class="la la-whatsapp me-1"></i> {{T "nav_whatsapp"}}</a>
+    <a class="btn btn-sm btn-primary flex-fill" href="/send"><i class="la la-paper-plane me-1"></i> {{T "nav_send"}}</a>
+  </div>
+  <div class="d-flex align-items-center justify-content-between" style="gap:8px;flex-wrap:wrap">
+    <span>{{range .Languages}}<a href="/lang/{{.Code}}" class="me-2" title="{{.Name}}"><span class="flag-icon flag-icon-{{.Flag}} lang-flag"></span></a>{{end}}</span>
+    <span>
+      <a href="/settings" class="text-muted me-3" style="font-size:13px;text-decoration:none"><i class="la la-cog"></i> {{T "nav_settings"}}</a>
+      {{if .IsImpersonating}}
+      <a href="/exit-impersonation" class="text-warning" style="font-size:13px;text-decoration:none"><i class="la la-times-circle"></i> {{T "nav_exit_impersonation"}}</a>
+      {{else}}
+      <a href="/logout" class="text-danger" style="font-size:13px;text-decoration:none"><i class="la la-sign-out"></i> {{T "auth_logout"}}</a>
+      {{end}}
+    </span>
+  </div>
+</div>
 
 {{template "sgroup" dict "id" "dashboard" "icon" "la-chart-bar" "label" (T "sg_dashboard") "open" true}}
   <li class="nav-item"><a class="nav-link {{if eq .Active "home"}}active{{end}}" href="/"><i class="la la-chart-bar la-lg"></i> {{T "nav_dashboard"}}</a></li>
@@ -333,7 +440,17 @@ if(a){var t=a.offsetTop-s.offsetHeight/2;if(t>0)s.scrollTop=t}
 {{end}}
 
 <ul class="navbar-nav mt-2">
-  <li class="nav-item"><a class="nav-link {{if eq .Active "subscribe"}}active{{end}}" href="/subscribe"><i class="la la-shopping-cart la-lg"></i> {{T "nav_upgrade"}}</a></li>
+  {{if .UserPackage}}
+  <li class="nav-item px-4 mb-2">
+    <div style="background:rgba(79,70,229,.12);border-radius:8px;padding:10px 12px">
+      <div style="font-size:.7rem;color:#8895b7;text-transform:uppercase;letter-spacing:.06em">Paket Aktif</div>
+      <div style="font-weight:700;color:#fff;font-size:.85rem">{{.UserPackage}}</div>
+      {{if .UserPackageExpire}}<div style="font-size:.7rem;color:#5a6780;margin-top:2px">Sampai {{.UserPackageExpire}}</div>{{end}}
+    </div>
+  </li>
+  {{end}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "upgrade"}}active{{end}}" href="/upgrade"><i class="la la-rocket la-lg"></i> {{T "nav_upgrade"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "subscribe"}}active{{end}}" href="/subscribe"><i class="la la-shopping-cart la-lg"></i> {{T "nav_subscribe"}}</a></li>
   <li class="nav-item"><a class="nav-link {{if eq .Active "docs"}}active{{end}}" href="/docs"><i class="la la-book la-lg"></i> {{T "nav_docs"}}</a></li>
 </ul>
     </div>
@@ -423,7 +540,28 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;c
 .cta-banner p{margin-bottom:24px;opacity:.9}
 .cta-banner a{padding:14px 32px;background:#fff;color:#4F46E5;border-radius:10px;font-weight:700;text-decoration:none;display:inline-block;font-size:15px}
 .footer{padding:24px;text-align:center;color:#888;font-size:13px;border-top:1px solid #eee}
-@media(max-width:768px){.hero h1{font-size:2rem}.feature-grid{grid-template-columns:1fr}}
+@media(max-width:768px){
+.hero{padding:120px 20px 56px}
+.hero h1{font-size:2rem}
+.hero p{font-size:1rem}
+.feature-grid{grid-template-columns:1fr}
+.navbar .container{padding:0 16px}
+.nav-links{gap:10px}
+.nav-links a{font-size:13px}
+.nav-links .btn-login{padding:7px 14px}
+.features{padding:32px 16px 56px}
+.features h2{font-size:1.5rem}
+.demo-section{padding:32px 16px 56px}
+.cta-banner{padding:44px 20px}
+.cta-banner h2{font-size:1.5rem}
+}
+@media(max-width:400px){
+.hero h1{font-size:1.6rem}
+.nav-links a:not(.btn-login){display:none}
+.nav-links .lang-switch{display:inline-block}
+}
+@media(pointer:coarse){.nav-links .btn-login,.hero .cta-group a,.cta-banner a{min-height:44px;display:inline-flex;align-items:center;justify-content:center}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
@@ -533,7 +671,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;m
 .demo-row{padding:3px 0;color:#555}
 .demo-row strong{color:#333}
 .alert-danger{background:rgba(230,55,87,.1);color:#e63757;padding:10px 14px;border-radius:8px;margin-bottom:14px;font-size:13px}
-@media(max-width:768px){.auth-left{display:none}.auth-right{min-width:100%}}
+@media(max-width:768px){.auth-left{display:none}.auth-right{min-width:100%;padding:28px 20px}.auth-card h2{font-size:1.5rem}.auth-card input{font-size:16px}}
+@media(pointer:coarse){.auth-card .btn-submit{min-height:46px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 </head>
 <body>
@@ -586,6 +726,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;m
 <div class="form-group"><label>{{T "auth_name"}}</label><input name="name" placeholder="Nama Anda" required></div>
 <div class="form-group"><label>{{T "auth_email"}}</label><input type="email" name="email" placeholder="email@domain.com" required></div>
 <div class="form-group"><label>{{T "auth_password"}}</label><input type="password" name="password" placeholder="••••••••" required></div>
+<div class="form-group"><label>Kode Voucher (Opsional)</label><input name="voucher" placeholder="Masukkan kode voucher"></div>
 <button type="submit" class="btn-submit">{{T "auth_register"}}</button>
 </form>
 </div>
@@ -1208,13 +1349,13 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 {{end}}
 
 {{if eq .Page "abtests"}}
-  <div class="card"><div class="card-header d-flex justify-content-between"><h4 class="card-header-title"><i class="la la-balance-scale me-1"></i> {{T "ab_title"}}</h4><button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#abModal"><i class="la la-plus"></i> {{T "ab_add"}}</button></div>
+  <div class="card"><div class="card-header d-flex justify-content-between"><h4 class="card-header-title"><i class="la la-balance-scale me-1"></i> {{T "ab_title"}}</h4><button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#abModal"><i class="la la-plus"></i> {{T "ab_add"}}</button></div>
     <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "ab_col_campaign"}}</th><th>{{T "ab_col_var_a"}}</th><th>{{T "ab_col_var_b"}}</th><th>{{T "ab_col_a_sent"}}</th><th>{{T "ab_col_b_sent"}}</th></tr></thead><tbody>
       {{range .ABTests}}<tr><td>{{.ID}}</td><td>#{{.CampaignID}}</td><td style="max-width:200px">{{.VariantA}}</td><td style="max-width:200px">{{.VariantB}}</td><td>{{.ASent}}</td><td>{{.BSent}}</td></tr>{{else}}<tr><td colspan="6" class="text-muted text-center py-4">{{T "ab_empty"}}</td></tr>{{end}}
     </tbody></table></div>
   </div>
   <div class="modal fade" id="abModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="post" action="/ab-tests/add">
-    <div class="modal-header"><h5>{{T "ab_modal_title"}}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-header"><h5>{{T "ab_modal_title"}}</h5><button type="button" class="close" data-dismiss="modal"><span>&times;</span></button></div>
     <div class="modal-body">
       <div class="form-group"><label>{{T "ab_campaign_id"}}</label><input type="number" name="campaign_id" class="form-control" required></div>
       <div class="form-group"><label>{{T "ab_var_a"}}</label><textarea name="variant_a" class="form-control" rows="2" required></textarea></div>
@@ -1627,6 +1768,128 @@ from=sender@email.com&subject=Judul Email&text=Isi email</code></pre>
   </div>
 {{end}}
 
+{{if eq .Page "upgrade"}}
+<div class="row justify-content-center">
+  <div class="col-12 text-center mb-4">
+    <h2 class="fw-bold">Pilih Paket ChatGo</h2>
+    <p class="text-muted">Mulai dari gratis sampai enterprise. Upgrade kapan saja.</p>
+  </div>
+
+  <!-- FREE -->
+  <div class="col-12 col-md-6 col-lg-4 mb-4">
+    <div class="card border shadow-sm h-100" style="border-radius:16px">
+      <div class="card-body text-center p-4">
+        <span class="badge bg-success mb-2">Open Source</span>
+        <h3 class="fw-bold">Free</h3>
+        <div class="display-4 fw-bold text-success my-3">Rp 0</div>
+        <p class="text-muted small">Selamanya gratis. Full source code.</p>
+        <hr>
+        <ul class="text-start small mb-3" style="list-style:none;padding:0;line-height:2.2">
+        <li>✅ Multi-Account WA</li>
+        <li>✅ Auto Reply (keyword + spintax)</li>
+        <li>✅ AI Auto Reply (BYOK)</li>
+        <li>✅ Broadcast + Drip + Recurring</li>
+        <li>✅ Inbox real-time + Agent</li>
+        <li>✅ Multi-User SaaS + RBAC</li>
+        <li>✅ Payment Gateway</li>
+        <li>✅ REST API + Webhook</li>
+        <li>✅ E-commerce + White-label</li>
+        <li>✅ PSEO 1.3M+ halaman</li>
+        <li>✅ Single binary Go</li>
+        </ul>
+        <div class="text-muted small mb-3">
+          <strong>⚠️ Build sendiri</strong><br>
+          git clone → go build → jalan.<br>
+          Support: komunitas GitHub.
+        </div>
+        <a href="https://github.com/linducip2208/chatforge" target="_blank" class="btn btn-outline-success w-100 mb-2">
+          <i class="la la-github me-1"></i> GitHub
+        </a>
+        <a href="/register" class="btn btn-outline-primary w-100">
+          <i class="la la-user-plus me-1"></i> Coba Demo
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- STANDARD -->
+  <div class="col-12 col-md-6 col-lg-4 mb-4">
+    <div class="card border-primary shadow h-100" style="border-radius:16px;border-width:2px">
+      <div class="card-body text-center p-4">
+        <span class="badge bg-primary mb-2">Populer</span>
+        <h3 class="fw-bold">Standard</h3>
+        <div class="display-4 fw-bold text-primary my-3">$66</div>
+        <p class="text-muted small">One-time purchase. Lifetime.</p>
+        <hr>
+        <ul class="text-start small mb-3" style="list-style:none;padding:0;line-height:2.2">
+        <li>✅ Semua fitur Free</li>
+        <li>📦 Binary siap pakai (.exe)</li>
+        <li>🛠️ Bantuan instalasi + setup</li>
+        <li>📞 Support WA 6 bulan</li>
+        <li>🔄 Update binary gratis</li>
+        <li>📖 Dokumentasi lengkap</li>
+        <li>🎯 Jaminan berfungsi</li>
+        </ul>
+        <div class="text-muted small mb-3">
+          <strong>Cocok untuk:</strong> UMKM, bisnis kecil-menengah, startup.
+        </div>
+        <a href="https://wa.me/6281296052010?text=Halo%20saya%20mau%20beli%20ChatGo%20Standard%20($66)" target="_blank" class="btn btn-primary w-100">
+          <i class="la la-whatsapp me-1"></i> Beli via WhatsApp
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRO -->
+  <div class="col-12 col-md-6 col-lg-4 mb-4">
+    <div class="card border-dark shadow-sm h-100" style="border-radius:16px;background:linear-gradient(135deg,#0f1f33,#152e4d)">
+      <div class="card-body text-center p-4" style="color:#fff">
+        <span class="badge bg-warning text-dark mb-2">Coming Soon</span>
+        <h3 class="fw-bold">Pro</h3>
+        <div class="display-4 fw-bold text-warning my-3">$799</div>
+        <p class="small" style="opacity:.8">One-time. Early adopter price.</p>
+        <hr style="border-color:rgba(255,255,255,.15)">
+        <ul class="text-start small mb-3" style="list-style:none;padding:0;line-height:2.2">
+        <li>✅ Semua fitur Standard</li>
+        <li>📸 Instagram DM Automation</li>
+        <li>📘 Facebook Messenger</li>
+        <li>✈️ Telegram Bot</li>
+        <li>🌐 Omnichannel Inbox</li>
+        <li>🧩 Visual Flow Builder</li>
+        <li>🔗 n8n / Zapier / Make</li>
+        <li>📊 Google Sheets Sync</li>
+        <li>🏢 Agency Dashboard</li>
+        <li>⭐ Priority Support</li>
+        </ul>
+        <div class="small mb-3" style="opacity:.7">
+          <strong>Target:</strong> Agency, SaaS Provider, Enterprise.
+        </div>
+        <a href="https://wa.me/6281296052010?text=Halo%20saya%20tertarik%20ChatGo%20Pro%20($799)" target="_blank" class="btn btn-warning w-100">
+          <i class="la la-whatsapp me-1"></i> Pre-order via WA
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <div class="col-12 col-lg-8 mt-5">
+    <h4 class="fw-bold mb-3">Pertanyaan Umum</h4>
+    <div class="accordion" id="faq">
+      <div class="card mb-2"><div class="card-header p-3" style="cursor:pointer" data-toggle="collapse" data-target="#q1"><strong>Apa bedanya Free dan Standard?</strong></div>
+      <div id="q1" class="collapse"><div class="card-body">Fitur <strong>sama persis</strong>. Bedanya: Free Anda clone dari GitHub dan build sendiri. Standard kami yang build, kirim binary siap pakai, dan beri support 6 bulan. Anda bayar untuk kenyamanan — tidak perlu install Go, setup environment, atau debugging masalah build.</div></div></div>
+      <div class="card mb-2"><div class="card-header p-3" style="cursor:pointer" data-toggle="collapse" data-target="#q2"><strong>Apakah Standard dapat source code?</strong></div>
+      <div id="q2" class="collapse"><div class="card-body">Tidak. Standard hanya binary (.exe). Kalau mau source code, gunakan versi Free dari GitHub — gratis, full source.</div></div></div>
+      <div class="card mb-2"><div class="card-header p-3" style="cursor:pointer" data-toggle="collapse" data-target="#q3"><strong>Kapan Pro tersedia?</strong></div>
+      <div id="q3" class="collapse"><div class="card-body">Pro sedang dalam pengembangan. Fitur omnichannel (Instagram, Facebook, Telegram) + Visual Flow Builder. Pre-order sekarang untuk harga early adopter.</div></div></div>
+      <div class="card mb-2"><div class="card-header p-3" style="cursor:pointer" data-toggle="collapse" data-target="#q4"><strong>Apakah bisa upgrade nanti?</strong></div>
+      <div id="q4" class="collapse"><div class="card-body">Bisa. Free → Standard ($66): beli Standard, dapat binary. Standard → Pro ($799): beli Pro, dapat binary Pro (update di atas Standard). Tidak perlu instalasi ulang — cukup replace .exe.</div></div></div>
+      <div class="card mb-2"><div class="card-header p-3" style="cursor:pointer" data-toggle="collapse" data-target="#q5"><strong>Kenapa Standard murah tapi Pro mahal?</strong></div>
+      <div id="q5" class="collapse"><div class="card-body">Standard adalah binary pre-built dari source code yang sama dengan Free — Anda bayar convenience. Pro adalah produk berbeda: omnichannel (Instagram, Facebook, Telegram), Visual Flow Builder, agency dashboard — fitur yang tidak ada di Free/Standard dan dikembangkan terpisah.</div></div></div>
+    </div>
+  </div>
+</div>
+{{end}}
+
 {{if eq .Page "subscribe"}}
   <div class="row">
     <div class="col-12"><h2 class="mb-4">{{T "sub_choose"}}</h2></div>
@@ -1641,6 +1904,13 @@ from=sender@email.com&subject=Judul Email&text=Isi email</code></pre>
             <strong>{{T "sub_limits_label"}}</strong> Send:{{.SendLimit}} WA:{{.WaAccountLimit}} Dev:{{.DeviceLimit}} Contact:{{.ContactLimit}}<br>
             <strong>{{T "sub_features_label"}}</strong> {{.Services}}
           </p>
+          <div class="my-3">
+            <form method="post" action="/subscribe/checkout" class="mb-2">
+              <input type="hidden" name="package_id" value="{{$pkgID}}">
+              <input type="hidden" name="gateway_id" value="free">
+              <div class="input-group"><input type="text" name="voucher" class="form-control form-control-sm" placeholder="Kode Voucher"><button class="btn btn-sm btn-outline-success">Aktifkan</button></div>
+            </form>
+          </div>
           {{range $.PaymentGateways}}
           {{if eq .Status "active"}}
           <form method="post" action="/subscribe/checkout" class="mt-2">
@@ -1913,9 +2183,10 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
 <td><span class="badge {{if eq .Role "admin"}}badge-soft-primary{{else}}badge-soft-secondary{{end}}">{{.Role}}</span></td>
 <td class="text-muted small">{{.Created}}</td>
 <td class="text-nowrap">
-<a class="btn btn-sm btn-white" href="/admin/users?edit={{.ID}}"><i class="la la-edit"></i></a>
-<a class="btn btn-sm btn-warning" href="/admin/users/impersonate?id={{.ID}}" title=">{{T "usr_impersonate"}}"><i class="la la-user-circle"></i></a>
-<form method="post" action="/admin/users/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger"><i class="la la-trash"></i></button></form>
+ <a class="btn btn-sm btn-white" href="/admin/users?edit={{.ID}}"><i class="la la-edit"></i></a>
+ <a class="btn btn-sm btn-warning" href="/admin/users/impersonate?id={{.ID}}" title="{{T "usr_impersonate"}}"><i class="la la-user-circle"></i></a>
+ <form method="post" action="/admin/users/reset-password" style="display:inline" onsubmit="return confirm('Reset password untuk {{.Name}}?')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-info" title="Reset Password"><i class="la la-key"></i></button></form>
+ <form method="post" action="/admin/users/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger"><i class="la la-trash"></i></button></form>
 </td>
 </tr>{{else}}<tr><td colspan="7" class="text-muted text-center py-4">-</td></tr>{{end}}
 </tbody></table></div></div></div>
@@ -1958,7 +2229,7 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
       <form method="post" action="/admin/packages/add">
         <div class="form-row"><div class="form-group col-6"><label>{{T "col_name"}}</label><input name="name" class="form-control" required></div>
         <div class="form-group col-3"><label>{{T "pkg_price"}}</label><input name="price" class="form-control" value="0"></div>
-        <div class="form-group col-3"><label>{{T "pkg_hidden"}}</label><select name="hidden" class="form-control"><option value="1">{{T "pkg_hidden_hidden"}}</option><option value="2">{{T "pkg_hidden_visible"}}</option></select></div></div>
+        <div class="form-group col-3"><label>Durasi (hari)</label><input name="duration" type="number" class="form-control" value="30"></div></div>
         <div class="form-group"><label>{{T "pkg_services"}}</label><select name="services" class="form-control" multiple size="15"><option value="whatsapp">{{T "svc_whatsapp"}}</option><option value="meta">{{T "svc_meta"}}</option><option value="broadcast">{{T "svc_broadcast"}}</option><option value="drips">{{T "svc_drips"}}</option><option value="recurring">{{T "svc_recurring"}}</option><option value="ai">{{T "svc_ai"}}</option><option value="inbox">{{T "svc_inbox"}}</option><option value="contacts">{{T "svc_contacts"}}</option><option value="tags">{{T "svc_tags"}}</option><option value="groups">{{T "svc_groups"}}</option><option value="merge">{{T "svc_merge"}}</option><option value="store">{{T "svc_store"}}</option><option value="payment">{{T "svc_payment"}}</option><option value="forms">{{T "svc_forms"}}</option><option value="reminders">{{T "svc_reminders"}}</option><option value="analytics">{{T "svc_analytics"}}</option><option value="csat">{{T "svc_csat"}}</option><option value="api">{{T "svc_api"}}</option><option value="webhooks">{{T "svc_webhooks"}}</option><option value="templates">{{T "svc_templates"}}</option><option value="canned">{{T "svc_canned"}}</option><option value="macros">{{T "svc_macros"}}</option><option value="translate">{{T "svc_translate"}}</option><option value="widget">{{T "svc_widget"}}</option><option value="email">{{T "svc_email"}}</option><option value="blacklist">{{T "svc_blacklist"}}</option><option value="files">{{T "svc_files"}}</option><option value="calendar">{{T "svc_calendar"}}</option><option value="knowledge">{{T "svc_knowledge"}}</option><option value="audit">{{T "svc_audit"}}</option><option value="backup">{{T "svc_backup"}}</option></select></div>
         <div class="form-group"><label>{{T "pkg_footermark"}}</label><select name="footermark" class="form-control"><option value="2">{{T "pkg_footermark_off"}}</option><option value="1">{{T "pkg_footermark_on"}}</option></select></div>
         <hr><h6 class="text-uppercase text-muted small">{{T "pkg_limits"}}</h6>
@@ -2023,7 +2294,7 @@ new Chart(document.getElementById('adminChart'),{type:'line',data:{labels:[{{.Ch
 {{if eq .Page "admin_subscriptions"}}
   <div class="row">
     <div class="col-12 col-lg-4"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "sub_add"}}</h4></div><div class="card-body">
-      <form method="post" action="/admin/subscriptions/add"><div class="form-group"><label>{{T "col_user"}}</label><select name="user" class="form-control" required>{{range .Users}}<option value="{{.Email}}">{{.Name}} ({{.Email}})</option>{{else}}<option value="">{{T "sub_no_users"}}</option>{{end}}</select></div><div class="form-group"><label>{{T "adm_packages"}}</label><select name="pkg" class="form-control">{{range .Packages}}<option value="{{.Name}}">{{.Name}}</option>{{end}}</select></div><div class="form-group"><label>{{T "sub_expire"}}</label><input name="expire" type="date" class="form-control"></div><button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button>{{if .EditID}}<a href="/admin/waservers" class="btn btn-white btn-sm ms-2">{{T "btn_cancel"}}</a>{{end}}</form></div></div></div>
+      <form method="post" action="/admin/subscriptions/add"><div class="form-group"><label>{{T "col_user"}}</label><select name="user_id" class="form-control" required>{{range .Users}}<option value="{{.ID}}">{{.Name}} ({{.Email}})</option>{{else}}<option value="">{{T "sub_no_users"}}</option>{{end}}</select></div><div class="form-group"><label>{{T "adm_packages"}}</label><select name="package_id" class="form-control">{{range .Packages}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select></div><div class="form-group"><label>{{T "sub_expire"}}</label><input name="expire" type="date" class="form-control"></div><button class="btn btn-primary lift"><i class="la la-plus me-1"></i> {{T "ar_add_btn"}}</button></form></div></div></div>
     <div class="col-12 col-lg-8"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "adm_subscriptions"}}</h4></div>
       <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_user"}}</th><th>{{T "adm_packages"}}</th><th>{{T "sub_expire"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
         {{range .Subscriptions}}<tr><td>{{.ID}}</td><td>{{.User}}</td><td>{{.Pkg}}</td><td>{{.Expire}}</td><td><form method="post" action="/admin/subscriptions/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="5" class="text-muted text-center">-</td></tr>{{end}}
@@ -2279,7 +2550,18 @@ onScroll();
 .conv-item .conv-name{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
 .conv-item .conv-msg{font-size:13px;color:#667781;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
 .conv-item .conv-time{font-size:11px;color:#8696a0;white-space:nowrap}
-@media(max-width:768px){.panel-left{width:100%}.panel-right{display:none}.panel-right.open{display:flex;position:fixed;top:0;left:0;right:0;bottom:0;z-index:1000}.chat-area{padding:12px 16px}}
+@media(max-width:767.98px){
+.inbox-split{height:calc(100vh - 120px);min-height:400px}
+.panel-left{width:100%;min-width:0}
+.panel-right{display:none}
+.panel-right.open{display:flex;position:fixed;top:0;left:0;right:0;bottom:0;z-index:1050;background:#efeae2}
+.chat-area{padding:12px 16px}
+.conv-item{padding:10px 12px}
+.conv-item .conv-name{max-width:52vw}
+.conv-item .conv-msg{max-width:58vw}
+.chat-bubble{max-width:85%}
+.chat-input-wrap textarea{font-size:16px}
+}
 </style>
 <div class="inbox-split" id="inboxSplit">
 <div class="panel-left">

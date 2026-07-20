@@ -43,6 +43,18 @@ type session struct {
 }
 
 // Engine manages MANY whatsmeow accounts (multi-number).
+type FlowCallbacks struct {
+	OnMessage  func(uid int64, accountPhone, phone, message, contactName string) (replies []FlowReply, matched bool)
+	OnWelcome  func(uid int64, accountPhone, phone, contactName string) (replies []FlowReply)
+	OnFallback func(uid int64, accountPhone, phone, message, contactName string) (replies []FlowReply)
+}
+
+type FlowReply struct {
+	Text      string
+	MediaURL  string
+	MediaType string
+}
+
 type Engine struct {
 	container *sqlstore.Container
 	db        *store.DB
@@ -52,7 +64,8 @@ type Engine struct {
 	sessions map[string]*session // key = session id
 	newSeq   int
 
-	notifyCh chan string
+	notifyCh      chan string
+	FlowCallbacks *FlowCallbacks
 }
 
 // New opens the whatsmeow session store.
@@ -633,6 +646,36 @@ skipAIAll:
 				rendered := msgtemplate.Render(wmsg, tv)
 				if err := e.sendVia(s, to, rendered); err == nil {
 					e.db.LogSent(to.User, rendered, "welcome", "whatsmeow"); e.db.Log("welcome", "sent", fmt.Sprintf("welcome -> %s: %s", to.User, rendered))
+				}
+			}
+		}
+	}
+
+	// ═══ PRO: Flow builder check (before keyword auto-reply) ═══
+	if e.FlowCallbacks != nil && e.FlowCallbacks.OnMessage != nil && !evt.Info.IsGroup {
+		if replies, matched := e.FlowCallbacks.OnMessage(s.userID, s.Phone, senderPhone, text, name); matched {
+			for _, reply := range replies {
+				if reply.MediaURL != "" {
+					e.SendMedia(s.userID, s.Phone, senderPhone, reply.MediaType, reply.MediaURL, reply.Text)
+					e.db.LogSent(to.User, reply.Text+" [media]", "flow", "whatsmeow")
+				} else if reply.Text != "" {
+					e.sendVia(s, to, reply.Text)
+					e.db.LogSent(to.User, reply.Text, "flow", "whatsmeow")
+				}
+			}
+			return
+		}
+	}
+
+	// ═══ PRO: Welcome flow ═══
+	if e.FlowCallbacks != nil && e.FlowCallbacks.OnWelcome != nil && !evt.Info.IsGroup {
+		if e.db.MarkWelcomed(senderPhone) {
+			if replies := e.FlowCallbacks.OnWelcome(s.userID, s.Phone, senderPhone, name); len(replies) > 0 {
+				for _, reply := range replies {
+					if reply.Text != "" {
+						e.sendVia(s, to, reply.Text)
+						e.db.LogSent(to.User, reply.Text, "flow_welcome", "whatsmeow")
+					}
 				}
 			}
 		}

@@ -3,7 +3,9 @@ package main
 import (
 	"encoding/csv"
 	"encoding/json"
+	"html/template"
 	"io"
+	"log"
 	"regexp"
 	"chatgo/secret"
 	"net/http"
@@ -32,11 +34,16 @@ func registerAdminRoutes(mux *http.ServeMux) {
 
 	// AI
 	mux.HandleFunc("/ai/keys", ap("ai_keys"))
-	mux.HandleFunc("/ai/keys/add", acp(func(r *http.Request) {
-		enc, _ := secret.Encrypt(r.FormValue("apikey"))
+	mux.HandleFunc("/ai/keys/add", a(func(w http.ResponseWriter, r *http.Request) {
 		uid, _ := strconv.ParseInt(r.Header.Get("X-User-ID"), 10, 64)
+		if db.CountUserAiKeys(uid) >= db.GetUserAiKeyLimit(uid) {
+			http.Redirect(w, r, "/autoreply?msg=AI+Key+limit+reached.+Upgrade+your+plan.", http.StatusSeeOther)
+			return
+		}
+		enc, _ := secret.Encrypt(r.FormValue("apikey"))
 		db.AddAiKey(uid, r.FormValue("name"), r.FormValue("provider"), r.FormValue("model"), enc, r.FormValue("base_url"), r.FormValue("system_prompt"))
-	}, "/autoreply"))
+		http.Redirect(w, r, "/autoreply", http.StatusSeeOther)
+	}))
 	mux.HandleFunc("/ai/keys/delete", a(func(w http.ResponseWriter, r *http.Request) {
 		id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
 		if id > 0 {
@@ -47,7 +54,12 @@ func registerAdminRoutes(mux *http.ServeMux) {
 	}))
 	// Knowledge base
 	mux.HandleFunc("/knowledge", ap("knowledge"))
-	mux.HandleFunc("/knowledge/add", acp(func(r *http.Request) {
+	mux.HandleFunc("/knowledge/add", a(func(w http.ResponseWriter, r *http.Request) {
+		uid, _ := strconv.ParseInt(r.Header.Get("X-User-ID"), 10, 64)
+		if db.CountUserKnowledge(uid) >= db.GetUserKnowledgeLimit(uid) {
+			http.Redirect(w, r, "/autoreply?msg=Knowledge+limit+reached.+Upgrade+your+plan.", http.StatusSeeOther)
+			return
+		}
 		r.ParseForm()
 		title := r.FormValue("title")
 		question := r.FormValue("question")
@@ -55,7 +67,8 @@ func registerAdminRoutes(mux *http.ServeMux) {
 		category := r.FormValue("category")
 		rows, _ := json.Marshal([]map[string]string{{"question": question, "answer": answer, "category": category}})
 		db.AddKnowledge(title, string(rows))
-	}, "/autoreply"))
+		http.Redirect(w, r, "/autoreply", http.StatusSeeOther)
+	}))
 	mux.HandleFunc("/knowledge/delete", acd(func(id int64) { db.DeleteKnowledge(id) }, "/autoreply"))
 	mux.HandleFunc("/knowledge/toggle", a(func(w http.ResponseWriter, r *http.Request) {
 		id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
@@ -104,6 +117,25 @@ func registerAdminRoutes(mux *http.ServeMux) {
 		}
 		http.Redirect(w, r, "/admin/users", http.StatusSeeOther)
 	}))
+	mux.HandleFunc("/admin/users/reset-password", a(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Redirect(w, r, "/admin/users", http.StatusSeeOther)
+			return
+		}
+		id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+		if id > 0 {
+			newPass := randPass()
+			hash, _ := hashPassword(newPass)
+			db.SetUserPassword(id, hash)
+			user, _ := db.GetUserByID(id)
+			name := ""
+			if user != nil { name = user.Name }
+			log.Printf("Admin reset password for user #%d (%s) → %s", id, name, newPass)
+			http.Redirect(w, r, "/admin/users?msg=Password+reset+for+"+template.URLQueryEscaper(name)+":+"+template.URLQueryEscaper(newPass), http.StatusSeeOther)
+			return
+		}
+		http.Redirect(w, r, "/admin/users", http.StatusSeeOther)
+	}))
 	mux.HandleFunc("/admin/roles", ap("admin_roles"))
 	mux.HandleFunc("/admin/roles/add", acp(func(r *http.Request) { db.AddRole(r.FormValue("name"), joinVals(r, "permissions")) }, "/admin/roles"))
 	mux.HandleFunc("/admin/roles/delete", acd(func(id int64) { db.DeleteRole(id) }, "/admin/roles"))
@@ -144,7 +176,8 @@ func registerAdminRoutes(mux *http.ServeMux) {
 		mcl, _ := strconv.Atoi(r.FormValue("macro_limit"))
 		akl, _ := strconv.Atoi(r.FormValue("ai_key_limit"))
 		knl, _ := strconv.Atoi(r.FormValue("knowledge_limit"))
-		db.AddPackage(r.FormValue("name"), r.FormValue("price"), s, rc, dv, us, ws, wr, wa, co, sc, kl, wl, al, ml, dl, rl, fl, tl, cl, mcl, akl, knl, sv, hd, fm)
+		dur, _ := strconv.Atoi(r.FormValue("duration"))
+		db.AddPackage(r.FormValue("name"), r.FormValue("price"), s, rc, dv, us, ws, wr, wa, co, sc, kl, wl, al, ml, dl, rl, fl, tl, cl, mcl, akl, knl, dur, sv, hd, fm)
 	}, "/admin/packages"))
 	mux.HandleFunc("/admin/packages/edit", a(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -174,10 +207,11 @@ func registerAdminRoutes(mux *http.ServeMux) {
 			mcl, _ := strconv.Atoi(r.FormValue("macro_limit"))
 			akl, _ := strconv.Atoi(r.FormValue("ai_key_limit"))
 			knl, _ := strconv.Atoi(r.FormValue("knowledge_limit"))
+			dur, _ := strconv.Atoi(r.FormValue("duration"))
 			sv := joinVals(r, "services")
 			hd, _ := strconv.Atoi(r.FormValue("hidden"))
 			fm, _ := strconv.Atoi(r.FormValue("footermark"))
-			db.UpdatePackage(id, r.FormValue("name"), r.FormValue("price"), s, rc, dv, us, ws, wr, wa, co, sc, kl, wl, al, ml, dl, rl, fl, tl, cl, mcl, akl, knl, sv, hd, fm)
+			db.UpdatePackage(id, r.FormValue("name"), r.FormValue("price"), s, rc, dv, us, ws, wr, wa, co, sc, kl, wl, al, ml, dl, rl, fl, tl, cl, mcl, akl, knl, dur, sv, hd, fm)
 		}
 		http.Redirect(w, r, "/admin/packages", http.StatusSeeOther)
 	}))
@@ -193,7 +227,19 @@ func registerAdminRoutes(mux *http.ServeMux) {
 	}, "/admin/vouchers"))
 	mux.HandleFunc("/admin/vouchers/delete", acd(func(id int64) { db.DeleteVoucher(id) }, "/admin/vouchers"))
 	mux.HandleFunc("/admin/subscriptions", ap("admin_subscriptions"))
-	mux.HandleFunc("/admin/subscriptions/add", acp(func(r *http.Request) { db.AddSubscription(r.FormValue("user"), r.FormValue("pkg"), r.FormValue("expire")) }, "/admin/subscriptions"))
+	mux.HandleFunc("/admin/subscriptions/add", a(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Redirect(w, r, "/admin/subscriptions", http.StatusSeeOther)
+			return
+		}
+		userID, _ := strconv.ParseInt(r.FormValue("user_id"), 10, 64)
+		pkgID, _ := strconv.ParseInt(r.FormValue("package_id"), 10, 64)
+		expire := r.FormValue("expire")
+		if userID > 0 && pkgID > 0 {
+			db.AddSubscription(userID, pkgID, expire)
+		}
+		http.Redirect(w, r, "/admin/subscriptions", http.StatusSeeOther)
+	}))
 	mux.HandleFunc("/admin/subscriptions/delete", acd(func(id int64) { db.DeleteSubscription(id) }, "/admin/subscriptions"))
 	mux.HandleFunc("/admin/transactions", ap("admin_transactions"))
 	mux.HandleFunc("/admin/payouts", ap("admin_payouts"))

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 )
 
 // Admin / AI / Android entities — the remaining Zender menus.
@@ -49,6 +50,7 @@ type Package struct {
 	MacroLimit     int
 	AiKeyLimit     int
 	KnowledgeLimit int
+	Duration       int
 	Services       string
 	Hidden         int
 	Footermark     int
@@ -192,6 +194,8 @@ func (d *DB) migrateAdmin() error {
 	d.safeAddColumn("ai_trainings", "user_id", "BIGINT NOT NULL DEFAULT 0")
 	d.safeAddColumn("packages", "drip_limit", "INT NOT NULL DEFAULT 1")
 	d.safeAddColumn("packages", "recurring_limit", "INT NOT NULL DEFAULT 1")
+	d.safeAddColumn("packages", "duration", "INT NOT NULL DEFAULT 30")
+	d.sql.Exec(`CREATE TABLE IF NOT EXISTS voucher_usage (id BIGINT AUTO_INCREMENT PRIMARY KEY, voucher_code VARCHAR(64) NOT NULL, user_id BIGINT NOT NULL, package_id BIGINT NOT NULL, redeemed_at DATETIME NOT NULL, INDEX idx_vu_code (voucher_code), INDEX idx_vu_user (user_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`)
 	d.safeAddColumn("packages", "form_limit", "INT NOT NULL DEFAULT 1")
 	d.safeAddColumn("packages", "template_limit", "INT NOT NULL DEFAULT 5")
 	d.safeAddColumn("packages", "canned_limit", "INT NOT NULL DEFAULT 10")
@@ -211,13 +215,97 @@ func (d *DB) MustListAiTrainings() []AiTraining {
 
 
 func (d *DB) GetUserPackageName(userID int64) string {
-	u, err := d.GetUserByID(userID)
-	if err != nil { return "" }
-	var pkgName string
-	err = d.sql.QueryRow(`SELECT pkg FROM subscriptions WHERE user=? ORDER BY id DESC LIMIT 1`, u.Email).Scan(&pkgName)
-	if err != nil { return "" }
-	return pkgName
+	pkg := d.getActivePackage(userID)
+	if pkg == nil { return "Free" }
+	return pkg.Name
 }
+
+func (d *DB) getActivePackage(userID int64) *Package {
+	var pkgID int64
+	var expire sql.NullString
+	err := d.sql.QueryRow(`SELECT package_id, expire FROM subscriptions WHERE user_id=? AND status='active' ORDER BY id DESC LIMIT 1`, userID).Scan(&pkgID, &expire)
+	if err != nil {
+		return nil
+	}
+	if expire.Valid && expire.String != "" {
+		et, parseErr := time.Parse("2006-01-02 15:04:05", expire.String)
+		if parseErr == nil && time.Now().After(et) {
+			d.sql.Exec(`UPDATE subscriptions SET status='expired' WHERE user_id=? AND status='active'`, userID)
+			return nil
+		}
+	}
+	var pkg Package
+	err = d.sql.QueryRow(`SELECT id,name,price,send_limit,receive_limit,device_limit,ussd_limit,wa_send_limit,wa_receive_limit,wa_account_limit,contact_limit,scheduled_limit,key_limit,webhook_limit,action_limit,IFNULL(meta_limit,0),IFNULL(drip_limit,1),IFNULL(recurring_limit,1),IFNULL(form_limit,1),IFNULL(template_limit,5),IFNULL(canned_limit,10),IFNULL(macro_limit,5),IFNULL(ai_key_limit,3),IFNULL(knowledge_limit,10),IFNULL(duration,30),IFNULL(services,''),hidden,footermark,created_at FROM packages WHERE id=? LIMIT 1`, pkgID).Scan(&pkg.ID, &pkg.Name, &pkg.Price, &pkg.SendLimit, &pkg.ReceiveLimit, &pkg.DeviceLimit, &pkg.UssdLimit, &pkg.WaSendLimit, &pkg.WaReceiveLimit, &pkg.WaAccountLimit, &pkg.ContactLimit, &pkg.ScheduledLimit, &pkg.KeyLimit, &pkg.WebhookLimit, &pkg.ActionLimit, &pkg.MetaLimit, &pkg.DripLimit, &pkg.RecurringLimit, &pkg.FormLimit, &pkg.TemplateLimit, &pkg.CannedLimit, &pkg.MacroLimit, &pkg.AiKeyLimit, &pkg.KnowledgeLimit, &pkg.Duration, &pkg.Services, &pkg.Hidden, &pkg.Footermark, &pkg.Created)
+	if err != nil {
+		return nil
+	}
+	return &pkg
+}
+
+func freeDefault(field string) int {
+	switch field {
+	case "device_limit": return 1
+	case "wa_account_limit": return 1
+	case "contact_limit": return 100
+	case "send_limit", "wa_send_limit": return 50
+	case "template_limit": return 3
+	case "canned_limit": return 5
+	case "drip_limit": return 1
+	case "scheduled_limit": return 5
+	case "key_limit": return 1
+	case "webhook_limit": return 1
+	case "meta_limit": return 0
+	case "recurring_limit": return 0
+	case "form_limit": return 1
+	case "macro_limit": return 1
+	case "ai_key_limit": return 1
+	case "knowledge_limit": return 5
+	case "duration": return 0
+	default: return 0
+	}
+}
+
+func (d *DB) getUserLimit(userID int64, field string) int {
+	pkg := d.getActivePackage(userID)
+	if pkg == nil { return freeDefault(field) }
+	switch field {
+	case "device_limit": return pkg.DeviceLimit
+	case "wa_account_limit": return pkg.WaAccountLimit
+	case "contact_limit": return pkg.ContactLimit
+	case "send_limit": return pkg.SendLimit
+	case "wa_send_limit": return pkg.WaSendLimit
+	case "template_limit": return pkg.TemplateLimit
+	case "canned_limit": return pkg.CannedLimit
+	case "drip_limit": return pkg.DripLimit
+	case "scheduled_limit": return pkg.ScheduledLimit
+	case "key_limit": return pkg.KeyLimit
+	case "webhook_limit": return pkg.WebhookLimit
+	case "meta_limit": return pkg.MetaLimit
+	case "recurring_limit": return pkg.RecurringLimit
+	case "form_limit": return pkg.FormLimit
+	case "macro_limit": return pkg.MacroLimit
+	case "ai_key_limit": return pkg.AiKeyLimit
+	case "knowledge_limit": return pkg.KnowledgeLimit
+	case "duration": return pkg.Duration
+	default: return 0
+	}
+}
+
+func (d *DB) GetUserPackageLimit(userID int64) int { return d.getUserLimit(userID, "wa_account_limit") }
+func (d *DB) GetUserSendLimit(userID int64) int   { return d.getUserLimit(userID, "wa_send_limit") }
+func (d *DB) GetUserContactLimit(userID int64) int { return d.getUserLimit(userID, "contact_limit") }
+func (d *DB) GetUserTemplateLimit(userID int64) int { return d.getUserLimit(userID, "template_limit") }
+func (d *DB) GetUserCannedLimit(userID int64) int   { return d.getUserLimit(userID, "canned_limit") }
+func (d *DB) GetUserDripLimit(userID int64) int     { return d.getUserLimit(userID, "drip_limit") }
+func (d *DB) GetUserScheduledLimit(userID int64) int { return d.getUserLimit(userID, "scheduled_limit") }
+func (d *DB) GetUserKeyLimit(userID int64) int      { return d.getUserLimit(userID, "key_limit") }
+func (d *DB) GetUserWebhookLimit(userID int64) int  { return d.getUserLimit(userID, "webhook_limit") }
+func (d *DB) GetUserRecurringLimit(userID int64) int { return d.getUserLimit(userID, "recurring_limit") }
+func (d *DB) GetUserFormLimit(userID int64) int     { return d.getUserLimit(userID, "form_limit") }
+func (d *DB) GetUserMacroLimit(userID int64) int    { return d.getUserLimit(userID, "macro_limit") }
+func (d *DB) GetUserAiKeyLimit(userID int64) int    { return d.getUserLimit(userID, "ai_key_limit") }
+func (d *DB) GetUserKnowledgeLimit(userID int64) int { return d.getUserLimit(userID, "knowledge_limit") }
+func (d *DB) GetUserMetaLimit(userID int64) int     { return d.getUserLimit(userID, "meta_limit") }
 
 func (d *DB) RecordAiUsage(userID int64, tokens int, provider, model string) {
 	d.sql.Exec(`INSERT INTO ai_usage (user_id, tokens, provider, model) VALUES (?,?,?,?)`, userID, tokens, provider, model)
@@ -228,13 +316,10 @@ func (d *DB) GetAiTokenUsage(userID int64) int64 {
 	return total.Int64
 }
 func (d *DB) GetUserAiQuota(userID int64) int64 {
-	u, err := d.GetUserByID(userID)
-	if err != nil { return 100000 }
-	var pkgName string
-	err = d.sql.QueryRow(`SELECT pkg FROM subscriptions WHERE user=? ORDER BY id DESC LIMIT 1`, u.Email).Scan(&pkgName)
-	if err != nil { return 100000 }
+	pkg := d.getActivePackage(userID)
+	if pkg == nil { return 100000 }
 	var quota sql.NullInt64
-	d.sql.QueryRow(`SELECT ai_token_quota FROM packages WHERE name=? LIMIT 1`, pkgName).Scan(&quota)
+	d.sql.QueryRow(`SELECT ai_token_quota FROM packages WHERE id=? LIMIT 1`, pkg.ID).Scan(&quota)
 	if quota.Int64 <= 0 { return 100000 }
 	return quota.Int64
 }
@@ -245,7 +330,6 @@ type AiTraining struct {
 	AiKeyID      int64
 	Created      string
 }
-
 func (d *DB) AddAiTraining(name, systemPrompt string, aiKeyID int64) (int64, error) {
 	return d.exec(`INSERT INTO ai_trainings (name,system_prompt,ai_key_id) VALUES (?,?,?)`, name, systemPrompt, aiKeyID)
 }
@@ -263,12 +347,81 @@ func (d *DB) ListAiTrainings() ([]AiTraining, error) {
 	return out, nil
 }
 
+// Voucher
+func (d *DB) GetVoucherByCode(code string) (*Voucher, error) {
+	var v Voucher
+	err := d.sql.QueryRow(`SELECT id, code, pkg, duration, created_at FROM vouchers WHERE code=?`, code).Scan(&v.ID, &v.Code, &v.Pkg, &v.Duration, &v.Created)
+	if err != nil { return nil, err }
+	return &v, nil
+}
+func (d *DB) RedeemVoucher(userID int64, code string) (int64, error) {
+	v, err := d.GetVoucherByCode(code)
+	if err != nil { return 0, fmt.Errorf("invalid voucher") }
+	var pkgID int64
+	err = d.sql.QueryRow(`SELECT id FROM packages WHERE name=? LIMIT 1`, v.Pkg).Scan(&pkgID)
+	if err != nil { return 0, fmt.Errorf("package not found") }
+	days := v.Duration
+	if days <= 0 { days = 30 }
+	expire := time.Now().AddDate(0, 0, days).Format("2006-01-02 15:04:05")
+	_, err = d.sql.Exec(`INSERT INTO subscriptions (user_id, package_id, expire, status) VALUES (?,?,?,'active') ON DUPLICATE KEY UPDATE package_id=VALUES(package_id), expire=VALUES(expire), status='active'`, userID, pkgID, expire)
+	if err != nil { return 0, err }
+	// Audit: log voucher usage
+	d.sql.Exec(`INSERT INTO voucher_usage (voucher_code, user_id, package_id, redeemed_at) VALUES (?,?,?,NOW())`, code, userID, pkgID)
+	d.sql.Exec(`DELETE FROM vouchers WHERE code=?`, code)
+	return pkgID, nil
+}
+
+// Additional counts for limit enforcement
+func (d *DB) CountUserApiKeys(userID int64) int {
+	var n int
+	d.sql.QueryRow(`SELECT COUNT(*) FROM api_keys WHERE user_id=?`, userID).Scan(&n)
+	return n
+}
+func (d *DB) CountUserWebhooks(userID int64) int {
+	var n int
+	d.sql.QueryRow(`SELECT COUNT(*) FROM webhooks WHERE user_id=?`, userID).Scan(&n)
+	return n
+}
+func (d *DB) CountUserRecurring(userID int64) int {
+	var n int
+	d.sql.QueryRow(`SELECT COUNT(*) FROM recurring_campaigns WHERE user_id=?`, userID).Scan(&n)
+	return n
+}
+func (d *DB) CountUserForms(userID int64) int {
+	var n int
+	d.sql.QueryRow(`SELECT COUNT(*) FROM chat_forms WHERE user_id=?`, userID).Scan(&n)
+	return n
+}
+func (d *DB) CountUserCanned(userID int64) int {
+	var n int
+	d.sql.QueryRow(`SELECT COUNT(*) FROM canned_responses WHERE user_id=?`, userID).Scan(&n)
+	return n
+}
+func (d *DB) CountUserMacros(userID int64) int {
+	var n int
+	d.sql.QueryRow(`SELECT COUNT(*) FROM inbox_macros WHERE user_id=?`, userID).Scan(&n)
+	return n
+}
+func (d *DB) CountUserAiKeys(userID int64) int {
+	var n int
+	d.sql.QueryRow(`SELECT COUNT(*) FROM ai_keys WHERE user_id=?`, userID).Scan(&n)
+	return n
+}
+func (d *DB) CountUserKnowledge(userID int64) int {
+	var n int
+	d.sql.QueryRow(`SELECT COUNT(*) FROM knowledge WHERE user_id=?`, userID).Scan(&n)
+	return n
+}
+func (d *DB) CountMetaByUser(userID int64) int {
+	var n int
+	d.sql.QueryRow(`SELECT COUNT(*) FROM meta_accounts WHERE user_id=?`, userID).Scan(&n)
+	return n
+}
+
 // generic exec helpers
 func (d *DB) exec(q string, args ...interface{}) (int64, error) {
 	res, err := d.sql.Exec(q, args...)
-	if err != nil {
-		return 0, err
-	}
+	if err != nil { return 0, err }
 	return res.LastInsertId()
 }
 func (d *DB) del(table string, id int64) error {
@@ -292,41 +445,6 @@ func (d *DB) GetUserByID(id int64) (*User, error) {
 	err := d.sql.QueryRow(`SELECT id,name,email,role,country,password,created_at FROM users WHERE id=?`, id).Scan(&u.ID, &u.Name, &u.Email, &u.Role, &u.Country, &u.Password, &u.Created)
 	if err != nil { return nil, err }
 	return &u, nil
-}
-func (d *DB) GetUserPackageLimit(userID int64) int {
-	u, err := d.GetUserByID(userID)
-	if err != nil { return 0 }
-	var pkgName string
-	err = d.sql.QueryRow(`SELECT pkg FROM subscriptions WHERE user=? ORDER BY id DESC LIMIT 1`, u.Email).Scan(&pkgName)
-	if err != nil { return 0 }
-	var limit int
-	err = d.sql.QueryRow(`SELECT device_limit FROM packages WHERE name=? LIMIT 1`, pkgName).Scan(&limit)
-	if err != nil { return 0 }
-	return limit
-}
-
-func (d *DB) GetUserSendLimit(userID int64) int {
-	u, err := d.GetUserByID(userID)
-	if err != nil { return 100 }
-	var pkgName string
-	err = d.sql.QueryRow(`SELECT pkg FROM subscriptions WHERE user=? ORDER BY id DESC LIMIT 1`, u.Email).Scan(&pkgName)
-	if err != nil { return 100 }
-	var limit int
-	err = d.sql.QueryRow(`SELECT wa_send_limit FROM packages WHERE name=? LIMIT 1`, pkgName).Scan(&limit)
-	if err != nil || limit <= 0 { return 100 }
-	return limit
-}
-
-func (d *DB) GetUserContactLimit(userID int64) int {
-	u, err := d.GetUserByID(userID)
-	if err != nil { return 100 }
-	var pkgName string
-	err = d.sql.QueryRow(`SELECT pkg FROM subscriptions WHERE user=? ORDER BY id DESC LIMIT 1`, u.Email).Scan(&pkgName)
-	if err != nil { return 100 }
-	var limit int
-	err = d.sql.QueryRow(`SELECT contact_limit FROM packages WHERE name=? LIMIT 1`, pkgName).Scan(&limit)
-	if err != nil || limit <= 0 { return 100 }
-	return limit
 }
 
 func (d *DB) CountUserContacts(userID int64) int {
@@ -439,14 +557,14 @@ func (d *DB) EnsureDefaultRoles() {
 }
 
 // Packages
-func (d *DB) AddPackage(name, price string, send, receive, dev, ussd, waSend, waReceive, waAcc, contact, scheduled, keyL, webhookL, actionL, metaL, dripL, recurringL, formL, templateL, cannedL, macroL, aiKeyL, knowledgeL int, services string, hidden, footermark int) (int64, error) {
-	return d.exec(`INSERT INTO packages (name,price,send_limit,receive_limit,device_limit,ussd_limit,wa_send_limit,wa_receive_limit,wa_account_limit,contact_limit,scheduled_limit,key_limit,webhook_limit,action_limit,meta_limit,drip_limit,recurring_limit,form_limit,template_limit,canned_limit,macro_limit,ai_key_limit,knowledge_limit,services,hidden,footermark) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-		name, price, send, receive, dev, ussd, waSend, waReceive, waAcc, contact, scheduled, keyL, webhookL, actionL, metaL, dripL, recurringL, formL, templateL, cannedL, macroL, aiKeyL, knowledgeL, services, hidden, footermark)
+func (d *DB) AddPackage(name, price string, send, receive, dev, ussd, waSend, waReceive, waAcc, contact, scheduled, keyL, webhookL, actionL, metaL, dripL, recurringL, formL, templateL, cannedL, macroL, aiKeyL, knowledgeL, duration int, services string, hidden, footermark int) (int64, error) {
+	return d.exec(`INSERT INTO packages (name,price,send_limit,receive_limit,device_limit,ussd_limit,wa_send_limit,wa_receive_limit,wa_account_limit,contact_limit,scheduled_limit,key_limit,webhook_limit,action_limit,meta_limit,drip_limit,recurring_limit,form_limit,template_limit,canned_limit,macro_limit,ai_key_limit,knowledge_limit,duration,services,hidden,footermark) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		name, price, send, receive, dev, ussd, waSend, waReceive, waAcc, contact, scheduled, keyL, webhookL, actionL, metaL, dripL, recurringL, formL, templateL, cannedL, macroL, aiKeyL, knowledgeL, duration, services, hidden, footermark)
 }
 func (d *DB) DeletePackage(id int64) error { return d.del("packages", id) }
-func (d *DB) UpdatePackage(id int64, name, price string, send, receive, dev, ussd, waSend, waReceive, waAcc, contact, scheduled, keyL, webhookL, actionL, metaL, dripL, recurringL, formL, templateL, cannedL, macroL, aiKeyL, knowledgeL int, services string, hidden, footermark int) error {
-	_, err := d.sql.Exec(`UPDATE packages SET name=?,price=?,send_limit=?,receive_limit=?,device_limit=?,ussd_limit=?,wa_send_limit=?,wa_receive_limit=?,wa_account_limit=?,contact_limit=?,scheduled_limit=?,key_limit=?,webhook_limit=?,action_limit=?,meta_limit=?,drip_limit=?,recurring_limit=?,form_limit=?,template_limit=?,canned_limit=?,macro_limit=?,ai_key_limit=?,knowledge_limit=?,services=?,hidden=?,footermark=? WHERE id=?`,
-		name, price, send, receive, dev, ussd, waSend, waReceive, waAcc, contact, scheduled, keyL, webhookL, actionL, metaL, dripL, recurringL, formL, templateL, cannedL, macroL, aiKeyL, knowledgeL, services, hidden, footermark, id)
+func (d *DB) UpdatePackage(id int64, name, price string, send, receive, dev, ussd, waSend, waReceive, waAcc, contact, scheduled, keyL, webhookL, actionL, metaL, dripL, recurringL, formL, templateL, cannedL, macroL, aiKeyL, knowledgeL, duration int, services string, hidden, footermark int) error {
+	_, err := d.sql.Exec(`UPDATE packages SET name=?,price=?,send_limit=?,receive_limit=?,device_limit=?,ussd_limit=?,wa_send_limit=?,wa_receive_limit=?,wa_account_limit=?,contact_limit=?,scheduled_limit=?,key_limit=?,webhook_limit=?,action_limit=?,meta_limit=?,drip_limit=?,recurring_limit=?,form_limit=?,template_limit=?,canned_limit=?,macro_limit=?,ai_key_limit=?,knowledge_limit=?,duration=?,services=?,hidden=?,footermark=? WHERE id=?`,
+		name, price, send, receive, dev, ussd, waSend, waReceive, waAcc, contact, scheduled, keyL, webhookL, actionL, metaL, dripL, recurringL, formL, templateL, cannedL, macroL, aiKeyL, knowledgeL, duration, services, hidden, footermark, id)
 	return err
 }
 func (d *DB) ListPackages() ([]Package, error) {
@@ -491,22 +609,26 @@ func (d *DB) ListVouchers() ([]Voucher, error) {
 }
 
 // Subscriptions
-func (d *DB) AddSubscription(user, pkg, expire string) (int64, error) {
-	return d.exec(`INSERT INTO subscriptions (user,pkg,expire) VALUES (?,?,?)`, user, pkg, expire)
+func (d *DB) AddSubscription(userID int64, packageID int64, expire string) (int64, error) {
+	return d.exec(`INSERT INTO subscriptions (user_id, package_id, expire, status) VALUES (?,?,?,'active') ON DUPLICATE KEY UPDATE package_id=VALUES(package_id), expire=VALUES(expire)`, userID, packageID, expire)
 }
 func (d *DB) DeleteSubscription(id int64) error { return d.del("subscriptions", id) }
+func (d *DB) GetPackageByName(name string) (*Package, error) {
+	var id int64
+	err := d.sql.QueryRow(`SELECT id FROM packages WHERE name=? LIMIT 1`, name).Scan(&id)
+	if err != nil { return nil, err }
+	return d.GetPackage(id)
+}
+
 func (d *DB) GetActiveSubscription(userID int64) (*Subscription, error) {
 	var s Subscription
-	uid := fmt.Sprintf("%d", userID)
-	err := d.sql.QueryRow(`SELECT id, user, pkg, IFNULL(expire,''), created_at FROM subscriptions WHERE user=? AND status='active' ORDER BY id DESC LIMIT 1`, uid).Scan(&s.ID, &s.User, &s.Pkg, &s.Expire, &s.Created)
+	err := d.sql.QueryRow(`SELECT id, user_id, package_id, IFNULL(expire,''), created_at FROM subscriptions WHERE user_id=? AND status='active' ORDER BY id DESC LIMIT 1`, userID).Scan(&s.ID, &s.User, &s.Pkg, &s.Expire, &s.Created)
 	if err != nil { return nil, err }
 	return &s, nil
 }
 func (d *DB) ListSubscriptions() ([]Subscription, error) {
-	rows, err := d.sql.Query(`SELECT id,user,pkg,IFNULL(expire,''),created_at FROM subscriptions ORDER BY id DESC`)
-	if err != nil {
-		return nil, err
-	}
+	rows, err := d.sql.Query(`SELECT id, COALESCE(NULLIF(user_id,0), user) as uid, COALESCE(NULLIF(package_id,0), pkg) as pid, IFNULL(expire,''), created_at FROM subscriptions ORDER BY id DESC`)
+	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []Subscription
 	for rows.Next() {

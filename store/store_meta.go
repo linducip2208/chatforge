@@ -89,24 +89,6 @@ func (d *DB) AddMetaTemplate(name, language, category, components, status string
 
 func (d *DB) DeleteMetaTemplate(id int64) error { _, err := d.sql.Exec(`DELETE FROM meta_templates WHERE id=?`, id); return err }
 
-func (d *DB) GetUserMetaLimit(userID int64) int {
-	u, err := d.GetUserByID(userID)
-	if err != nil { return 0 }
-	var pkgName string
-	err = d.sql.QueryRow(`SELECT pkg FROM subscriptions WHERE user=? ORDER BY id DESC LIMIT 1`, u.Email).Scan(&pkgName)
-	if err != nil { return 0 }
-	var limit int
-	err = d.sql.QueryRow(`SELECT meta_limit FROM packages WHERE name=? LIMIT 1`, pkgName).Scan(&limit)
-	if err != nil { return 0 }
-	return limit
-}
-
-func (d *DB) CountMetaByUser(userID int64) int {
-	var n int
-	d.sql.QueryRow(`SELECT COUNT(*) FROM meta_accounts WHERE user_id=?`, userID).Scan(&n)
-	return n
-}
-
 func (d *DB) ListMetaTemplates() ([]MetaTemplate, error) {
 	rows, err := d.sql.Query(`SELECT id, name, language, category, components, status, created_at FROM meta_templates ORDER BY id DESC`)
 	if err != nil { return nil, err }

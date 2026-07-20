@@ -4,6 +4,7 @@ import (
 	crand "crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -79,6 +80,7 @@ func registerUser(w http.ResponseWriter, r *http.Request) {
 	name := r.FormValue("name")
 	email := r.FormValue("email")
 	pass := r.FormValue("password")
+	voucher := r.FormValue("voucher")
 	if name == "" || email == "" || pass == "" {
 		http.Redirect(w, r, "/register?msg=All+fields+required", http.StatusSeeOther)
 		return
@@ -90,6 +92,15 @@ func registerUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	db.SetUserPassword(id, hash)
+
+	// Redeem voucher if provided
+	if voucher != "" {
+		_, verr := db.RedeemVoucher(id, voucher)
+		if verr != nil {
+			log.Printf("Voucher redeem failed for user %d: %v", id, verr)
+		}
+	}
+
 	token := randToken()
 	saveSession(token, id)
 	secure := strings.HasPrefix(os.Getenv("APP_URL"), "https")
@@ -160,6 +171,12 @@ func randToken() string {
 	b := make([]byte, 32)
 	crand.Read(b)
 	return hex.EncodeToString(b)
+}
+
+func randPass() string {
+	b := make([]byte, 6)
+	crand.Read(b)
+	return hex.EncodeToString(b)[:10]
 }
 
 func requireAdmin(next http.HandlerFunc) http.HandlerFunc {

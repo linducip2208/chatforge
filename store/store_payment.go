@@ -138,14 +138,12 @@ func (d *DB) ListPayTransactions() ([]PaymentTransaction, error) {
 	return out, nil
 }
 func (d *DB) ActivateSubscription(userID, packageID int64) error {
-	var pkgName string
-	var price string
-	d.sql.QueryRow(`SELECT name, price FROM packages WHERE id=?`, packageID).Scan(&pkgName, &price)
 	days := 30
+	var dbDays int
+	err := d.sql.QueryRow(`SELECT IFNULL(duration,30) FROM packages WHERE id=?`, packageID).Scan(&dbDays)
+	if err == nil && dbDays > 0 { days = dbDays }
 	expire := time.Now().AddDate(0, 0, days).Format("2006-01-02 15:04:05")
-	_, err := d.sql.Exec(`INSERT INTO subscriptions (user_id, package_id, expire, status) VALUES (?,?,?,'active') ON DUPLICATE KEY UPDATE package_id=VALUES(package_id), expire=VALUES(expire), status='active'`, userID, packageID, expire)
-	_ = pkgName
-	_ = price
+	_, err = d.sql.Exec(`INSERT INTO subscriptions (user_id, package_id, expire, status) VALUES (?,?,?,'active') ON DUPLICATE KEY UPDATE package_id=VALUES(package_id), expire=VALUES(expire), status='active'`, userID, packageID, expire)
 	return err
 }
 

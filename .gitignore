@@ -11,3 +11,7 @@ node_modules/
 .env.bak
 *.csv
 /web/screens/
+
+# Pro features (private — NEVER push)
+pro/
+auto_pro.go

@@ -191,6 +191,7 @@ func (d *DB) migrate() error {
 	d.migrateSafety()
 	d.migratePlus()
 	d.migrateFinal()
+	d.migrateFlow()
 	return nil
 }
 
