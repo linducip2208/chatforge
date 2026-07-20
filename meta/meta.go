@@ -480,6 +480,41 @@ func (c *Client) SendMediaByID(to, mediaType, mediaID, caption string) (string, 
 	return c.doPost("/messages", body)
 }
 
+// ── WhatsApp Calling (WACall) ──
+
+func (c *Client) EnableCalling() error {
+	body := map[string]interface{}{
+		"calling": map[string]string{"status": "ENABLED"},
+	}
+	_, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/settings", c.PhoneNumberID), body)
+	return err
+}
+
+func (c *Client) MakeCall(to, callType string, audioURL string) (string, error) {
+	body := map[string]interface{}{
+		"messaging_product": "whatsapp",
+		"to":                to,
+		"type":              "audio",
+		"audio": map[string]string{
+			"link": audioURL,
+		},
+	}
+	return c.doPost("/messages", body)
+}
+
+func (c *Client) CheckCallStatus(callID string) (string, error) {
+	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/calls/%s", c.PhoneNumberID, callID)
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	resp, err := c.HTTP.Do(req)
+	if err != nil { return "", err }
+	defer resp.Body.Close()
+	rb, _ := io.ReadAll(resp.Body)
+	var result struct{ Status string `json:"status"` }
+	json.Unmarshal(rb, &result)
+	return result.Status, nil
+}
+
 func (c *Client) DeleteProduct(productID string) error {
 	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/products/%s", c.PhoneNumberID, productID)
 	req, _ := http.NewRequest("DELETE", url, nil)
