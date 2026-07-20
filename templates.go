@@ -364,6 +364,7 @@ if(a){var t=a.offsetTop-s.offsetHeight/2;if(t>0)s.scrollTop=t}
 
 {{template "sgroup" dict "id" "automation" "icon" "la-robot" "label" (T "sg_automation")}}
   <li class="nav-item"><a class="nav-link {{if eq .Active "autoreply"}}active{{end}}" href="/autoreply"><i class="la la-reply la-lg"></i> {{T "nav_autoreply"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "flowbuilder"}}active{{end}}" href="/pro/flow-builder"><i class="la la-project-diagram la-lg"></i> Flow Builder</a></li>
   <li class="nav-item"><a class="nav-link {{if eq .Active "canned"}}active{{end}}" href="/canned"><i class="la la-comment-dots la-lg"></i> {{T "nav_canned"}}</a></li>
   <li class="nav-item"><a class="nav-link {{if eq .Active "macros"}}active{{end}}" href="/macros"><i class="la la-bolt la-lg"></i> {{T "nav_macros"}}</a></li>
   <li class="nav-item"><a class="nav-link {{if eq .Active "forms"}}active{{end}}" href="/forms"><i class="la la-wpforms la-lg"></i> {{T "nav_forms"}}</a></li>
