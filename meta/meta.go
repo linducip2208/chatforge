@@ -273,3 +273,29 @@ func (c *Client) SendMedia(to, mediaType, mediaURL, caption string) (string, err
 	default: return c.SendImage(to, mediaURL, caption)
 	}
 }
+
+func (c *Client) SendPoll(to, question string, options []string) (string, error) {
+	rows := make([]map[string]interface{}, 0)
+	for i, opt := range options {
+		rows = append(rows, map[string]interface{}{
+			"id":          fmt.Sprintf("opt_%d", i),
+			"title":       opt,
+			"description": "",
+		})
+	}
+	interactive := map[string]interface{}{
+		"type": "list",
+		"header": map[string]string{
+			"type": "text",
+			"text": question,
+		},
+		"body": map[string]string{
+			"text": "Pilih salah satu:",
+		},
+		"action": map[string]interface{}{
+			"button":   "Pilih",
+			"sections": []map[string]interface{}{{"title": "Pilihan", "rows": rows}},
+		},
+	}
+	return c.SendInteractive(to, interactive)
+}
