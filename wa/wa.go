@@ -51,6 +51,8 @@ type FlowCallbacks struct {
 	OnInactivity func(phones []string) int
 }
 
+var MetaFlowCallback func(uid int64, accountPhone, phone, message, name string) (replies []string, matched bool)
+
 type FlowReply struct {
 	Text      string
 	MediaURL  string

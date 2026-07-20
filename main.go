@@ -2626,6 +2626,17 @@ func handleMetaWebhook(w http.ResponseWriter, r *http.Request) {
 
 				// Auto-reply for Meta
 				mc := meta.New(acc.PhoneNumberID, decryptOrPlain(acc.AccessToken), acc.VerifyToken)
+
+				// PRO: Flow builder check
+				if wa.MetaFlowCallback != nil {
+					if replies, matched := wa.MetaFlowCallback(acc.UserID, acc.PhoneNumberID, m.From, text, ""); matched {
+						for _, reply := range replies {
+							if reply != "" { mc.SendText(m.From, reply) }
+						}
+						continue
+					}
+				}
+
 				if ar, found := db.FindReplyFullForAccount(text, ""); found && ar.IsActive {
 					reply := msgtemplate.Render(ar.Reply, msgtemplate.Vars{Phone: m.From, Name: "", Message: text})
 					if ar.UseAI && ar.AiKeyID > 0 {
