@@ -27,6 +27,8 @@ func (e *Engine) StartLoops() {
 	go e.reminderLoop()
 	go e.recurringLoop()
 	go e.autoCloseLoop()
+	go e.flowCronLoop()
+	go e.flowInactivityLoop()
 }
 
 // campaignLoop drains running campaigns, sending to each contact in the target groups.
@@ -471,6 +473,24 @@ func (e *Engine) autoCloseLoop() {
 				e.sendVia(s, jid, msg)
 			}
 			time.Sleep(2 * time.Second)
+		}
+	}
+}
+
+func (e *Engine) flowCronLoop() {
+	for {
+		time.Sleep(5 * time.Minute)
+		if e.FlowCallbacks != nil && e.FlowCallbacks.OnCronTick != nil {
+			e.FlowCallbacks.OnCronTick()
+		}
+	}
+}
+
+func (e *Engine) flowInactivityLoop() {
+	for {
+		time.Sleep(15 * time.Minute)
+		if e.FlowCallbacks != nil && e.FlowCallbacks.OnInactivity != nil {
+			e.FlowCallbacks.OnInactivity(nil)
 		}
 	}
 }

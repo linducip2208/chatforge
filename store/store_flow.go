@@ -17,7 +17,7 @@ func (d *DB) migrateFlow() error {
 		id BIGINT AUTO_INCREMENT PRIMARY KEY,
 		user_id BIGINT NOT NULL DEFAULT 0,
 		name VARCHAR(255) NOT NULL DEFAULT 'New Flow',
-		trigger JSON NOT NULL,
+		` + "`trigger`" + ` JSON NOT NULL,
 		nodes JSON NOT NULL,
 		edges JSON NOT NULL,
 		active TINYINT NOT NULL DEFAULT 1,
@@ -30,7 +30,7 @@ func (d *DB) migrateFlow() error {
 }
 
 func (d *DB) SaveFlow(uid int64, name, trigger, nodes, edges string) (int64, error) {
-	res, err := d.sql.Exec(`INSERT INTO chat_flows (user_id, name, trigger, nodes, edges, active) VALUES (?,?,?,?,?,1) ON DUPLICATE KEY UPDATE name=VALUES(name), trigger=VALUES(trigger), nodes=VALUES(nodes), edges=VALUES(edges)`,
+	res, err := d.sql.Exec(`INSERT INTO chat_flows (user_id, name, `+"`trigger`"+`, nodes, edges, active) VALUES (?,?,?,?,?,1) ON DUPLICATE KEY UPDATE name=VALUES(name), `+"`trigger`"+`=VALUES(`+"`trigger`"+`), nodes=VALUES(nodes), edges=VALUES(edges)`,
 		uid, name, trigger, nodes, edges)
 	if err != nil {
 		return 0, err
@@ -39,7 +39,7 @@ func (d *DB) SaveFlow(uid int64, name, trigger, nodes, edges string) (int64, err
 }
 
 func (d *DB) UpdateFlow(id, uid int64, name, trigger, nodes, edges string) error {
-	_, err := d.sql.Exec(`UPDATE chat_flows SET name=?, trigger=?, nodes=?, edges=?, updated_at=NOW() WHERE id=? AND user_id=?`,
+	_, err := d.sql.Exec(`UPDATE chat_flows SET name=?, `+"`trigger`"+`=?, nodes=?, edges=?, updated_at=NOW() WHERE id=? AND user_id=?`,
 		name, trigger, nodes, edges, id, uid)
 	return err
 }
@@ -60,7 +60,7 @@ func (d *DB) ToggleFlow(id, uid int64) (bool, error) {
 }
 
 func (d *DB) ListFlows(uid int64) ([]ChatFlow, error) {
-	rows, err := d.sql.Query(`SELECT id, user_id, name, trigger, nodes, edges, active, created_at, updated_at FROM chat_flows WHERE user_id=? ORDER BY updated_at DESC`, uid)
+	rows, err := d.sql.Query("SELECT id, user_id, name, `trigger`, nodes, edges, active, created_at, updated_at FROM chat_flows WHERE user_id=? ORDER BY updated_at DESC", uid)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (d *DB) ListFlows(uid int64) ([]ChatFlow, error) {
 func (d *DB) GetFlow(id, uid int64) (*ChatFlow, error) {
 	var f ChatFlow
 	var trig []byte
-	err := d.sql.QueryRow(`SELECT id, user_id, name, trigger, nodes, edges, active, created_at, updated_at FROM chat_flows WHERE id=? AND user_id=?`, id, uid).Scan(&f.ID, &f.UserID, &f.Name, &trig, &f.NodesJSON, &f.EdgesJSON, &f.Active, &f.CreatedAt, &f.UpdatedAt)
+	err := d.sql.QueryRow("SELECT id, user_id, name, `trigger`, nodes, edges, active, created_at, updated_at FROM chat_flows WHERE id=? AND user_id=?", id, uid).Scan(&f.ID, &f.UserID, &f.Name, &trig, &f.NodesJSON, &f.EdgesJSON, &f.Active, &f.CreatedAt, &f.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,7 @@ func (d *DB) DuplicateFlowRaw(id, uid int64) (int64, error) {
 
 // For pro flow engine: load all active flows for a user
 func (d *DB) LoadActiveFlows(uid int64) ([]ChatFlow, error) {
-	rows, err := d.sql.Query(`SELECT id, user_id, name, trigger, nodes, edges, active, created_at, updated_at FROM chat_flows WHERE user_id=? AND active=1 ORDER BY updated_at DESC`, uid)
+	rows, err := d.sql.Query("SELECT id, user_id, name, `trigger`, nodes, edges, active, created_at, updated_at FROM chat_flows WHERE user_id=? AND active=1 ORDER BY updated_at DESC", uid)
 	if err != nil {
 		return nil, err
 	}

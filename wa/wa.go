@@ -44,9 +44,11 @@ type session struct {
 
 // Engine manages MANY whatsmeow accounts (multi-number).
 type FlowCallbacks struct {
-	OnMessage  func(uid int64, accountPhone, phone, message, contactName string) (replies []FlowReply, matched bool)
-	OnWelcome  func(uid int64, accountPhone, phone, contactName string) (replies []FlowReply)
-	OnFallback func(uid int64, accountPhone, phone, message, contactName string) (replies []FlowReply)
+	OnMessage    func(uid int64, accountPhone, phone, message, contactName string) (replies []FlowReply, matched bool)
+	OnWelcome    func(uid int64, accountPhone, phone, contactName string) (replies []FlowReply)
+	OnFallback   func(uid int64, accountPhone, phone, message, contactName string) (replies []FlowReply)
+	OnCronTick   func() int
+	OnInactivity func(phones []string) int
 }
 
 type FlowReply struct {
