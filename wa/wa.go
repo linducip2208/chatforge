@@ -861,6 +861,68 @@ func (e *Engine) CheckWANumber(phone string) (bool, error) {
 	return false, nil
 }
 
+func (e *Engine) SendButtons(userID int64, accountPhone, phone, title, footer string, buttons []string) error {
+	s := e.findSession(userID, accountPhone)
+	if s == nil { return fmt.Errorf("session not found") }
+	jid, err := waTypes.ParseJID(phone + "@s.whatsapp.net")
+	if err != nil { return err }
+	btns := make([]*waProto.ButtonsMessage_Button, 0)
+	for i, b := range buttons {
+		btns = append(btns, &waProto.ButtonsMessage_Button{
+			ButtonID: proto.String(fmt.Sprintf("btn%d", i)),
+			ButtonText: &waProto.ButtonsMessage_Button_ButtonText{DisplayText: proto.String(b)},
+			Type: waProto.ButtonsMessage_Button_RESPONSE.Enum(),
+		})
+	}
+	msg := &waProto.Message{
+		ButtonsMessage: &waProto.ButtonsMessage{
+			ContentText: proto.String(title),
+			FooterText:  proto.String(footer),
+			Buttons:     btns,
+			HeaderType:  waProto.ButtonsMessage_TEXT.Enum(),
+		},
+	}
+	resp, err := s.client.SendMessage(context.Background(), jid, msg)
+	if err != nil { return err }
+	e.db.LogSentForWA(s.Phone, phone, title+" [buttons]", "sent", "whatsmeow")
+	_ = resp
+	return nil
+}
+
+func (e *Engine) SendList(userID int64, accountPhone, phone, title, text, buttonText string, rows []map[string]string) error {
+	s := e.findSession(userID, accountPhone)
+	if s == nil { return fmt.Errorf("session not found") }
+	jid, err := waTypes.ParseJID(phone + "@s.whatsapp.net")
+	if err != nil { return err }
+	sections := make([]*waProto.ListMessage_Section, 0)
+	rowList := make([]*waProto.ListMessage_Row, 0)
+	for i, r := range rows {
+		rowList = append(rowList, &waProto.ListMessage_Row{
+			Title:       proto.String(r["title"]),
+			Description: proto.String(r["description"]),
+			RowID:       proto.String(fmt.Sprintf("r%d", i)),
+		})
+	}
+	sections = append(sections, &waProto.ListMessage_Section{
+		Title: proto.String(title),
+		Rows:  rowList,
+	})
+	msg := &waProto.Message{
+		ListMessage: &waProto.ListMessage{
+			Title:       proto.String(title),
+			Description: proto.String(text),
+			ButtonText:  proto.String(buttonText),
+			ListType:    waProto.ListMessage_SINGLE_SELECT.Enum(),
+			Sections:    sections,
+		},
+	}
+	resp, err := s.client.SendMessage(context.Background(), jid, msg)
+	if err != nil { return err }
+	e.db.LogSentForWA(s.Phone, phone, title+" [list]", "sent", "whatsmeow")
+	_ = resp
+	return nil
+}
+
 func (e *Engine) findSession(userID int64, accountPhone string) *session {
 	e.mu.RLock()
 	defer e.mu.RUnlock()

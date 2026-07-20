@@ -389,6 +389,8 @@ func main() {
 	mux.HandleFunc("/admin/meta/payment", authMiddleware(requireAdmin(handleMetaPayment)))
 	mux.HandleFunc("/admin/meta/register", authMiddleware(requireAdmin(handleMetaRegister)))
 	mux.HandleFunc("/admin/meta/insights", authMiddleware(requireAdmin(handleMetaInsights)))
+	mux.HandleFunc("/sheets", authMiddleware(handleSheets))
+	mux.HandleFunc("/n8n-webhook", handleN8NWebhook)
 
 	// Template edit
 	mux.HandleFunc("/templates/edit", authMiddleware(handleTemplateEdit))
@@ -2913,6 +2915,19 @@ func handleMetaRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	status, _ := mc.GetPhoneNumberStatus()
 	json.NewEncoder(w).Encode(status)
+}
+
+func handleSheets(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"status": "ready"})
+}
+
+func handleN8NWebhook(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	body, _ := io.ReadAll(r.Body)
+	var input map[string]interface{}
+	json.Unmarshal(body, &input)
+	json.NewEncoder(w).Encode(map[string]interface{}{"status": "ok", "input": input})
 }
 
 func handleMetaInsights(w http.ResponseWriter, r *http.Request) {
