@@ -54,9 +54,11 @@ type FlowCallbacks struct {
 var MetaFlowCallback func(uid int64, accountPhone, phone, message, name string) (replies []FlowReply, matched bool)
 
 type FlowReply struct {
-	Text      string
-	MediaURL  string
-	MediaType string
+	Text       string
+	MediaURL   string
+	MediaType  string
+	Action     string
+	ActionData map[string]interface{}
 }
 
 type Engine struct {

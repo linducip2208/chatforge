@@ -374,7 +374,15 @@ func main() {
 	}))
 
 	// Contact edit
-	mux.HandleFunc("/contacts/edit", authMiddleware(handleContactEdit))
+	mux.HandleFunc("/contact/edit", authMiddleware(handleContactEdit))
+
+	// Meta admin API routes
+	mux.HandleFunc("/admin/meta/flows", authMiddleware(requireAdmin(handleMetaFlows)))
+	mux.HandleFunc("/admin/meta/catalog", authMiddleware(requireAdmin(handleMetaCatalog)))
+	mux.HandleFunc("/admin/meta/calling", authMiddleware(requireAdmin(handleMetaCalling)))
+	mux.HandleFunc("/admin/meta/profile", authMiddleware(requireAdmin(handleMetaProfile)))
+	mux.HandleFunc("/admin/meta/qr", authMiddleware(requireAdmin(handleMetaQR)))
+	mux.HandleFunc("/admin/meta/health", authMiddleware(requireAdmin(handleMetaHealth)))
 
 	// Template edit
 	mux.HandleFunc("/templates/edit", authMiddleware(handleTemplateEdit))
@@ -2630,19 +2638,51 @@ func handleMetaWebhook(w http.ResponseWriter, r *http.Request) {
 				// Auto-reply for Meta
 				mc := meta.New(acc.PhoneNumberID, decryptOrPlain(acc.AccessToken), acc.VerifyToken)
 
-				// PRO: Flow builder check
+					// PRO: Flow builder check
 				if wa.MetaFlowCallback != nil {
 					if replies, matched := wa.MetaFlowCallback(acc.UserID, acc.PhoneNumberID, m.From, text, ""); matched {
 						for _, reply := range replies {
-							if reply.MediaURL != "" {
-								// Upload to Meta first for reliability
-								if mediaID, err := mc.UploadMedia(reply.MediaURL); err == nil {
-									mc.SendMediaByID(m.From, reply.MediaType, mediaID, reply.Text)
-								} else {
-									mc.SendMedia(m.From, reply.MediaType, reply.MediaURL, reply.Text)
+							switch reply.Action {
+							case "poll":
+								if opts, ok := reply.ActionData["options"].([]string); ok {
+									mc.SendPoll(m.From, reply.Text, opts)
 								}
-							} else if reply.Text != "" {
+							case "template":
+								tplName := ""
+								if v, ok := reply.ActionData["template_name"].(string); ok { tplName = v }
+								mc.SendTemplate(m.From, tplName, "id", nil)
+							case "flow":
+								fid := ""; ft := ""
+								if v, ok := reply.ActionData["flow_id"].(string); ok { fid = v }
+								if v, ok := reply.ActionData["flow_token"].(string); ok { ft = v }
+								mc.SendFlow(m.From, fid, ft)
+							case "location":
+								lat := 0.0; lng := 0.0
+								if v, ok := reply.ActionData["lat"].(float64); ok { lat = v }
+								if v, ok := reply.ActionData["lng"].(float64); ok { lng = v }
+								mc.SendLocation(m.From, reply.Text, "", lat, lng)
+							case "contacts":
 								mc.SendText(m.From, reply.Text)
+							case "reaction":
+								msgID := ""
+								if v, ok := reply.ActionData["message_id"].(string); ok { msgID = v }
+								mc.SendReaction(m.From, msgID, "❤️")
+							case "reply":
+								msgID := ""
+								if v, ok := reply.ActionData["message_id"].(string); ok { msgID = v }
+								mc.SendReply(m.From, msgID, reply.Text)
+							case "carousel":
+								mc.SendText(m.From, reply.Text)
+							default:
+								if reply.MediaURL != "" {
+									if mediaID, err := mc.UploadMedia(reply.MediaURL); err == nil {
+										mc.SendMediaByID(m.From, reply.MediaType, mediaID, reply.Text)
+									} else {
+										mc.SendMedia(m.From, reply.MediaType, reply.MediaURL, reply.Text)
+									}
+								} else if reply.Text != "" {
+									mc.SendText(m.From, reply.Text)
+								}
 							}
 						}
 						continue
@@ -2731,6 +2771,76 @@ func handleMetaWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 	http.Error(w, "method not allowed", 405)
 }
+
+func handleMetaFlows(w http.ResponseWriter, r *http.Request) {
+	accounts, _ := db.ListMetaAccounts()
+	var result []map[string]interface{}
+	for _, acc := range accounts {
+		mc := meta.New(acc.PhoneNumberID, decryptOrPlain(acc.AccessToken), acc.VerifyToken)
+		flows, _ := mc.ListFlows()
+		if flows != nil { result = append(result, flows...) }
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
+func handleMetaCatalog(w http.ResponseWriter, r *http.Request) {
+	accounts, _ := db.ListMetaAccounts()
+	if r.Method == http.MethodPost {
+		for _, acc := range accounts {
+			mc := meta.New(acc.PhoneNumberID, decryptOrPlain(acc.AccessToken), acc.VerifyToken)
+			mc.SyncProduct(r.FormValue("name"), r.FormValue("description"), parseFloat(r.FormValue("price")), r.FormValue("image_url"), r.FormValue("website"))
+		}
+		http.Redirect(w, r, "/admin/meta/catalog", http.StatusSeeOther)
+		return
+	}
+	var result []map[string]interface{}
+	for _, acc := range accounts {
+		mc := meta.New(acc.PhoneNumberID, decryptOrPlain(acc.AccessToken), acc.VerifyToken)
+		products, _ := mc.ListProducts()
+		if products != nil { result = append(result, products...) }
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
+func handleMetaCalling(w http.ResponseWriter, r *http.Request) {
+	accounts, _ := db.ListMetaAccounts()
+	w.Header().Set("Content-Type", "application/json")
+	if len(accounts) == 0 { json.NewEncoder(w).Encode(map[string]string{"status":"no_meta_account"}); return }
+	mc := meta.New(accounts[0].PhoneNumberID, decryptOrPlain(accounts[0].AccessToken), accounts[0].VerifyToken)
+	voices, _ := mc.FetchElevenLabsVoices()
+	status, _ := mc.GetHealthStatus()
+	json.NewEncoder(w).Encode(map[string]interface{}{"status":status,"voices":voices})
+}
+
+func handleMetaProfile(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, "/admin/meta/health", http.StatusSeeOther) }
+
+func handleMetaQR(w http.ResponseWriter, r *http.Request) {
+	accounts, _ := db.ListMetaAccounts()
+	w.Header().Set("Content-Type", "application/json")
+	if len(accounts) == 0 { json.NewEncoder(w).Encode(map[string]string{"status":"no_meta_account"}); return }
+	mc := meta.New(accounts[0].PhoneNumberID, decryptOrPlain(accounts[0].AccessToken), accounts[0].VerifyToken)
+	msg := r.URL.Query().Get("message"); if msg == "" { msg = "Hello!" }
+	qr, _ := mc.GenerateQRCode(msg)
+	json.NewEncoder(w).Encode(qr)
+}
+
+func handleMetaHealth(w http.ResponseWriter, r *http.Request) {
+	accounts, _ := db.ListMetaAccounts()
+	w.Header().Set("Content-Type", "application/json")
+	var result []map[string]interface{}
+	for _, acc := range accounts {
+		mc := meta.New(acc.PhoneNumberID, decryptOrPlain(acc.AccessToken), acc.VerifyToken)
+		health, _ := mc.GetHealthStatus()
+		quality, _ := mc.GetQualityScore()
+		phone, _ := mc.GetPhoneNumberStatus()
+		result = append(result, map[string]interface{}{"phone_id":acc.PhoneNumberID,"name":acc.Name,"health":health,"quality":quality,"phone":phone})
+	}
+	json.NewEncoder(w).Encode(result)
+}
+
+func parseFloat(s string) float64 { f, _ := strconv.ParseFloat(s, 64); return f }
 
 
 
