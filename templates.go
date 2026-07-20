@@ -358,6 +358,8 @@ if(a){var t=a.offsetTop-s.offsetHeight/2;if(t>0)s.scrollTop=t}
   <li class="nav-item"><a class="nav-link {{if eq .Active "meta_calling"}}active{{end}}" href="/admin/meta/calling"><i class="la la-phone la-lg"></i> WA Calling<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px">NEW</span></a></li>
   <li class="nav-item"><a class="nav-link {{if eq .Active "meta_webhook"}}active{{end}}" href="/admin/meta/webhooks"><i class="la la-plug la-lg"></i> Webhooks<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px">META</span></a></li>
   <li class="nav-item"><a class="nav-link {{if eq .Active "meta_health"}}active{{end}}" href="/admin/meta/health"><i class="la la-heartbeat la-lg"></i> Health<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px">META</span></a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "meta_qr"}}active{{end}}" href="/admin/meta/qr"><i class="la la-qrcode la-lg"></i> QR Code<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px">META</span></a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "meta_payment"}}active{{end}}" href="/admin/meta/payment"><i class="la la-credit-card la-lg"></i> Payment<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px">META</span></a></li>
   <li class="nav-item"><a class="nav-link {{if eq .Active "emailwa"}}active{{end}}" href="/email-wa"><i class="la la-envelope la-lg"></i> {{T "nav_email_wa"}}</a></li>
 {{template "egroup"}}
 
