@@ -2664,6 +2664,24 @@ func handleMetaWebhook(w http.ResponseWriter, r *http.Request) {
 				}
 				// Anti-spam mute
 				if aiservice.CheckSpam(m.From, text) || aiservice.CheckJailbreak(text) { continue }
+				// Department auto-detect
+				if depts, _ := db.ListDepts(); len(depts) > 0 {
+					for _, d := range depts {
+						if strings.Contains(strings.ToLower(text), strings.ToLower(d.Name)) {
+							db.AssignToDept(m.From, d.Name); break
+						}
+					}
+				}
+				// Human handoff
+				if db.GetSetting("handoff_enabled", "0") == "1" {
+					keywords := strings.Split(strings.ToLower(db.GetSetting("handoff_keywords", "admin,telp,manusia,cs,operator")), ",")
+					for _, kw := range keywords {
+						if strings.TrimSpace(kw) != "" && strings.Contains(strings.ToLower(text), strings.TrimSpace(kw)) {
+							handoffMsg := msgtemplate.Render(db.GetSetting("handoff_message", "Silakan hubungi admin kami."), msgtemplate.Vars{Phone: m.From, Message: text})
+							mc.SendText(m.From, handoffMsg); continue
+						}
+					}
+				}
 				// Welcome message
 				if db.GetSetting("welcome_enabled", "0") == "1" && db.MarkWelcomed(m.From) {
 					if wmsg := db.GetSetting("welcome_message", ""); wmsg != "" {
@@ -2671,6 +2689,8 @@ func handleMetaWebhook(w http.ResponseWriter, r *http.Request) {
 						db.LogSent(m.From, wmsg, "welcome", "meta")
 					}
 				}
+				// Fallback message
+				fallbackSent := false
 				// Webhook dispatch
 				db.Log("meta", "received", fmt.Sprintf("%s -> %s: %s", m.From, acc.Name, text))
 
@@ -2688,7 +2708,14 @@ func handleMetaWebhook(w http.ResponseWriter, r *http.Request) {
 					if reply != "" {
 						mc.SendText(m.From, reply)
 						db.LogSent(m.From, reply, "autoreply", "meta")
-						db.Log("meta", "autoreply", fmt.Sprintf("-> %s: %s", m.From, reply))
+						fallbackSent = true
+					}
+				}
+				// Fallback message
+				if !fallbackSent && db.GetSetting("fallback_enabled", "0") == "1" {
+					if fmsg := db.GetSetting("fallback_message", ""); fmsg != "" {
+						mc.SendText(m.From, msgtemplate.Render(fmsg, msgtemplate.Vars{Phone: m.From, Message: text}))
+						db.LogSent(m.From, fmsg, "fallback", "meta")
 					}
 				}
 			}
