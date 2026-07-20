@@ -63,6 +63,30 @@ func (c *Client) SendDocument(to, docURL, filename, caption string) (string, err
 	return c.doPost("/messages", body)
 }
 
+func (c *Client) SendVideo(to, videoURL, caption string) (string, error) {
+	body := map[string]interface{}{
+		"messaging_product": "whatsapp",
+		"recipient_type":    "individual",
+		"to":                to,
+		"type":              "video",
+		"video":             map[string]string{"link": videoURL, "caption": caption},
+	}
+	return c.doPost("/messages", body)
+}
+
+func (c *Client) SendAudio(to, audioURL string) (string, error) {
+	body := map[string]interface{}{
+		"messaging_product": "whatsapp",
+		"recipient_type":    "individual",
+		"to":                to,
+		"type":              "audio",
+		"audio":             map[string]string{"link": audioURL},
+	}
+	return c.doPost("/messages", body)
+}
+
+// SendMedia smart dispatcher — picks the right method based on media type
+
 func (c *Client) SendTemplate(to, templateName, language string, params []string) (string, error) {
 	components := []map[string]interface{}{}
 	if len(params) > 0 {
@@ -237,4 +261,15 @@ func (c *Client) FetchTemplates() ([]map[string]interface{}, error) {
 	}
 	json.Unmarshal(rb, &result)
 	return result.Data, nil
+}
+
+func (c *Client) SendMedia(to, mediaType, mediaURL, caption string) (string, error) {
+	switch mediaType {
+	case "image": return c.SendImage(to, mediaURL, caption)
+	case "video": return c.SendVideo(to, mediaURL, caption)
+	case "audio", "voice": return c.SendAudio(to, mediaURL)
+	case "document": return c.SendDocument(to, mediaURL, "document", caption)
+	case "sticker": return c.SendImage(to, mediaURL, caption)
+	default: return c.SendImage(to, mediaURL, caption)
+	}
 }

@@ -2635,11 +2635,7 @@ func handleMetaWebhook(w http.ResponseWriter, r *http.Request) {
 					if replies, matched := wa.MetaFlowCallback(acc.UserID, acc.PhoneNumberID, m.From, text, ""); matched {
 						for _, reply := range replies {
 							if reply.MediaURL != "" {
-								switch reply.MediaType {
-								case "image": mc.SendImage(m.From, reply.MediaURL, reply.Text)
-								case "document": mc.SendDocument(m.From, reply.MediaURL, "document", reply.Text)
-								default: mc.SendText(m.From, reply.Text)
-								}
+								mc.SendMedia(m.From, reply.MediaType, reply.MediaURL, reply.Text)
 							} else if reply.Text != "" {
 								mc.SendText(m.From, reply.Text)
 							}
