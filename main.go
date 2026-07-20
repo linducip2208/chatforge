@@ -383,6 +383,12 @@ func main() {
 	mux.HandleFunc("/admin/meta/profile", authMiddleware(requireAdmin(handleMetaProfile)))
 	mux.HandleFunc("/admin/meta/qr", authMiddleware(requireAdmin(handleMetaQR)))
 	mux.HandleFunc("/admin/meta/health", authMiddleware(requireAdmin(handleMetaHealth)))
+	mux.HandleFunc("/admin/meta/templates", authMiddleware(requireAdmin(handleMetaTemplates)))
+	mux.HandleFunc("/admin/meta/carousel", authMiddleware(requireAdmin(handleMetaCarousel)))
+	mux.HandleFunc("/admin/meta/webhooks", authMiddleware(requireAdmin(handleMetaWebhooks)))
+	mux.HandleFunc("/admin/meta/payment", authMiddleware(requireAdmin(handleMetaPayment)))
+	mux.HandleFunc("/admin/meta/register", authMiddleware(requireAdmin(handleMetaRegister)))
+	mux.HandleFunc("/admin/meta/insights", authMiddleware(requireAdmin(handleMetaInsights)))
 
 	// Template edit
 	mux.HandleFunc("/templates/edit", authMiddleware(handleTemplateEdit))
@@ -2841,6 +2847,90 @@ func handleMetaHealth(w http.ResponseWriter, r *http.Request) {
 }
 
 func parseFloat(s string) float64 { f, _ := strconv.ParseFloat(s, 64); return f }
+
+func handleMetaTemplates(w http.ResponseWriter, r *http.Request) {
+	accounts, _ := db.ListMetaAccounts()
+	w.Header().Set("Content-Type", "application/json")
+	if len(accounts) == 0 { json.NewEncoder(w).Encode(map[string]string{"status":"no_meta_account"}); return }
+	mc := meta.New(accounts[0].PhoneNumberID, decryptOrPlain(accounts[0].AccessToken), accounts[0].VerifyToken)
+	if r.Method == http.MethodPost {
+		name := r.FormValue("name"); language := r.FormValue("language"); category := r.FormValue("category")
+		if name != "" { mc.CreateTemplate(name, language, category, nil) }
+	}
+	templates, _ := mc.FetchTemplates()
+	json.NewEncoder(w).Encode(templates)
+}
+
+func handleMetaCarousel(w http.ResponseWriter, r *http.Request) {
+	accounts, _ := db.ListMetaAccounts()
+	w.Header().Set("Content-Type", "application/json")
+	if len(accounts) == 0 { json.NewEncoder(w).Encode(map[string]string{"status":"no_meta_account"}); return }
+	mc := meta.New(accounts[0].PhoneNumberID, decryptOrPlain(accounts[0].AccessToken), accounts[0].VerifyToken)
+	if r.Method == http.MethodPost {
+		var products []map[string]string
+		json.NewDecoder(r.Body).Decode(&products)
+		mc.SendCarousel(r.FormValue("to"), products)
+	}
+	json.NewEncoder(w).Encode(map[string]string{"status":"ok"})
+}
+
+func handleMetaWebhooks(w http.ResponseWriter, r *http.Request) {
+	accounts, _ := db.ListMetaAccounts()
+	w.Header().Set("Content-Type", "application/json")
+	if len(accounts) == 0 { json.NewEncoder(w).Encode(map[string]string{"status":"no_meta_account"}); return }
+	mc := meta.New(accounts[0].PhoneNumberID, decryptOrPlain(accounts[0].AccessToken), accounts[0].VerifyToken)
+	if r.Method == http.MethodPost {
+		fields := r.Form["fields"]
+		if len(fields) > 0 { mc.SubscribeWebhook(fields) }
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"webhook_url": appURL() + "/webhook/meta",
+		"fields":      []string{"messages", "message_template_status_update", "message_template_quality_update"},
+	})
+}
+
+func handleMetaPayment(w http.ResponseWriter, r *http.Request) {
+	accounts, _ := db.ListMetaAccounts()
+	w.Header().Set("Content-Type", "application/json")
+	if len(accounts) == 0 { json.NewEncoder(w).Encode(map[string]string{"status":"no_meta_account"}); return }
+	mc := meta.New(accounts[0].PhoneNumberID, decryptOrPlain(accounts[0].AccessToken), accounts[0].VerifyToken)
+	if r.Method == http.MethodPost {
+		result, _ := mc.SendPaymentRequest(r.FormValue("to"), r.FormValue("token"), r.FormValue("amount"), r.FormValue("currency"))
+		json.NewEncoder(w).Encode(map[string]string{"result": result})
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]string{"status":"ready"})
+}
+
+func handleMetaRegister(w http.ResponseWriter, r *http.Request) {
+	accounts, _ := db.ListMetaAccounts()
+	w.Header().Set("Content-Type", "application/json")
+	if len(accounts) == 0 { json.NewEncoder(w).Encode(map[string]string{"status":"no_meta_account"}); return }
+	mc := meta.New(accounts[0].PhoneNumberID, decryptOrPlain(accounts[0].AccessToken), accounts[0].VerifyToken)
+	if r.Method == http.MethodPost {
+		if r.FormValue("action") == "register" { mc.RegisterPhoneNumber(r.FormValue("pin")) }
+		if r.FormValue("action") == "deregister" { mc.DeregisterPhoneNumber() }
+	}
+	status, _ := mc.GetPhoneNumberStatus()
+	json.NewEncoder(w).Encode(status)
+}
+
+func handleMetaInsights(w http.ResponseWriter, r *http.Request) {
+	accounts, _ := db.ListMetaAccounts()
+	w.Header().Set("Content-Type", "application/json")
+	if len(accounts) == 0 { json.NewEncoder(w).Encode(map[string]string{"status":"no_meta_account"}); return }
+	mc := meta.New(accounts[0].PhoneNumberID, decryptOrPlain(accounts[0].AccessToken), accounts[0].VerifyToken)
+	msgID := r.URL.Query().Get("message_id")
+	var insights map[string]interface{}
+	if msgID != "" { insights, _ = mc.GetMessageInsights(msgID) }
+	rateLimit, _ := mc.GetRateLimit()
+	quality, _ := mc.GetQualityScore()
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"insights":   insights,
+		"rate_limit": rateLimit,
+		"quality":    quality,
+	})
+}
 
 
 
