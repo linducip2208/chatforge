@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
@@ -513,6 +514,69 @@ func (c *Client) CheckCallStatus(callID string) (string, error) {
 	var result struct{ Status string `json:"status"` }
 	json.Unmarshal(rb, &result)
 	return result.Status, nil
+}
+
+// ── ElevenLabs Voice ──
+
+var ElevenLabsAPIKey string
+
+func SetElevenLabsKey(key string) { ElevenLabsAPIKey = key }
+
+func (c *Client) FetchElevenLabsVoices() ([]map[string]interface{}, error) {
+	req, _ := http.NewRequest("GET", "https://api.elevenlabs.io/v1/voices", nil)
+	req.Header.Set("xi-api-key", ElevenLabsAPIKey)
+	resp, err := c.HTTP.Do(req)
+	if err != nil { return nil, err }
+	defer resp.Body.Close()
+	rb, _ := io.ReadAll(resp.Body)
+	var result struct{ Voices []map[string]interface{} `json:"voices"` }
+	json.Unmarshal(rb, &result)
+	return result.Voices, nil
+}
+
+func (c *Client) GenerateTTS(text, voiceID string) (string, error) {
+	body := map[string]interface{}{
+		"text":     text,
+		"model_id": "eleven_multilingual_v2",
+		"voice_settings": map[string]interface{}{
+			"stability":        0.5,
+			"similarity_boost": 0.75,
+		},
+	}
+	b, _ := json.Marshal(body)
+	url := fmt.Sprintf("https://api.elevenlabs.io/v1/text-to-speech/%s", voiceID)
+	req, _ := http.NewRequest("POST", url, bytes.NewReader(b))
+	req.Header.Set("xi-api-key", ElevenLabsAPIKey)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "audio/mpeg")
+	resp, err := c.HTTP.Do(req)
+	if err != nil { return "", err }
+	defer resp.Body.Close()
+	data, _ := io.ReadAll(resp.Body)
+	os.MkdirAll("public", 0o755)
+	path := fmt.Sprintf("public/tts_%d.mp3", time.Now().UnixNano())
+	os.WriteFile(path, data, 0o644)
+	return "/" + path, nil
+}
+
+// ── WhatsApp Pay ──
+
+func (c *Client) SendPaymentRequest(to, paymentToken, amount, currency string) (string, error) {
+	body := map[string]interface{}{
+		"messaging_product": "whatsapp",
+		"recipient_type":    "individual",
+		"to":                to,
+		"type":              "interactive",
+		"interactive": map[string]interface{}{
+			"type": "payment",
+			"payment": map[string]string{
+				"token":        paymentToken,
+				"amount":       amount,
+				"currency":     currency,
+			},
+		},
+	}
+	return c.doPost("/messages", body)
 }
 
 func (c *Client) DeleteProduct(productID string) error {
