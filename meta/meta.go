@@ -406,3 +406,48 @@ func (c *Client) SendPoll(to, question string, options []string) (string, error)
 	}
 	return c.SendInteractive(to, interactive)
 }
+
+// ── Click-to-Chat Ads ──
+
+func (c *Client) GenerateAdLink(phone, prefillMessage string) string {
+	link := fmt.Sprintf("https://wa.me/%s", phone)
+	if prefillMessage != "" {
+		link += "?text=" + strings.ReplaceAll(prefillMessage, " ", "%20")
+	}
+	return link
+}
+
+// ── WhatsApp Catalog ──
+
+func (c *Client) SyncProduct(name, description string, price float64, imageURL, websiteURL string) (string, error) {
+	body := map[string]interface{}{
+		"name":         name,
+		"description":  description,
+		"price":        fmt.Sprintf("%.0f IDR", price),
+		"images":       []string{imageURL},
+		"website_url":  websiteURL,
+	}
+	resp, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/products", c.PhoneNumberID), body)
+	return resp, err
+}
+
+func (c *Client) ListProducts() ([]map[string]interface{}, error) {
+	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/products?fields=id,name,price,image_url", c.PhoneNumberID)
+	resp, err := c.HTTP.Get(url)
+	if err != nil { return nil, err }
+	defer resp.Body.Close()
+	rb, _ := io.ReadAll(resp.Body)
+	var result struct{ Data []map[string]interface{} `json:"data"` }
+	json.Unmarshal(rb, &result)
+	return result.Data, nil
+}
+
+func (c *Client) DeleteProduct(productID string) error {
+	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/products/%s", c.PhoneNumberID, productID)
+	req, _ := http.NewRequest("DELETE", url, nil)
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	resp, err := c.HTTP.Do(req)
+	if err != nil { return err }
+	resp.Body.Close()
+	return nil
+}

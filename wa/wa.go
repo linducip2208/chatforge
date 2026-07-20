@@ -436,6 +436,14 @@ func (e *Engine) handleEvent(s *session, rawEvt interface{}) {
 		s.status = "disconnected"
 		e.mu.Unlock()
 		e.db.LogInstance(s.Phone, "logged_out")
+	case *events.Receipt:
+		for _, msg := range evt.MessageIDs {
+			if evt.Type == events.ReceiptTypeRead {
+				e.db.UpdateSentStatus(msg, "read")
+			} else if evt.Type == events.ReceiptTypeDelivered {
+				e.db.UpdateSentStatus(msg, "delivered")
+			}
+		}
 	case *events.Message:
 		e.onMessage(s, evt)
 	}
@@ -836,6 +844,19 @@ func (e *Engine) SendFrom(userID int64, accountPhone, phone, message string) err
 	e.db.LogSentForWA(s.Phone, phone, message, "sent", "whatsmeow"); e.db.Log("send", "sent", fmt.Sprintf("outgoing -> %s: %s", phone, message))
 	e.dispatchWebhooks("sent", phone, "", message, "private")
 	return nil
+}
+
+func (e *Engine) CheckWANumber(phone string) (bool, error) {
+	s := e.FirstSession(0)
+	if s == nil { return false, fmt.Errorf("no connected session") }
+	jid, err := waTypes.ParseJID(phone + "@s.whatsapp.net")
+	if err != nil { return false, err }
+	results, err := s.client.IsOnWhatsApp(context.Background(), []string{jid.String()})
+	if err != nil { return false, err }
+	for _, r := range results {
+		if r.JID == jid { return r.IsIn, nil }
+	}
+	return false, nil
 }
 
 func (e *Engine) findSession(userID int64, accountPhone string) *session {

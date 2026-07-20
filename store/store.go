@@ -182,6 +182,7 @@ func (d *DB) migrate() error {
 	d.sql.Exec(`CREATE TABLE IF NOT EXISTS wa_session_owners (phone VARCHAR(64) PRIMARY KEY, user_id BIGINT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`)
 	d.safeAddColumn("received", "wa_phone", "VARCHAR(64) NOT NULL DEFAULT ''")
 	d.safeAddColumn("sent", "wa_phone", "VARCHAR(64) NOT NULL DEFAULT ''")
+	d.safeAddColumn("sent", "msg_id", "VARCHAR(128) NOT NULL DEFAULT ''")
 	d.migrateInstanceLog()
 	d.migrateStatuses()
 	d.migrateMeta()
@@ -339,6 +340,14 @@ func (d *DB) LogSent(phone, message, status, channel string) {
 func (d *DB) LogSentForWA(waPhone, phone, message, status, channel string) {
 	if channel == "" { channel = "whatsmeow" }
 	d.sql.Exec(`INSERT INTO sent (wa_phone,phone,message,status,channel) VALUES (?,?,?,?,?)`, waPhone, phone, message, status, channel)
+}
+func (d *DB) UpdateSentStatus(messageID, newStatus string) {
+	d.sql.Exec(`UPDATE sent SET status=? WHERE msg_id=?`, newStatus, messageID)
+}
+func (d *DB) GetSentStatus(messageID string) string {
+	var s string
+	d.sql.QueryRow(`SELECT status FROM sent WHERE msg_id=? LIMIT 1`, messageID).Scan(&s)
+	return s
 }
 func (d *DB) ListSent(limit int) ([]SentMessage, error) { return d.ListSentPaginated(1, limit) }
 func (d *DB) ListSentPaginated(page, perPage int) ([]SentMessage, error) {
