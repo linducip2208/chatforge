@@ -2644,6 +2644,36 @@ func handleMetaWebhook(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 
+				// Spam detection
+				if db.TrackSpam(m.From, fmt.Sprintf("%x", text[:min(len(text), 20)])) {
+					db.AddBlacklist(m.From, "auto: spam detected (meta)")
+					continue
+				}
+				// FAQ check
+				if reply, found := db.FindFAQAnswer(acc.UserID, text); found {
+					mc.SendText(m.From, msgtemplate.Render(reply, msgtemplate.Vars{Phone: m.From, Message: text}))
+					db.LogSent(m.From, reply, "faq", "meta"); continue
+				}
+				// Store Bot
+				if trimmed == "menu" || trimmed == "katalog" {
+					if cats, _ := db.ListCategories(); len(cats) > 0 {
+						var msg string
+						for _, c := range cats { msg += "• " + c.Name + "\n" }
+						mc.SendText(m.From, "📋 Kategori:\n"+msg+"\nKetik nama kategori."); continue
+					}
+				}
+				// Anti-spam mute
+				if aiservice.CheckSpam(m.From, text) || aiservice.CheckJailbreak(text) { continue }
+				// Welcome message
+				if db.GetSetting("welcome_enabled", "0") == "1" && db.MarkWelcomed(m.From) {
+					if wmsg := db.GetSetting("welcome_message", ""); wmsg != "" {
+						mc.SendText(m.From, msgtemplate.Render(wmsg, msgtemplate.Vars{Phone: m.From, Message: text}))
+						db.LogSent(m.From, wmsg, "welcome", "meta")
+					}
+				}
+				// Webhook dispatch
+				db.Log("meta", "received", fmt.Sprintf("%s -> %s: %s", m.From, acc.Name, text))
+
 				if ar, found := db.FindReplyFullForAccount(text, ""); found && ar.IsActive {
 					reply := msgtemplate.Render(ar.Reply, msgtemplate.Vars{Phone: m.From, Name: "", Message: text})
 					if ar.UseAI && ar.AiKeyID > 0 {
