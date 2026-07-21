@@ -391,6 +391,8 @@ func main() {
 	mux.HandleFunc("/admin/meta/insights", authMiddleware(requireAdmin(handleMetaInsights)))
 	mux.HandleFunc("/sheets", authMiddleware(handleSheets))
 	mux.HandleFunc("/n8n-webhook", handleN8NWebhook)
+	mux.HandleFunc("/n8n-node-definition", handleN8NNodeDefinition)
+	mux.HandleFunc("/n8n-templates", handleN8NTemplates)
 
 	// Template edit
 	mux.HandleFunc("/templates/edit", authMiddleware(handleTemplateEdit))
@@ -2928,6 +2930,26 @@ func handleN8NWebhook(w http.ResponseWriter, r *http.Request) {
 	var input map[string]interface{}
 	json.Unmarshal(body, &input)
 	json.NewEncoder(w).Encode(map[string]interface{}{"status": "ok", "input": input})
+}
+
+func handleN8NNodeDefinition(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	nodes := []map[string]interface{}{
+		{"name": "chatgo.sendMessage", "displayName": "ChatGo — Send Message", "inputs": []string{"main"}, "outputs": []string{"main"}, "properties": []interface{}{map[string]interface{}{"displayName": "Phone", "name": "phone", "type": "string", "required": true}, map[string]interface{}{"displayName": "Message", "name": "message", "type": "string", "required": true}}},
+		{"name": "chatgo.addContact", "displayName": "ChatGo — Add Contact", "inputs": []string{"main"}, "outputs": []string{"main"}, "properties": []interface{}{map[string]interface{}{"displayName": "Name", "name": "name", "type": "string", "required": true}, map[string]interface{}{"displayName": "Phone", "name": "phone", "type": "string", "required": true}}},
+		{"name": "chatgo.trigger", "displayName": "ChatGo — WhatsApp Trigger", "inputs": []string{}, "outputs": []string{"main"}},
+	}
+	json.NewEncoder(w).Encode(nodes)
+}
+
+func handleN8NTemplates(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	t := []map[string]string{
+		{"id": "wa-to-sheets", "name": "WhatsApp → Google Sheets"},
+		{"id": "form-to-wa", "name": "Form → WhatsApp"},
+		{"id": "broadcast-scheduler", "name": "Broadcast Scheduler"},
+	}
+	json.NewEncoder(w).Encode(t)
 }
 
 func handleMetaInsights(w http.ResponseWriter, r *http.Request) {
