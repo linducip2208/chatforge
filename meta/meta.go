@@ -866,6 +866,45 @@ func (c *Client) GetPhoneNumberStatus() (map[string]interface{}, error) {
 	return result, nil
 }
 
+// ── Instagram Messaging ──
+
+func (c *Client) SendIGMessage(to, message string) (string, error) {
+	body := map[string]interface{}{
+		"recipient": map[string]string{"id": to},
+		"message":   map[string]string{"text": message},
+		"messaging_type": "RESPONSE",
+	}
+	return c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/messages", c.PhoneNumberID), body)
+}
+
+func (c *Client) SendIGMedia(to, mediaURL, caption string) (string, error) {
+	body := map[string]interface{}{
+		"recipient": map[string]string{"id": to},
+		"message": map[string]interface{}{
+			"attachment": map[string]interface{}{
+				"type": "image",
+				"payload": map[string]string{"url": mediaURL},
+			},
+		},
+		"messaging_type": "RESPONSE",
+	}
+	if caption != "" { body["message"].(map[string]interface{})["text"] = caption }
+	return c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/messages", c.PhoneNumberID), body)
+}
+
+func (c *Client) GetIGConversations() ([]map[string]interface{}, error) {
+	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/conversations?platform=instagram&fields=participants,messages.limit(10){message,from,created_time}", c.PhoneNumberID)
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	resp, err := c.HTTP.Do(req)
+	if err != nil { return nil, err }
+	defer resp.Body.Close()
+	rb, _ := io.ReadAll(resp.Body)
+	var result struct{ Data []map[string]interface{} `json:"data"` }
+	json.Unmarshal(rb, &result)
+	return result.Data, nil
+}
+
 func (c *Client) DeleteProduct(productID string) error {
 	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/products/%s", c.PhoneNumberID, productID)
 	req, _ := http.NewRequest("DELETE", url, nil)
