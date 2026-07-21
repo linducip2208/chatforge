@@ -938,3 +938,99 @@ func ParseIGWebhook(body []byte) ([]WebhookMessage, bool) {
 	}
 	return msgs, len(msgs) > 0
 }
+
+// -- Instagram Comment Automation --
+
+func (c *Client) ReplyToComment(commentID, message string) (string, error) {
+	body := map[string]string{"message": message}
+	return c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/replies?access_token=%s", commentID, c.AccessToken), body)
+}
+
+func (c *Client) SendDMFromComment(igUserID, message string) (string, error) {
+	return c.SendIGMessage(igUserID, message)
+}
+
+func (c *Client) HideComment(commentID string) error {
+	body := map[string]bool{"hide": true}
+	_, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s?access_token=%s", commentID, c.AccessToken), body)
+	return err
+}
+
+// -- Instagram Story Mentions --
+
+func (c *Client) GetStoryMentions(igUserID string) ([]map[string]interface{}, error) {
+	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/mentioned_media?fields=id,media_type,media_url,owner,timestamp", igUserID)
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	resp, err := c.HTTP.Do(req)
+	if err != nil { return nil, err }
+	defer resp.Body.Close()
+	rb, _ := io.ReadAll(resp.Body)
+	var result struct{ Data []map[string]interface{} `json:"data"` }
+	json.Unmarshal(rb, &result)
+	return result.Data, nil
+}
+
+// -- Instagram Post Publishing --
+
+func (c *Client) CreateMediaContainer(igUserID, mediaURL, caption string, isVideo bool) (string, error) {
+	body := map[string]interface{}{
+		"image_url": mediaURL,
+		"caption":   caption,
+	}
+	if isVideo {
+		body = map[string]interface{}{
+			"video_url": mediaURL,
+			"caption":   caption,
+			"media_type": "REELS",
+		}
+	}
+	resp, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/media", igUserID), body)
+	if err != nil { return "", err }
+	var result struct{ ID string `json:"id"` }
+	json.Unmarshal([]byte(resp), &result)
+	return result.ID, nil
+}
+
+func (c *Client) PublishMedia(igUserID, creationID string) (string, error) {
+	body := map[string]string{"creation_id": creationID}
+	resp, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/media_publish", igUserID), body)
+	if err != nil { return "", err }
+	var result struct{ ID string `json:"id"` }
+	json.Unmarshal([]byte(resp), &result)
+	return result.ID, nil
+}
+
+// -- Instagram Quick Replies --
+
+func (c *Client) SendIGQuickReplies(to, message string, replies []string) (string, error) {
+	quickReplies := make([]map[string]string, 0)
+	for _, r := range replies {
+		quickReplies = append(quickReplies, map[string]string{
+			"content_type": "text",
+			"title":        r,
+			"payload":      r,
+		})
+	}
+	body := map[string]interface{}{
+		"recipient": map[string]string{"id": to},
+		"message": map[string]interface{}{
+			"text":          message,
+			"quick_replies": quickReplies,
+		},
+		"messaging_type": "RESPONSE",
+	}
+	return c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/messages", c.PhoneNumberID), body)
+}
+
+// -- Instagram Broadcast --
+
+func (c *Client) SendIGBroadcast(igUserIDs []string, message string) ([]string, error) {
+	var results []string
+	for _, id := range igUserIDs {
+		resp, err := c.SendIGMessage(id, message)
+		if err == nil { results = append(results, resp) }
+		time.Sleep(500 * time.Millisecond)
+	}
+	return results, nil
+}
