@@ -1034,3 +1034,113 @@ func (c *Client) SendIGBroadcast(igUserIDs []string, message string) ([]string, 
 	}
 	return results, nil
 }
+
+// -- Instagram Insights --
+
+func (c *Client) GetIGAccountInsights(igUserID string) (map[string]interface{}, error) {
+	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/insights?metric=impressions,reach,profile_views,website_clicks,follower_count,email_contacts,phone_call_clicks,text_message_clicks,direction_clicks&period=day&metric_type=total_value", igUserID)
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	resp, err := c.HTTP.Do(req)
+	if err != nil { return nil, err }
+	defer resp.Body.Close()
+	rb, _ := io.ReadAll(resp.Body)
+	var result map[string]interface{}
+	json.Unmarshal(rb, &result)
+	return result, nil
+}
+
+func (c *Client) GetIGMediaInsights(mediaID string) (map[string]interface{}, error) {
+	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/insights?metric=engagement,impressions,reach,saved,video_views,likes,comments,shares", mediaID)
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	resp, err := c.HTTP.Do(req)
+	if err != nil { return nil, err }
+	defer resp.Body.Close()
+	rb, _ := io.ReadAll(resp.Body)
+	var result map[string]interface{}
+	json.Unmarshal(rb, &result)
+	return result, nil
+}
+
+func (c *Client) GetIGAudienceInsights(igUserID string) (map[string]interface{}, error) {
+	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/insights?metric=audience_gender_age,audience_locale,audience_country,audience_city,online_followers&period=lifetime", igUserID)
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	resp, err := c.HTTP.Do(req)
+	if err != nil { return nil, err }
+	defer resp.Body.Close()
+	rb, _ := io.ReadAll(resp.Body)
+	var result map[string]interface{}
+	json.Unmarshal(rb, &result)
+	return result, nil
+}
+
+// -- Instagram Story + Reel Publisher --
+
+func (c *Client) CreateStory(igUserID, mediaURL, caption string) (string, error) {
+	body := map[string]interface{}{
+		"media_type": "STORIES",
+		"image_url":  mediaURL,
+		"caption":    caption,
+	}
+	resp, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/media", igUserID), body)
+	if err != nil { return "", err }
+	var result struct{ ID string `json:"id"` }
+	json.Unmarshal([]byte(resp), &result)
+	_, err = c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/media_publish?creation_id=%s", igUserID, result.ID),
+		map[string]string{"creation_id": result.ID})
+	return result.ID, err
+}
+
+func (c *Client) CreateReel(igUserID, videoURL, caption, shareToFeed string) (string, error) {
+	body := map[string]interface{}{
+		"media_type":  "REELS",
+		"video_url":   videoURL,
+		"caption":     caption,
+		"share_to_feed": shareToFeed == "true",
+	}
+	resp, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/media", igUserID), body)
+	if err != nil { return "", err }
+	var result struct{ ID string `json:"id"` }
+	json.Unmarshal([]byte(resp), &result)
+	time.Sleep(5 * time.Second)
+	_, err = c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/media_publish?creation_id=%s", igUserID, result.ID),
+		map[string]string{"creation_id": result.ID})
+	return result.ID, err
+}
+
+// -- Instagram Auto-Responder + Handover --
+
+func (c *Client) SetIGIceBreakers(questions []string) error {
+	body := map[string]interface{}{
+		"ice_breakers": questions,
+	}
+	_, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/messenger_profile", c.PhoneNumberID), body)
+	return err
+}
+
+func (c *Client) SetIGGreeting(text string) error {
+	body := map[string]interface{}{
+		"greeting": []map[string]string{{"locale": "default", "text": text}},
+	}
+	_, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/messenger_profile", c.PhoneNumberID), body)
+	return err
+}
+
+func (c *Client) HandoverToAgent(igUserID, agentID string) error {
+	body := map[string]interface{}{
+		"recipient": map[string]string{"id": igUserID},
+		"target_app_id": agentID,
+	}
+	_, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/pass_thread_control", c.PhoneNumberID), body)
+	return err
+}
+
+func (c *Client) TakeThreadControl(igUserID string) error {
+	body := map[string]interface{}{
+		"recipient": map[string]string{"id": igUserID},
+	}
+	_, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/take_thread_control", c.PhoneNumberID), body)
+	return err
+}
