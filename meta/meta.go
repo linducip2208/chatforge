@@ -1144,3 +1144,75 @@ func (c *Client) TakeThreadControl(igUserID string) error {
 	_, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/take_thread_control", c.PhoneNumberID), body)
 	return err
 }
+
+// -- Story Reply Detection --
+
+type IGWebhookEntry struct {
+	ID        string              `json:"id"`
+	Messaging []IGMessagingEvent  `json:"messaging,omitempty"`
+	Changes   []IGChangeEvent     `json:"changes,omitempty"`
+}
+
+type IGMessagingEvent struct {
+	Sender    struct{ ID string } `json:"sender"`
+	Recipient struct{ ID string } `json:"recipient"`
+	Message   struct {
+		MID      string `json:"mid"`
+		Text     string `json:"text"`
+		ReplyTo  struct {
+			MID   string `json:"mid"`
+			Story struct {
+				ID    string `json:"id"`
+				URL   string `json:"url"`
+			} `json:"story"`
+		} `json:"reply_to"`
+	} `json:"message"`
+}
+
+func ParseIGStoryReply(body []byte) (storyID, fromUser, messageText string, isReply bool) {
+	var raw struct {
+		Entry []IGWebhookEntry `json:"entry"`
+	}
+	if err := json.Unmarshal(body, &raw); err != nil { return }
+	for _, entry := range raw.Entry {
+		for _, m := range entry.Messaging {
+			if m.Message.ReplyTo.Story.ID != "" {
+				return m.Message.ReplyTo.Story.ID, m.Sender.ID, m.Message.Text, true
+			}
+		}
+	}
+	return "", "", "", false
+}
+
+// -- Instagram Product Tagging --
+
+func (c *Client) TagProductInMedia(igUserID, mediaID, productID string, x, y float64) error {
+	body := map[string]interface{}{
+		"product_tags": []map[string]interface{}{
+			{"product_id": productID, "x": x, "y": y},
+		},
+	}
+	_, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s?access_token=%s", mediaID, c.AccessToken), body)
+	return err
+}
+
+// -- Instagram Broadcast Channel --
+
+func (c *Client) CreateBroadcastChannel(igUserID, name, description string) (string, error) {
+	body := map[string]interface{}{
+		"name":        name,
+		"description": description,
+	}
+	resp, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/broadcast_channels", igUserID), body)
+	if err != nil { return "", err }
+	var result struct{ ID string `json:"id"` }
+	json.Unmarshal([]byte(resp), &result)
+	return result.ID, nil
+}
+
+func (c *Client) SendBroadcastMessage(channelID, message string) (string, error) {
+	body := map[string]interface{}{
+		"message": message,
+	}
+	return c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/messages", channelID), body)
+}
