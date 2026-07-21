@@ -393,6 +393,9 @@ func main() {
 	mux.HandleFunc("/n8n-webhook", handleN8NWebhook)
 	mux.HandleFunc("/n8n-node-definition", handleN8NNodeDefinition)
 	mux.HandleFunc("/n8n-templates", handleN8NTemplates)
+	mux.HandleFunc("/ig-webhook", handleIGWebhook)
+	mux.HandleFunc("/admin/instagram", authMiddleware(requireAdmin(handleIGInbox)))
+	mux.HandleFunc("/telegram-webhook", handleTelegramWebhook)
 
 	// Template edit
 	mux.HandleFunc("/templates/edit", authMiddleware(handleTemplateEdit))
@@ -2967,6 +2970,53 @@ func handleMetaInsights(w http.ResponseWriter, r *http.Request) {
 		"rate_limit": rateLimit,
 		"quality":    quality,
 	})
+}
+
+func handleIGWebhook(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		mode := r.URL.Query().Get("hub.mode")
+		challenge := r.URL.Query().Get("hub.challenge")
+		if mode == "subscribe" { fmt.Fprint(w, challenge) }
+		return
+	}
+	body, _ := io.ReadAll(r.Body)
+	msgs, ok := meta.ParseIGWebhook(body)
+	if !ok { return }
+	accounts, _ := db.ListMetaAccounts()
+	for _, acc := range accounts {
+		mc := meta.New(acc.PhoneNumberID, decryptOrPlain(acc.AccessToken), acc.VerifyToken)
+		for _, m := range msgs {
+			db.LogReceivedForWA(acc.PhoneNumberID, m.From, "", m.Text.Body, false, "", "", "instagram")
+			if wa.MetaFlowCallback != nil {
+				if replies, matched := wa.MetaFlowCallback(acc.UserID, acc.PhoneNumberID, m.From, m.Text.Body, ""); matched {
+					for _, reply := range replies {
+						if reply.Text != "" { mc.SendIGMessage(m.From, reply.Text) }
+					}
+				}
+			}
+		}
+	}
+	fmt.Fprint(w, "ok")
+}
+
+func handleIGInbox(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	accounts, _ := db.ListMetaAccounts()
+	var result []map[string]interface{}
+	for _, acc := range accounts {
+		mc := meta.New(acc.PhoneNumberID, decryptOrPlain(acc.AccessToken), acc.VerifyToken)
+		convs, _ := mc.GetIGConversations()
+		if convs != nil { result = append(result, convs...) }
+	}
+	json.NewEncoder(w).Encode(result)
+}
+
+func handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	body, _ := io.ReadAll(r.Body)
+	var update map[string]interface{}
+	json.Unmarshal(body, &update)
+	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
 

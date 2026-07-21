@@ -914,3 +914,27 @@ func (c *Client) DeleteProduct(productID string) error {
 	resp.Body.Close()
 	return nil
 }
+
+func ParseIGWebhook(body []byte) ([]WebhookMessage, bool) {
+	var raw struct {
+		Entry []struct {
+			Messaging []struct {
+				Sender  struct { ID string }
+				Message struct {
+					MID  string
+					Text string
+				}
+			}
+		}
+	}
+	json.Unmarshal(body, &raw)
+	var msgs []WebhookMessage
+	for _, entry := range raw.Entry {
+		for _, m := range entry.Messaging {
+			msgs = append(msgs, WebhookMessage{
+				From: m.Sender.ID, ID: m.Message.MID,
+			})
+		}
+	}
+	return msgs, len(msgs) > 0
+}
