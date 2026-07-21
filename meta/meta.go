@@ -1150,7 +1150,7 @@ func (c *Client) TakeThreadControl(igUserID string) error {
 type IGWebhookEntry struct {
 	ID        string              `json:"id"`
 	Messaging []IGMessagingEvent  `json:"messaging,omitempty"`
-	Changes   []IGChangeEvent     `json:"changes,omitempty"`
+	Changes   []interface{}     `json:"changes,omitempty"`
 }
 
 type IGMessagingEvent struct {
