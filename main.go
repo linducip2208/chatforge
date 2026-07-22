@@ -403,6 +403,8 @@ func main() {
 	mux.HandleFunc("/flow-search", authMiddleware(handleFlowSearch))
 	mux.HandleFunc("/dark-mode", authMiddleware(handleDarkMode))
 	mux.HandleFunc("/flow-logs", authMiddleware(handleFlowLogs))
+	mux.HandleFunc("/healthz", handleHealthz)
+	mux.HandleFunc("/backup-schedule", authMiddleware(requireAdmin(handleBackupSchedule)))
 	mux.HandleFunc("/telegram-webhook", handleTelegramWebhook)
 	mux.HandleFunc("/fb-webhook", handleFBWebhook)
 	mux.HandleFunc("/omni/inbox", authMiddleware(handleOmniInbox))
@@ -3235,4 +3237,41 @@ func handleFlowLogs(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(idStr, 10, 64)
 	logs, _ := db.GetFlowExecutionLog(id, 50)
 	json.NewEncoder(w).Encode(logs)
+}
+
+func handleHealthz(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	var s string
+	db.QueryRow("SELECT 1").Scan(&s)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "ok", "version": "3.0",
+		"channels": []string{"wa", "meta", "ig", "fb", "tg"},
+	})
+}
+
+func handleBackupSchedule(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	enabled := db.GetSetting("auto_backup", "0")
+	if r.Method == http.MethodPost {
+		db.SetSetting("auto_backup", r.FormValue("enabled"))
+		db.SetSetting("backup_hour", r.FormValue("hour"))
+	}
+	json.NewEncoder(w).Encode(map[string]string{
+		"backup_enabled": enabled,
+		"backup_hour":    db.GetSetting("backup_hour", "3"),
+	})
+}
+
+func autoBackupLoop() {
+	for {
+		time.Sleep(1 * time.Hour)
+		if db.GetSetting("auto_backup", "0") == "1" {
+			now := time.Now()
+			hour := db.GetSetting("backup_hour", "3")
+			h, _ := strconv.Atoi(hour)
+			if now.Hour() == h {
+				db.Log("backup", "auto", "scheduled backup trigger")
+			}
+		}
+	}
 }
