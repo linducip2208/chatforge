@@ -1140,13 +1140,7 @@ func (c *Client) HandoverToAgent(igUserID, agentID string) error {
 	return err
 }
 
-func (c *Client) TakeThreadControl(igUserID string) error {
-	body := map[string]interface{}{
-		"recipient": map[string]string{"id": igUserID},
-	}
-	_, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/take_thread_control", c.PhoneNumberID), body)
-	return err
-}
+
 
 // -- Story Reply Detection --
 
@@ -1258,10 +1252,7 @@ func (c *Client) PassThreadControl(to, appID string) error {
 	_, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/pass_thread_control", c.PhoneNumberID), map[string]interface{}{"recipient": map[string]string{"id": to}, "target_app_id": appID})
 	return err
 }
-func (c *Client) TakeThreadControl(to string) error {
-	_, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/take_thread_control", c.PhoneNumberID), map[string]interface{}{"recipient": map[string]string{"id": to}})
-	return err
-}
+
 
 // -- FB Message Tags (outside 24h window) --
 func (c *Client) SendTaggedMessage(to, message, tag string) (string, error) {
