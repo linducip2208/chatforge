@@ -396,6 +396,7 @@ func main() {
 	mux.HandleFunc("/n8n-templates", handleN8NTemplates)
 	mux.HandleFunc("/ig-webhook", handleIGWebhook)
 	mux.HandleFunc("/admin/instagram", authMiddleware(requireAdmin(handleIGInbox)))
+	mux.HandleFunc("/agency", authMiddleware(requireAdmin(handleAgency)))
 	mux.HandleFunc("/telegram-webhook", handleTelegramWebhook)
 	mux.HandleFunc("/omni/inbox", authMiddleware(handleOmniInbox))
 	mux.HandleFunc("/omni/analytics", authMiddleware(handleOmniAnalytics))
@@ -3118,5 +3119,23 @@ func handleOmniHandoff(w http.ResponseWriter, r *http.Request) {
 		"status": "handoff_initiated",
 		"from":   fromChannel,
 		"to":     toChannel,
+	})
+}
+
+func handleAgency(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	users, _ := db.ListUsers()
+	var clients []map[string]interface{}
+	for _, u := range users {
+		if u.Role != "admin" {
+			clients = append(clients, map[string]interface{}{
+				"id": u.ID, "name": u.Name, "email": u.Email,
+				"role": u.Role, "created": u.Created,
+			})
+		}
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"clients": clients,
+		"total":   len(clients),
 	})
 }
