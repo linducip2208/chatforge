@@ -1238,3 +1238,59 @@ func (c *Client) SendFBMedia(to, mediaURL, mediaType string) (string, error) {
 	}
 	return c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/messages", c.PhoneNumberID), body)
 }
+
+// -- FB Lead Gen --
+func (c *Client) CreateLeadForm(pageID, name, privacyURL string) (string, error) {
+	body := map[string]interface{}{"name": name, "privacy_url": privacyURL}
+	resp, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/leadgen_forms", pageID), body)
+	if err != nil { return "", err }
+	var result struct{ ID string `json:"id"` }; json.Unmarshal([]byte(resp), &result); return result.ID, nil
+}
+
+// -- IG Shopping Tag --
+func (c *Client) TagProductInStory(mediaID, productID string) error {
+	_, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s", mediaID), map[string]interface{}{"product_tags": []map[string]string{{"product_id": productID}}})
+	return err
+}
+
+// -- Handover Protocol --
+func (c *Client) PassThreadControl(to, appID string) error {
+	_, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/pass_thread_control", c.PhoneNumberID), map[string]interface{}{"recipient": map[string]string{"id": to}, "target_app_id": appID})
+	return err
+}
+func (c *Client) TakeThreadControl(to string) error {
+	_, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/take_thread_control", c.PhoneNumberID), map[string]interface{}{"recipient": map[string]string{"id": to}})
+	return err
+}
+
+// -- FB Message Tags (outside 24h window) --
+func (c *Client) SendTaggedMessage(to, message, tag string) (string, error) {
+	body := map[string]interface{}{"recipient": map[string]string{"id": to}, "message": map[string]string{"text": message}, "messaging_type": "MESSAGE_TAG", "tag": tag}
+	return c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/messages", c.PhoneNumberID), body)
+}
+
+// -- IG Creator Marketplace --
+func (c *Client) SearchCreators(igUserID, query string) ([]map[string]interface{}, error) {
+	url := fmt.Sprintf("https://graph.facebook.com/v22.0/%s/creator_marketplace_search?q=%s", igUserID, query)
+	req, _ := http.NewRequest("GET", url, nil); req.Header.Set("Authorization", "Bearer "+c.AccessToken)
+	resp, err := c.HTTP.Do(req); if err != nil { return nil, err }
+	defer resp.Body.Close(); rb, _ := io.ReadAll(resp.Body)
+	var r struct{ Data []map[string]interface{} `json:"data"` }; json.Unmarshal(rb, &r); return r.Data, nil
+}
+
+// -- FB+IG Content Scheduler --
+func (c *Client) SchedulePost(igUserID, mediaURL, caption string, publishTime time.Time, isReel bool) (string, error) {
+	body := map[string]interface{}{"image_url": mediaURL, "caption": caption, "scheduled_publish_time": publishTime.Unix()}
+	if isReel { body = map[string]interface{}{"video_url": mediaURL, "caption": caption, "media_type": "REELS", "scheduled_publish_time": publishTime.Unix()} }
+	resp, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/media", igUserID), body)
+	if err != nil { return "", err }
+	var r struct{ ID string `json:"id"` }; json.Unmarshal([]byte(resp), &r); return r.ID, nil
+}
+
+// -- IG Collab Posts --
+func (c *Client) CreateCollabPost(igUserID, mediaURL, caption, collaboratorID string) (string, error) {
+	body := map[string]interface{}{"image_url": mediaURL, "caption": caption, "collaborators": []string{collaboratorID}}
+	resp, err := c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/media", igUserID), body)
+	if err != nil { return "", err }
+	var r struct{ ID string `json:"id"` }; json.Unmarshal([]byte(resp), &r); return r.ID, nil
+}
