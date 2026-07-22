@@ -400,6 +400,8 @@ func main() {
 	mux.HandleFunc("/ai-settings", authMiddleware(handleAISettings))
 	mux.HandleFunc("/buttons-builder", authMiddleware(handleButtonsBuilder))
 	mux.HandleFunc("/warmer", authMiddleware(requireAdmin(handleWarmer)))
+	mux.HandleFunc("/flow-search", authMiddleware(handleFlowSearch))
+	mux.HandleFunc("/dark-mode", authMiddleware(handleDarkMode))
 	mux.HandleFunc("/telegram-webhook", handleTelegramWebhook)
 	mux.HandleFunc("/fb-webhook", handleFBWebhook)
 	mux.HandleFunc("/omni/inbox", authMiddleware(handleOmniInbox))
@@ -3201,4 +3203,27 @@ func handleFBWebhook(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	json.NewEncoder(w).Encode(map[string]string{"status":"ok"})
+}
+
+func handleFlowSearch(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	q := r.URL.Query().Get("q"); tag := r.URL.Query().Get("tag")
+	flows, _ := db.ListFlows(0)
+	var result []interface{}
+	for _, f := range flows {
+		if q != "" && !strings.Contains(strings.ToLower(f.Name), strings.ToLower(q)) { continue }
+		result = append(result, map[string]interface{}{"id": f.ID, "name": f.Name, "active": f.Active})
+	}
+	json.NewEncoder(w).Encode(result)
+}
+
+func handleDarkMode(w http.ResponseWriter, r *http.Request) {
+	uid := getUserID(r)
+	mode := db.GetSetting("dark_mode_"+strconv.FormatInt(uid, 10), "light")
+	if r.Method == http.MethodPost {
+		mode = r.FormValue("mode")
+		db.SetSetting("dark_mode_"+strconv.FormatInt(uid, 10), mode)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"mode": mode})
 }
