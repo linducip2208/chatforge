@@ -402,6 +402,7 @@ func main() {
 	mux.HandleFunc("/warmer", authMiddleware(requireAdmin(handleWarmer)))
 	mux.HandleFunc("/flow-search", authMiddleware(handleFlowSearch))
 	mux.HandleFunc("/dark-mode", authMiddleware(handleDarkMode))
+	mux.HandleFunc("/flow-logs", authMiddleware(handleFlowLogs))
 	mux.HandleFunc("/telegram-webhook", handleTelegramWebhook)
 	mux.HandleFunc("/fb-webhook", handleFBWebhook)
 	mux.HandleFunc("/omni/inbox", authMiddleware(handleOmniInbox))
@@ -3226,4 +3227,12 @@ func handleDarkMode(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"mode": mode})
+}
+
+func handleFlowLogs(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	idStr := r.URL.Query().Get("flow_id")
+	id, _ := strconv.ParseInt(idStr, 10, 64)
+	logs, _ := db.GetFlowExecutionLog(id, 50)
+	json.NewEncoder(w).Encode(logs)
 }

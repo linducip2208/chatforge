@@ -127,7 +127,28 @@ func (d *DB) migrateFlowStats() error {
 	d.sql.Exec(`CREATE TABLE IF NOT EXISTS flow_stats (flow_id BIGINT NOT NULL PRIMARY KEY, trigger_count INT DEFAULT 0, completion_count INT DEFAULT 0) ENGINE=InnoDB`)
 	d.sql.Exec(`CREATE TABLE IF NOT EXISTS flow_node_hits (flow_id BIGINT NOT NULL, node_id VARCHAR(64) NOT NULL, hit_count INT DEFAULT 0, PRIMARY KEY(flow_id, node_id)) ENGINE=InnoDB`)
 	d.sql.Exec(`CREATE TABLE IF NOT EXISTS flow_counters (counter_key VARCHAR(255) NOT NULL PRIMARY KEY, count_value INT DEFAULT 0) ENGINE=InnoDB`)
+	d.sql.Exec(`CREATE TABLE IF NOT EXISTS flow_execution_log (id BIGINT AUTO_INCREMENT PRIMARY KEY, flow_id BIGINT NOT NULL, flow_name VARCHAR(255), phone VARCHAR(64), `+"`trigger`"+` VARCHAR(32), nodes_visited INT DEFAULT 0, replies_count INT DEFAULT 0, status VARCHAR(20) DEFAULT 'completed', error_msg TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, INDEX idx_fel_flow(flow_id)) ENGINE=InnoDB`)
 	return nil
+}
+
+func (d *DB) LogFlowExecution(flowID int64, flowName, phone, trigger string, nodesVisited, repliesCount int, status, errMsg string) {
+	d.sql.Exec(`INSERT INTO flow_execution_log (flow_id, flow_name, phone, `+"`trigger`"+`, nodes_visited, replies_count, status, error_msg) VALUES (?,?,?,?,?,?,?,?)`, flowID, flowName, phone, trigger, nodesVisited, repliesCount, status, errMsg)
+}
+
+func (d *DB) GetFlowExecutionLog(flowID int64, limit int) ([]map[string]interface{}, error) {
+	if limit <= 0 { limit = 50 }
+	rows, err := d.sql.Query(`SELECT flow_name, phone, `+"`trigger`"+`, nodes_visited, replies_count, status, created_at FROM flow_execution_log WHERE flow_id=? ORDER BY id DESC LIMIT ?`, flowID, limit)
+	if err != nil { return nil, err }
+	defer rows.Close()
+	var out []map[string]interface{}
+	for rows.Next() {
+		var name, phone, trig, status string
+		var nodes, replies int
+		var created string
+		rows.Scan(&name, &phone, &trig, &nodes, &replies, &status, &created)
+		out = append(out, map[string]interface{}{"flow": name, "phone": phone, "trigger": trig, "nodes": nodes, "replies": replies, "status": status, "time": created})
+	}
+	return out, nil
 }
 func (d *DB) IncFlowTrigger(fid int64) { d.sql.Exec(`INSERT INTO flow_stats (flow_id,trigger_count) VALUES (?,1) ON DUPLICATE KEY UPDATE trigger_count=trigger_count+1`, fid) }
 func (d *DB) IncFlowComplete(fid int64) { d.sql.Exec(`INSERT INTO flow_stats (flow_id,completion_count) VALUES (?,1) ON DUPLICATE KEY UPDATE completion_count=completion_count+1`, fid) }
