@@ -396,6 +396,9 @@ func main() {
 	mux.HandleFunc("/ig-webhook", handleIGWebhook)
 	mux.HandleFunc("/admin/instagram", authMiddleware(requireAdmin(handleIGInbox)))
 	mux.HandleFunc("/telegram-webhook", handleTelegramWebhook)
+	mux.HandleFunc("/omni/inbox", authMiddleware(handleOmniInbox))
+	mux.HandleFunc("/omni/analytics", authMiddleware(handleOmniAnalytics))
+	mux.HandleFunc("/omni/handoff", authMiddleware(handleOmniHandoff))
 
 	// Template edit
 	mux.HandleFunc("/templates/edit", authMiddleware(handleTemplateEdit))
@@ -3029,3 +3032,71 @@ func handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 
 
 
+
+func handleOmniInbox(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	channel := r.URL.Query().Get("channel")
+	var conversations []map[string]interface{}
+
+	// WhatsApp conversations
+	if channel == "" || channel == "wa" {
+		recv, _ := db.ListReceivedPaginated(1, 50)
+		for _, msg := range recv {
+			conversations = append(conversations, map[string]interface{}{
+				"id": msg.ID, "phone": msg.Phone, "message": msg.Message,
+				"channel": "wa", "time": msg.Created, "name": msg.Name,
+			})
+		}
+	}
+
+	// Instagram conversations (from Meta accounts)
+	if channel == "" || channel == "ig" {
+		accounts, _ := db.ListMetaAccounts()
+		for _, acc := range accounts {
+			mc := meta.New(acc.PhoneNumberID, decryptOrPlain(acc.AccessToken), acc.VerifyToken)
+			convs, _ := mc.GetIGConversations()
+			for _, c := range convs {
+				conversations = append(conversations, map[string]interface{}{
+					"channel": "ig", "data": c,
+				})
+			}
+		}
+	}
+
+	json.NewEncoder(w).Encode(conversations)
+}
+
+func handleOmniAnalytics(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	waSent := db.CountSent()
+	waRecv := db.CountReceived()
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"channels": map[string]interface{}{
+			"whatsapp": map[string]int{"sent": waSent, "received": waRecv},
+			"instagram": map[string]int{"sent": 0, "received": 0},
+			"telegram": map[string]int{"sent": 0, "received": 0},
+		},
+		"total": map[string]int{
+			"sent": waSent, "received": waRecv,
+		},
+	})
+}
+
+func handleOmniHandoff(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	fromChannel := r.FormValue("from")
+	toChannel := r.FormValue("to")
+	phone := r.FormValue("phone")
+	message := r.FormValue("message")
+
+	if toChannel == "wa" && phone != "" {
+		engine.SendFrom(0, "", phone,
+			fmt.Sprintf("🔀 Handoff dari %s:\n%s\n\nSilakan dibantu.", fromChannel, message))
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "handoff_initiated",
+		"from":   fromChannel,
+		"to":     toChannel,
+	})
+}
