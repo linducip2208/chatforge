@@ -3043,10 +3043,21 @@ func handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 	// Flow builder integration
 	if wa.TGCallback != nil {
 		if replies, matched := wa.TGCallback(0, chatID, text, name); matched {
-			for _, reply := range replies {
-				if reply.Text != "" { bot.SendMessage(update.Message.Chat.ID, reply.Text) }
+				for _, reply := range replies {
+					switch reply.Action {
+					case "tg_keyboard":
+						buttons := []telegram.InlineKeyboardButton{}
+						for _, b := range strings.Split(reply.Text, ",") {
+							buttons = append(buttons, telegram.InlineKeyboardButton{Text: b, CallbackData: b})
+						}
+						bot.SendInlineKeyboard(update.Message.Chat.ID, reply.ActionData["text"].(string), [][]telegram.InlineKeyboardButton{buttons})
+					case "tg_payment":
+						bot.SendMessage(update.Message.Chat.ID, fmt.Sprintf("💳 %s: %s %s", reply.Text, reply.ActionData["amount"], reply.ActionData["currency"]))
+					default:
+						if reply.Text != "" { bot.SendMessage(update.Message.Chat.ID, reply.Text) }
+					}
+				}
 			}
-		}
 	}
 
 	json.NewEncoder(w).Encode(map[string]string{"status":"ok"})
