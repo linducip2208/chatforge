@@ -3207,7 +3207,7 @@ func handleFBWebhook(w http.ResponseWriter, r *http.Request) {
 
 func handleFlowSearch(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	q := r.URL.Query().Get("q"); tag := r.URL.Query().Get("tag")
+	q := r.URL.Query().Get("q")
 	flows, _ := db.ListFlows(0)
 	var result []interface{}
 	for _, f := range flows {
