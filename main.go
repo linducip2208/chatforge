@@ -881,6 +881,13 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.InboxConversations, _ = db.GroupInboxPaginated(uid, d.PageNum, 10)
 		d.InboxTotal = db.CountInbox(uid)
 		d.InboxPages = pageNums(d.PageNum, (d.InboxTotal+9)/10)
+	case "omni_inbox":
+		recv, _ := db.ListReceivedPaginated(1, 50)
+		for _, msg := range recv {
+			d.InboxConversations = append(d.InboxConversations, store.InboxConversation{
+				Phone: msg.Phone, Name: msg.Name,
+			})
+		}
 		d.Statuses, _ = db.ListStatuses()
 		d.Canned, _ = db.ListCanned()
 	case "inbox_chat":
@@ -1033,6 +1040,8 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Live Chat", "Messaging", "Percakapan", "la-comments"
 	case "inbox_chat":
 		d.Title, d.Pretitle, d.Heading, d.Icon = "Live Chat", "Messaging", "Percakapan", "la-comment"
+	case "omni_inbox":
+		d.Title, d.Pretitle, d.Heading, d.Icon = "Omnichannel", "Messaging", "Semua Channel", "la-globe"
 	case "settings":
 		d.Title, d.Pretitle, d.Heading, d.Icon = T("nav_settings"), T("nav_tools"), T("nav_settings"), "la-cog"
 	case "autoreply":
@@ -3075,6 +3084,11 @@ func handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 
 
 func handleOmniInbox(w http.ResponseWriter, r *http.Request) {
+	accept := r.Header.Get("Accept")
+	if strings.Contains(accept, "text/html") {
+		render(w, r, "omni_inbox")
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	channel := r.URL.Query().Get("channel")
 	var conversations []map[string]interface{}
