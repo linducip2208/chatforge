@@ -636,7 +636,7 @@ func (d *DB) GetActiveSubscription(userID int64) (*Subscription, error) {
 	return &s, nil
 }
 func (d *DB) ListSubscriptions() ([]Subscription, error) {
-	rows, err := d.sql.Query(`SELECT id, COALESCE(NULLIF(user_id,0), user) as uid, COALESCE(NULLIF(package_id,0), pkg) as pid, IFNULL(expire,''), created_at FROM subscriptions ORDER BY id DESC`)
+	rows, err := d.sql.Query(`SELECT s.id, COALESCE(u.name, u.email, s.user) as uname, COALESCE(p.name, s.pkg) as pname, IFNULL(s.expire,''), s.created_at FROM subscriptions s LEFT JOIN users u ON s.user_id=u.id LEFT JOIN packages p ON s.package_id=p.id ORDER BY s.id DESC`)
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []Subscription
@@ -646,6 +646,11 @@ func (d *DB) ListSubscriptions() ([]Subscription, error) {
 		out = append(out, x)
 	}
 	return out, nil
+}
+
+func (d *DB) UpdateSubscription(id int64, userID, packageID int64, expire string) error {
+	_, err := d.sql.Exec(`UPDATE subscriptions SET user_id=?, package_id=?, expire=? WHERE id=?`, userID, packageID, expire, id)
+	return err
 }
 
 // Transactions

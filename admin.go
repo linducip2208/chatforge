@@ -241,6 +241,19 @@ func registerAdminRoutes(mux *http.ServeMux) {
 		http.Redirect(w, r, "/admin/subscriptions", http.StatusSeeOther)
 	}))
 	mux.HandleFunc("/admin/subscriptions/delete", acd(func(id int64) { db.DeleteSubscription(id) }, "/admin/subscriptions"))
+	mux.HandleFunc("/admin/subscriptions/edit", a(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Redirect(w, r, "/admin/subscriptions", http.StatusSeeOther)
+			return
+		}
+		id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+		userID, _ := strconv.ParseInt(r.FormValue("user_id"), 10, 64)
+		pkgID, _ := strconv.ParseInt(r.FormValue("package_id"), 10, 64)
+		if id > 0 {
+			db.UpdateSubscription(id, userID, pkgID, r.FormValue("expire"))
+		}
+		http.Redirect(w, r, "/admin/subscriptions", http.StatusSeeOther)
+	}))
 	mux.HandleFunc("/admin/transactions", ap("admin_transactions"))
 	mux.HandleFunc("/admin/payouts", ap("admin_payouts"))
 	mux.HandleFunc("/admin/payouts/delete", acd(func(id int64) { db.DeletePayout(id) }, "/admin/payouts"))
