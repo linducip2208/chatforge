@@ -25,6 +25,7 @@ import (
 	"chatgo/secret"
 	"chatgo/store"
 	"chatgo/wa"
+	"chatgo/telegram"
 
 	qrcode "github.com/skip2/go-qrcode"
 )
@@ -3017,9 +3018,28 @@ func handleIGInbox(w http.ResponseWriter, r *http.Request) {
 func handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	body, _ := io.ReadAll(r.Body)
-	var update map[string]interface{}
-	json.Unmarshal(body, &update)
-	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	token := db.GetSetting("telegram_token", "")
+	if token == "" { json.NewEncoder(w).Encode(map[string]string{"status":"no_token"}); return }
+	bot := telegram.New(token)
+	update, err := telegram.ParseUpdate(body)
+	if err != nil || update == nil { json.NewEncoder(w).Encode(map[string]string{"status":"invalid"}); return }
+
+	chatID := strconv.FormatInt(update.Message.Chat.ID, 10)
+	text := update.Message.Text
+	name := update.Message.Chat.FirstName
+
+	db.LogReceivedForWA("tg", chatID, name, text, false, "", "", "telegram")
+
+	// Flow builder integration
+	if wa.MetaFlowCallback != nil {
+		if replies, matched := wa.MetaFlowCallback(0, "tg", chatID, text, name); matched {
+			for _, reply := range replies {
+				if reply.Text != "" { bot.SendMessage(update.Message.Chat.ID, reply.Text) }
+			}
+		}
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{"status":"ok"})
 }
 
 
