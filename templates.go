@@ -348,6 +348,7 @@ if(a){var t=a.offsetTop-s.offsetHeight/2;if(t>0)s.scrollTop=t}
   <li class="nav-item"><a class="nav-link {{if eq .Active "wa"}}active{{end}}" href="/wa"><i class="la la-whatsapp la-lg"></i> {{T "nav_wa_unofficial"}}</a></li>
   <li class="nav-item" style="padding-left:16px"><a class="nav-link {{if eq .Active "wa"}}active{{end}}" href="/wa"><i class="la la-qrcode la-lg"></i> {{T "nav_account_qr"}}</a></li>
   <li class="nav-item" style="padding-left:16px"><a class="nav-link {{if eq .Active "hosts_whatsapp"}}active{{end}}" href="/hosts/whatsapp"><i class="la la-server la-lg"></i> {{T "nav_devices"}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "warmer"}}active{{end}}" href="/warmer"><i class="la la-fire la-lg"></i> WA Warmer</a></li>
   <li class="nav-item"><a class="nav-link {{if eq .Active "admin_meta"}}active{{end}}" href="/admin/meta"><i class="la la-cloud la-lg"></i> {{T "nav_meta_api"}}<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;padding:2px 5px;border-radius:3px">META</span></a></li>
   <li class="nav-item" style="padding-left:16px"><a class="nav-link {{if eq .Active "admin_metatemplates"}}active{{end}}" href="/admin/metatemplates"><i class="la la-file-alt la-lg"></i> {{T "nav_meta_templates"}}</a></li>
   <li class="nav-item" style="padding-left:16px"><a class="nav-link {{if eq .Active "meta_webhook"}}active{{end}}" href="/meta/webhook"><i class="la la-link la-lg"></i> {{T "nav_meta_webhook"}}</a></li>
@@ -380,6 +381,10 @@ if(a){var t=a.offsetTop-s.offsetHeight/2;if(t>0)s.scrollTop=t}
 {{template "sgroup" dict "id" "automation" "icon" "la-robot" "label" (T "sg_automation")}}
   <li class="nav-item"><a class="nav-link {{if eq .Active "autoreply"}}active{{end}}" href="/autoreply"><i class="la la-reply la-lg"></i> {{T "nav_autoreply"}}</a></li>
   <li class="nav-item"><a class="nav-link {{if eq .Active "flowbuilder"}}active{{end}}" href="/pro/flow-builder"><i class="la la-project-diagram la-lg"></i> Flow Builder</a></li>
+  <li class="nav-item" style="padding-left:16px"><a class="nav-link {{if eq .Active "flowsearch"}}active{{end}}" href="/flow-search"><i class="la la-search la-lg"></i> Flow Search</a></li>
+  <li class="nav-item" style="padding-left:16px"><a class="nav-link {{if eq .Active "flowlogs"}}active{{end}}" href="/flow-logs"><i class="la la-history la-lg"></i> Flow Logs</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "buttonsbuilder"}}active{{end}}" href="/buttons-builder"><i class="la la-th-large la-lg"></i> Buttons Builder</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "aisettings"}}active{{end}}" href="/ai-settings"><i class="la la-cog la-lg"></i> AI Settings</a></li>
   <li class="nav-item"><a class="nav-link {{if eq .Active "canned"}}active{{end}}" href="/canned"><i class="la la-comment-dots la-lg"></i> {{T "nav_canned"}}</a></li>
   <li class="nav-item"><a class="nav-link {{if eq .Active "macros"}}active{{end}}" href="/macros"><i class="la la-bolt la-lg"></i> {{T "nav_macros"}}</a></li>
   <li class="nav-item"><a class="nav-link {{if eq .Active "forms"}}active{{end}}" href="/forms"><i class="la la-wpforms la-lg"></i> {{T "nav_forms"}}</a></li>
