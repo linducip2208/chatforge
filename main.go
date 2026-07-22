@@ -397,6 +397,9 @@ func main() {
 	mux.HandleFunc("/ig-webhook", handleIGWebhook)
 	mux.HandleFunc("/admin/instagram", authMiddleware(requireAdmin(handleIGInbox)))
 	mux.HandleFunc("/agency", authMiddleware(requireAdmin(handleAgency)))
+	mux.HandleFunc("/ai-settings", authMiddleware(handleAISettings))
+	mux.HandleFunc("/buttons-builder", authMiddleware(handleButtonsBuilder))
+	mux.HandleFunc("/warmer", authMiddleware(requireAdmin(handleWarmer)))
 	mux.HandleFunc("/telegram-webhook", handleTelegramWebhook)
 	mux.HandleFunc("/omni/inbox", authMiddleware(handleOmniInbox))
 	mux.HandleFunc("/omni/analytics", authMiddleware(handleOmniAnalytics))
@@ -3137,5 +3140,38 @@ func handleAgency(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"clients": clients,
 		"total":   len(clients),
+	})
+}
+
+func handleAISettings(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	uid := getUserID(r)
+	if r.Method == http.MethodPost {
+		db.SetSetting("ai_provider_"+strconv.FormatInt(uid, 10), r.FormValue("provider"))
+		db.SetSetting("ai_model_"+strconv.FormatInt(uid, 10), r.FormValue("model"))
+		db.SetSetting("ai_temp_"+strconv.FormatInt(uid, 10), r.FormValue("temperature"))
+	}
+	json.NewEncoder(w).Encode(map[string]string{
+		"provider": db.GetSetting("ai_provider_"+strconv.FormatInt(uid, 10), "openai"),
+		"model":    db.GetSetting("ai_model_"+strconv.FormatInt(uid, 10), "gpt-4o"),
+		"temp":     db.GetSetting("ai_temp_"+strconv.FormatInt(uid, 10), "0.7"),
+	})
+}
+
+func handleButtonsBuilder(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method == http.MethodPost {
+		phone := r.FormValue("phone"); title := r.FormValue("title"); footer := r.FormValue("footer")
+		buttons := strings.Split(r.FormValue("buttons"), ",")
+		engine.SendButtons(0, "", phone, title, footer, buttons)
+	}
+	json.NewEncoder(w).Encode(map[string]string{"status": "ready"})
+}
+
+func handleWarmer(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	accounts := engine.Accounts(0)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"accounts": len(accounts), "status": "ready",
 	})
 }

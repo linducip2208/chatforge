@@ -444,7 +444,10 @@ func (c *Client) ListProducts() ([]map[string]interface{}, error) {
 }
 
 func (c *Client) UploadMedia(mediaURL string) (string, error) {
-	// Download media from URL
+	// SSRF protection: only allow same-domain or trusted hosts
+	if strings.Contains(mediaURL, "localhost") || strings.Contains(mediaURL, "127.0.0.1") || strings.Contains(mediaURL, "169.254") || strings.Contains(mediaURL, "10.") || strings.Contains(mediaURL, "192.168") {
+		return "", fmt.Errorf("SSRF blocked: internal URL")
+	}
 	resp, err := c.HTTP.Get(mediaURL)
 	if err != nil { return "", fmt.Errorf("download failed: %v", err) }
 	defer resp.Body.Close()
