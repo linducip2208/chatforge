@@ -1219,3 +1219,22 @@ func (c *Client) SendBroadcastMessage(channelID, message string) (string, error)
 	}
 	return c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/messages", channelID), body)
 }
+
+// ── Facebook Messenger ──
+func (c *Client) SendFBMessage(to, message string) (string, error) {
+	body := map[string]interface{}{
+		"recipient": map[string]string{"id": to},
+		"message":   map[string]string{"text": message},
+		"messaging_type": "RESPONSE",
+	}
+	return c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/messages", c.PhoneNumberID), body)
+}
+
+func (c *Client) SendFBMedia(to, mediaURL, mediaType string) (string, error) {
+	body := map[string]interface{}{
+		"recipient": map[string]string{"id": to},
+		"message":   map[string]interface{}{"attachment": map[string]interface{}{"type": mediaType, "payload": map[string]string{"url": mediaURL}}},
+		"messaging_type": "RESPONSE",
+	}
+	return c.doPostWithURL(fmt.Sprintf("https://graph.facebook.com/v22.0/%s/messages", c.PhoneNumberID), body)
+}

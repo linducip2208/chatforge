@@ -401,6 +401,7 @@ func main() {
 	mux.HandleFunc("/buttons-builder", authMiddleware(handleButtonsBuilder))
 	mux.HandleFunc("/warmer", authMiddleware(requireAdmin(handleWarmer)))
 	mux.HandleFunc("/telegram-webhook", handleTelegramWebhook)
+	mux.HandleFunc("/fb-webhook", handleFBWebhook)
 	mux.HandleFunc("/omni/inbox", authMiddleware(handleOmniInbox))
 	mux.HandleFunc("/omni/analytics", authMiddleware(handleOmniAnalytics))
 	mux.HandleFunc("/omni/handoff", authMiddleware(handleOmniHandoff))
@@ -2995,8 +2996,8 @@ func handleIGWebhook(w http.ResponseWriter, r *http.Request) {
 		mc := meta.New(acc.PhoneNumberID, decryptOrPlain(acc.AccessToken), acc.VerifyToken)
 		for _, m := range msgs {
 			db.LogReceivedForWA(acc.PhoneNumberID, m.From, "", m.Text.Body, false, "", "", "instagram")
-			if wa.MetaFlowCallback != nil {
-				if replies, matched := wa.MetaFlowCallback(acc.UserID, acc.PhoneNumberID, m.From, m.Text.Body, ""); matched {
+			if wa.IGCallback != nil {
+				if replies, matched := wa.IGCallback(acc.UserID, m.From, m.Text.Body, ""); matched {
 					for _, reply := range replies {
 						if reply.Text != "" { mc.SendIGMessage(m.From, reply.Text) }
 					}
@@ -3035,8 +3036,8 @@ func handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 	db.LogReceivedForWA("tg", chatID, name, text, false, "", "", "telegram")
 
 	// Flow builder integration
-	if wa.MetaFlowCallback != nil {
-		if replies, matched := wa.MetaFlowCallback(0, "tg", chatID, text, name); matched {
+	if wa.TGCallback != nil {
+		if replies, matched := wa.TGCallback(0, chatID, text, name); matched {
 			for _, reply := range replies {
 				if reply.Text != "" { bot.SendMessage(update.Message.Chat.ID, reply.Text) }
 			}
@@ -3174,4 +3175,30 @@ func handleWarmer(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"accounts": len(accounts), "status": "ready",
 	})
+}
+
+func handleFBWebhook(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method == "GET" {
+		mode := r.URL.Query().Get("hub.mode"); challenge := r.URL.Query().Get("hub.challenge")
+		if mode == "subscribe" { fmt.Fprint(w, challenge) }; return
+	}
+	body, _ := io.ReadAll(r.Body)
+	msgs, ok := meta.ParseIGWebhook(body)
+	if !ok { json.NewEncoder(w).Encode(map[string]string{"status":"no_messages"}); return }
+	accounts, _ := db.ListMetaAccounts()
+	for _, acc := range accounts {
+		mc := meta.New(acc.PhoneNumberID, decryptOrPlain(acc.AccessToken), acc.VerifyToken)
+		for _, m := range msgs {
+			db.LogReceivedForWA(acc.PhoneNumberID, m.From, "", m.Text.Body, false, "", "", "facebook")
+			if wa.FBCallback != nil {
+				if replies, matched := wa.FBCallback(acc.UserID, m.From, m.Text.Body, ""); matched {
+					for _, reply := range replies {
+						if reply.Text != "" { mc.SendFBMessage(m.From, reply.Text) }
+					}
+				}
+			}
+		}
+	}
+	json.NewEncoder(w).Encode(map[string]string{"status":"ok"})
 }

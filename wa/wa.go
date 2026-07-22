@@ -52,6 +52,9 @@ type FlowCallbacks struct {
 }
 
 var MetaFlowCallback func(uid int64, accountPhone, phone, message, name string) (replies []FlowReply, matched bool)
+var TGCallback func(uid int64, phone, message, name string) (replies []FlowReply, matched bool)
+var IGCallback func(uid int64, phone, message, name string) (replies []FlowReply, matched bool)
+var FBCallback func(uid int64, phone, message, name string) (replies []FlowReply, matched bool)
 
 type FlowReply struct {
 	Text       string
