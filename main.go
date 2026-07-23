@@ -396,8 +396,12 @@ func main() {
 	mux.HandleFunc("/n8n-webhook", handleN8NWebhook)
 	mux.HandleFunc("/n8n-node-definition", handleN8NNodeDefinition)
 	mux.HandleFunc("/n8n-templates", handleN8NTemplates)
-	mux.HandleFunc("/ig-webhook", handleIGWebhook)
-	mux.HandleFunc("/admin/instagram", authMiddleware(requireAdmin(handleIGInbox)))
+	if isProBuild() {
+		mux.HandleFunc("/ig-webhook", handleIGWebhook)
+		mux.HandleFunc("/admin/instagram", authMiddleware(requireAdmin(handleIGInbox)))
+		mux.HandleFunc("/telegram-webhook", handleTelegramWebhook)
+		mux.HandleFunc("/fb-webhook", handleFBWebhook)
+	}
 	mux.HandleFunc("/agency", authMiddleware(requireAdmin(handleAgency)))
 	mux.HandleFunc("/ai-settings", authMiddleware(handleAISettings))
 	mux.HandleFunc("/buttons-builder", authMiddleware(handleButtonsBuilder))
@@ -408,8 +412,6 @@ func main() {
 	mux.HandleFunc("/flow-logs", authMiddleware(handleFlowLogs))
 	mux.HandleFunc("/healthz", handleHealthz)
 	mux.HandleFunc("/backup-schedule", authMiddleware(requireAdmin(handleBackupSchedule)))
-	mux.HandleFunc("/telegram-webhook", handleTelegramWebhook)
-	mux.HandleFunc("/fb-webhook", handleFBWebhook)
 	mux.HandleFunc("/omni/inbox", authMiddleware(handleOmniInbox))
 	mux.HandleFunc("/omni/analytics", authMiddleware(handleOmniAnalytics))
 	mux.HandleFunc("/omni/handoff", authMiddleware(handleOmniHandoff))
@@ -3031,6 +3033,7 @@ func handleMetaInsights(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleIGWebhook(w http.ResponseWriter, r *http.Request) {
+	if !isProBuild() { http.Error(w, "Pro feature", 402); return }
 	if r.Method == "GET" {
 		mode := r.URL.Query().Get("hub.mode")
 		challenge := r.URL.Query().Get("hub.challenge")
@@ -3058,6 +3061,7 @@ func handleIGWebhook(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleIGInbox(w http.ResponseWriter, r *http.Request) {
+	if !isProBuild() { http.Error(w, "Pro feature", 402); return }
 	w.Header().Set("Content-Type", "application/json")
 	accounts, _ := db.ListMetaAccounts()
 	var result []map[string]interface{}
@@ -3070,6 +3074,7 @@ func handleIGInbox(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
+	if !isProBuild() { http.Error(w, "Pro feature", 402); return }
 	w.Header().Set("Content-Type", "application/json")
 	body, _ := io.ReadAll(r.Body)
 	token := db.GetSetting("telegram_token", "")
@@ -3297,6 +3302,7 @@ func handleWarmer(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleFBWebhook(w http.ResponseWriter, r *http.Request) {
+	if !isProBuild() { http.Error(w, "Pro feature", 402); return }
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "GET" {
 		mode := r.URL.Query().Get("hub.mode"); challenge := r.URL.Query().Get("hub.challenge")
