@@ -63,14 +63,14 @@ func handleAPIMessages(w http.ResponseWriter, r *http.Request) {
 
 	switch t {
 	case "sent":
-		list, _ := db.ListSentPaginated(page, perPage)
-		writeAPIOK(w, map[string]interface{}{"type": "sent", "page": page, "data": list, "total": db.CountSent()})
+		list, _ := db.ListSentPaginated(0, page, perPage)
+		writeAPIOK(w, map[string]interface{}{"type": "sent", "page": page, "data": list, "total": db.CountSent(0)})
 	case "received":
-		list, _ := db.ListReceivedPaginated(page, perPage)
-		writeAPIOK(w, map[string]interface{}{"type": "received", "page": page, "data": list, "total": db.CountReceived()})
+		list, _ := db.ListReceivedPaginated(0, page, perPage)
+		writeAPIOK(w, map[string]interface{}{"type": "received", "page": page, "data": list, "total": db.CountReceived(0)})
 	default:
-		sent, _ := db.ListSentPaginated(1, 10)
-		recv, _ := db.ListReceivedPaginated(1, 10)
+		sent, _ := db.ListSentPaginated(0, 1, 10)
+		recv, _ := db.ListReceivedPaginated(0, 1, 10)
 		writeAPIOK(w, map[string]interface{}{"sent": sent, "received": recv})
 	}
 }

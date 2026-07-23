@@ -325,7 +325,7 @@ if(a){var t=a.offsetTop-s.offsetHeight/2;if(t>0)s.scrollTop=t}
 {{template "egroup"}}
 
 {{template "sgroup" dict "id" "inbox" "icon" "la-comments" "label" (T "sg_inbox") "open" true}}
-  <li class="nav-item"><a class="nav-link {{if eq .Active "inbox"}}active{{end}}" href="/inbox"><i class="la la-inbox la-lg"></i> {{T "nav_inbox"}}{{if gt .UnreadCount 0}} <span class="badge badge-pill badge-danger ml-1">{{.UnreadCount}}</span>{{end}}</a></li>
+  <li class="nav-item"><a class="nav-link {{if eq .Active "omni_inbox"}}active{{end}}" href="/omni/inbox"><i class="la la-inbox la-lg"></i> {{T "nav_inbox"}}{{if gt .UnreadCount 0}} <span class="badge badge-pill badge-danger ml-1">{{.UnreadCount}}</span>{{end}}</a></li>
 {{template "egroup"}}
 
 {{template "sgroup" dict "id" "contacts" "icon" "la-address-book" "label" (T "sg_contacts")}}
@@ -337,9 +337,15 @@ if(a){var t=a.offsetTop-s.offsetHeight/2;if(t>0)s.scrollTop=t}
 {{template "egroup"}}
 
 {{template "sgroup" dict "id" "broadcast" "icon" "la-bullhorn" "label" (T "sg_broadcast")}}
+{{if hasService .UserPackageServices "broadcast" .IsAdmin}}
   <li class="nav-item"><a class="nav-link {{if eq .Active "broadcast"}}active{{end}}" href="/broadcast"><i class="la la-paper-plane la-lg"></i> {{T "nav_broadcast"}}<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;padding:2px 5px;border-radius:3px">META</span></a></li>
+{{end}}
+{{if hasService .UserPackageServices "drips" .IsAdmin}}
   <li class="nav-item"><a class="nav-link {{if eq .Active "drips"}}active{{end}}" href="/drips"><i class="la la-tint la-lg"></i> {{T "nav_drips"}}</a></li>
+{{end}}
+{{if hasService .UserPackageServices "recurring" .IsAdmin}}
   <li class="nav-item"><a class="nav-link {{if eq .Active "recurring"}}active{{end}}" href="/recurring"><i class="la la-redo-alt la-lg"></i> {{T "nav_recurring"}}</a></li>
+{{end}}
   <li class="nav-item"><a class="nav-link {{if eq .Active "scheduled"}}active{{end}}" href="/scheduled"><i class="la la-clock la-lg"></i> {{T "nav_scheduled"}}</a></li>
   <li class="nav-item"><a class="nav-link {{if eq .Active "abtests"}}active{{end}}" href="/ab-tests"><i class="la la-balance-scale la-lg"></i> {{T "nav_abtest"}}</a></li>
 {{template "egroup"}}
@@ -364,7 +370,6 @@ if(a){var t=a.offsetTop-s.offsetHeight/2;if(t>0)s.scrollTop=t}
 {{template "egroup"}}
 
 {{template "sgroup" dict "id" "omni" "icon" "la-globe" "label" "Omnichannel"}}
-  <li class="nav-item"><a class="nav-link {{if eq .Active "omni_inbox"}}active{{end}}" href="/omni/inbox"><i class="la la-comments la-lg"></i> Unified Inbox<span class="badge ms-1" style="background:#10B981;color:#fff;font-size:8px">NEW</span></a></li>
   <li class="nav-item"><a class="nav-link {{if eq .Active "omni_analytics"}}active{{end}}" href="/omni/analytics"><i class="la la-chart-bar la-lg"></i> Analytics<span class="badge ms-1" style="background:#10B981;color:#fff;font-size:8px">NEW</span></a></li>
 {{template "egroup"}}
 
@@ -379,23 +384,39 @@ if(a){var t=a.offsetTop-s.offsetHeight/2;if(t>0)s.scrollTop=t}
 {{template "egroup"}}
 
 {{template "sgroup" dict "id" "automation" "icon" "la-robot" "label" (T "sg_automation")}}
+{{if hasService .UserPackageServices "ai" .IsAdmin}}
   <li class="nav-item"><a class="nav-link {{if eq .Active "autoreply"}}active{{end}}" href="/autoreply"><i class="la la-reply la-lg"></i> {{T "nav_autoreply"}}</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "flowbuilder"}}active{{end}}" href="/pro/flow-builder"><i class="la la-project-diagram la-lg"></i> Flow Builder</a></li>
+{{if .IsPro}}
+  <li class="nav-item"><a class="nav-link" href="/pro/flow-builder" target="_blank"><i class="la la-project-diagram la-lg"></i> Flow Builder <i class="la la-external-link" style="font-size:10px"></i></a></li>
   <li class="nav-item" style="padding-left:16px"><a class="nav-link {{if eq .Active "flowsearch"}}active{{end}}" href="/flow-search"><i class="la la-search la-lg"></i> Flow Search</a></li>
   <li class="nav-item" style="padding-left:16px"><a class="nav-link {{if eq .Active "flowlogs"}}active{{end}}" href="/flow-logs"><i class="la la-history la-lg"></i> Flow Logs</a></li>
   <li class="nav-item"><a class="nav-link {{if eq .Active "buttonsbuilder"}}active{{end}}" href="/buttons-builder"><i class="la la-th-large la-lg"></i> Buttons Builder</a></li>
+{{end}}
   <li class="nav-item"><a class="nav-link {{if eq .Active "aisettings"}}active{{end}}" href="/ai-settings"><i class="la la-cog la-lg"></i> AI Settings</a></li>
+{{end}}
+{{if hasService .UserPackageServices "canned" .IsAdmin}}
   <li class="nav-item"><a class="nav-link {{if eq .Active "canned"}}active{{end}}" href="/canned"><i class="la la-comment-dots la-lg"></i> {{T "nav_canned"}}</a></li>
+{{end}}
+{{if hasService .UserPackageServices "macros" .IsAdmin}}
   <li class="nav-item"><a class="nav-link {{if eq .Active "macros"}}active{{end}}" href="/macros"><i class="la la-bolt la-lg"></i> {{T "nav_macros"}}</a></li>
+{{end}}
+{{if hasService .UserPackageServices "forms" .IsAdmin}}
   <li class="nav-item"><a class="nav-link {{if eq .Active "forms"}}active{{end}}" href="/forms"><i class="la la-wpforms la-lg"></i> {{T "nav_forms"}}</a></li>
+{{end}}
+{{if hasService .UserPackageServices "reminders" .IsAdmin}}
   <li class="nav-item"><a class="nav-link {{if eq .Active "reminders"}}active{{end}}" href="/reminders"><i class="la la-bell la-lg"></i> {{T "nav_reminders"}}</a></li>
+{{end}}
+{{if hasService .UserPackageServices "translate" .IsAdmin}}
   <li class="nav-item"><a class="nav-link {{if eq .Active "translate"}}active{{end}}" href="/translate-tool"><i class="la la-language la-lg"></i> {{T "nav_translate"}}</a></li>
+{{end}}
   <li class="nav-item"><a class="nav-link {{if eq .Active "widget"}}active{{end}}" href="/widget-info"><i class="la la-code la-lg"></i> {{T "nav_widget"}}</a></li>
 {{template "egroup"}}
 
 {{template "sgroup" dict "id" "commerce" "icon" "la-store" "label" (T "sg_commerce")}}
+{{if hasService .UserPackageServices "store" .IsAdmin}}
   <li class="nav-item"><a class="nav-link {{if eq .Active "store"}}active{{end}}" href="/store"><i class="la la-store la-lg"></i> {{T "nav_store"}}</a></li>
   <li class="nav-item"><a class="nav-link {{if eq .Active "orders"}}active{{end}}" href="/store/orders"><i class="la la-shopping-bag la-lg"></i> {{T "nav_orders"}}</a></li>
+{{end}}
 {{template "egroup"}}
 
 {{if .IsAdmin}}
@@ -422,9 +443,15 @@ if(a){var t=a.offsetTop-s.offsetHeight/2;if(t>0)s.scrollTop=t}
 {{template "egroup"}}
 
 {{template "sgroup" dict "id" "admin_system" "icon" "la-server" "label" (T "sg_system")}}
+{{if hasService .UserPackageServices "backup" .IsAdmin}}
   <li class="nav-item"><a class="nav-link {{if eq .Active "backup"}}active{{end}}" href="/backup"><i class="la la-database la-lg"></i> {{T "nav_backup"}}</a></li>
+{{end}}
+{{if hasService .UserPackageServices "audit" .IsAdmin}}
   <li class="nav-item"><a class="nav-link {{if eq .Active "audit"}}active{{end}}" href="/audit"><i class="la la-history la-lg"></i> {{T "nav_audit"}}</a></li>
+{{end}}
+{{if hasService .UserPackageServices "logger" .IsAdmin}}
   <li class="nav-item"><a class="nav-link {{if eq .Active "logger"}}active{{end}}" href="/logger"><i class="la la-clipboard-list la-lg"></i> {{T "nav_logger"}}</a></li>
+{{end}}
 {{template "egroup"}}
 
 {{template "sgroup" dict "id" "admin_content" "icon" "la-file" "label" (T "sg_content")}}
@@ -439,13 +466,31 @@ if(a){var t=a.offsetTop-s.offsetHeight/2;if(t>0)s.scrollTop=t}
   <li class="nav-item"><a class="nav-link {{if eq .Active "admin_shorteners"}}active{{end}}" href="/admin/shorteners"><i class="la la-link la-lg"></i> {{T "adm_shorteners"}}</a></li>
   <li class="nav-item"><a class="nav-link {{if eq .Active "admin_plugins"}}active{{end}}" href="/admin/plugins"><i class="la la-puzzle-piece la-lg"></i> {{T "adm_plugins"}}</a></li>
 {{template "egroup"}}
+{{end}}
 
 {{template "sgroup" dict "id" "reports" "icon" "la-chart-pie" "label" (T "sg_reports")}}
+{{if hasService .UserPackageServices "analytics" .IsAdmin}}
   <li class="nav-item"><a class="nav-link {{if eq .Active "analytics"}}active{{end}}" href="/analytics"><i class="la la-chart-pie la-lg"></i> {{T "nav_analytics"}}</a></li>
   <li class="nav-item"><a class="nav-link {{if eq .Active "meta_analytics"}}active{{end}}" href="/meta/analytics"><i class="la la-chart-bar la-lg"></i> {{T "nav_meta_stats"}}<span class="badge ms-1" style="background:#4F46E5;color:#fff;font-size:8px;padding:2px 5px;border-radius:3px">META</span></a></li>
+{{end}}
+{{if hasService .UserPackageServices "csat" .IsAdmin}}
   <li class="nav-item"><a class="nav-link {{if eq .Active "csat"}}active{{end}}" href="/csat"><i class="la la-star la-lg"></i> {{T "nav_csat"}}</a></li>
+{{end}}
 {{template "egroup"}}
 
+{{template "sgroup" dict "id" "admin_system" "icon" "la-server" "label" (T "sg_system")}}
+{{if hasService .UserPackageServices "backup" .IsAdmin}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "backup"}}active{{end}}" href="/backup"><i class="la la-database la-lg"></i> {{T "nav_backup"}}</a></li>
+{{end}}
+{{if hasService .UserPackageServices "audit" .IsAdmin}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "audit"}}active{{end}}" href="/audit"><i class="la la-history la-lg"></i> {{T "nav_audit"}}</a></li>
+{{end}}
+{{if hasService .UserPackageServices "logger" .IsAdmin}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "logger"}}active{{end}}" href="/logger"><i class="la la-clipboard-list la-lg"></i> {{T "nav_logger"}}</a></li>
+{{end}}
+{{template "egroup"}}
+
+{{if .IsAdmin}}
 {{template "sgroup" dict "id" "settings" "icon" "la-cog" "label" (T "sg_settings")}}
   <li class="nav-item"><a class="nav-link {{if eq .Active "settings"}}active{{end}}" href="/settings"><i class="la la-cog la-lg"></i> {{T "nav_general"}}</a></li>
   <li class="nav-item"><a class="nav-link {{if eq .Active "templates"}}active{{end}}" href="/templates"><i class="la la-file-alt la-lg"></i> {{T "nav_templates"}}</a></li>
@@ -456,7 +501,6 @@ if(a){var t=a.offsetTop-s.offsetHeight/2;if(t>0)s.scrollTop=t}
   <li class="nav-item"><a class="nav-link {{if eq .Active "customers"}}active{{end}}" href="/customers"><i class="la la-users la-lg"></i> {{T "nav_customers"}}</a></li>
   <li class="nav-item"><a class="nav-link {{if eq .Active "apikeys"}}active{{end}}" href="/apikeys"><i class="la la-key la-lg"></i> {{T "nav_apikeys"}}</a></li>
   <li class="nav-item"><a class="nav-link {{if eq .Active "webhooks"}}active{{end}}" href="/webhooks"><i class="la la-code-branch la-lg"></i> {{T "nav_webhooks"}}</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "logger"}}active{{end}}" href="/logger"><i class="la la-clipboard-list la-lg"></i> {{T "nav_logger"}}</a></li>
 {{template "egroup"}}
 {{end}}
 
@@ -837,7 +881,7 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
           {{end}}
           {{range .Accounts}}
           <div class="d-flex align-items-center justify-content-between border rounded p-3 mb-2">
-            <div>{{if .Phone}}<strong>+{{.Phone}}</strong>{{else}}<span class="text-muted">{{T "wa_pairing"}}</span>{{end}}<br>
+            <div>{{if .Phone}}{{if eq .Phone "syncing..."}}<strong class="text-muted">{{T "wa_pairing"}}...</strong>{{else}}<strong>+{{.Phone}}</strong>{{end}}{{else}}<span class="text-muted">{{T "wa_pairing"}}</span>{{end}}<br>
               {{if eq .Status "connected"}}<span class="badge badge-soft-success"><i class="la la-check-circle me-1"></i>{{T "wa_connected"}}</span>
               {{else if eq .Status "qr"}}<span class="badge badge-soft-warning"><i class="la la-qrcode me-1"></i>{{T "wa_scanqr"}}</span>
               {{else}}<span class="badge badge-soft-danger"><i class="la la-times-circle me-1"></i>{{T "wa_disconnected"}}</span>{{end}}
@@ -1044,9 +1088,9 @@ new Chart(document.getElementById('msgChart'),{type:'line',data:{labels:[{{.Char
 <div class="col-12 col-lg-7"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "nav_ai_plugins"}}</h4></div>
 <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_name"}}</th><th>{{T "ar_ai_endpoint"}}</th><th>{{T "col_action"}}</th></tr></thead><tbody>
 {{range .AiPlugins}}<tr><td>{{.ID}}</td><td>{{.Name}}</td><td>{{.Endpoint}}</td><td><form method="post" action="/ai/plugins/delete" style="display:inline" onsubmit="return confirm('{{T "ar_confirm_delete"}}')"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm btn-danger">{{T "ar_delete"}}</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">-</td></tr>{{end}}
-</tbody></table></div></div></div>
-</div>
-</div>
+      </tbody></table></div></div></div>
+  </div>
+  <div class="row mt-3"><div class="col-12"><div class="card border-info" style="border-left:4px solid #0ea5e9"><div class="card-body py-3"><div class="d-flex align-items-start gap-3"><div style="font-size:24px">&#x1F4F7;</div><div><strong style="color:#0ea5e9">Fitur OCR — Baca Teks dari Gambar</strong><p class="text-muted small mb-0 mt-1">Supaya auto-reply bisa membaca teks dalam gambar, tambahkan AI Key dengan <b>model vision (multimodal)</b>.<br>Contoh: <code>gpt-4o</code>, <code>gemini-1.5-flash</code>, <code>claude-3-haiku</code>. Tanpa ini, gambar tetap terdeteksi tapi tidak bisa dibaca teksnya.</p></div></div></div></div></div>
 {{end}}
 {{if eq .Page "settings"}}
 <style>
@@ -3057,5 +3101,44 @@ n.forEach(function(a){a.addEventListener('click',function(e){e.preventDefault();
 <div class="col-12 col-lg-7"><div class="card"><div class="card-header"><h4 class="card-header-title">{{T "faq_list_title"}} <small class="text-muted">— {{T "faq_subtitle"}}</small></h4></div>
 <div class="table-responsive"><table class="table table-sm card-table"><thead><tr><th>#</th><th>{{T "col_question"}}</th><th>{{T "col_answer"}}</th><th></th></tr></thead><tbody>
 {{range .FAQ}}<tr><td>{{.id}}</td><td>{{.question}}</td><td>{{.answer}}</td><td><form method="post" action="/faq/delete" style="display:inline"><input type="hidden" name="id" value="{{.id}}"><button class="btn btn-sm btn-danger">&times;</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center">{{T "faq_empty"}}</td></tr>{{end}}</tbody></table></div></div></div></div>
+{{end}}
+{{if eq .Page "flowbuilder"}}
+<div style="display:flex;flex-direction:column;height:calc(100vh - 120px);margin:-16px;background:#f1f5f9">
+<iframe src="/pro/flow-builder" style="flex:1;border:none;width:100%;height:100%" id="flowFrame"></iframe>
+</div>
+{{end}}
+{{if eq .Page "omni_inbox"}}
+<style>.omni-tab{display:inline-block;padding:8px 16px;border-radius:8px 8px 0 0;cursor:pointer;font-size:12px;font-weight:600;color:#6B7280;border:1px solid transparent;margin-right:2px;transition:.15s}.omni-tab:hover{color:#4F46E5;background:#EEF2FF}.omni-tab.active{color:#4F46E5;background:#fff;border-color:#e5e7eb;border-bottom-color:#fff;position:relative;z-index:1}.omni-tab .badge{font-size:9px;margin-left:4px;background:#e5e7eb;border-radius:10px;padding:1px 6px}.omni-wrap{margin:-16px -24px;height:calc(100vh - 130px);min-height:500px;display:flex;flex-direction:column;background:#fff}.omni-split{display:flex;flex:1;overflow:hidden}.omni-left{width:360px;min-width:280px;border-right:1px solid #e5e7eb;display:flex;flex-direction:column;overflow:hidden;background:#fff}.omni-right{flex:1;display:flex;flex-direction:column;background:#efeae2;overflow:hidden}.omni-list{flex:1;overflow-y:auto}.omni-item{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid #f3f4f6;cursor:pointer;transition:.1s}.omni-item:hover{background:#f8f9fc}.omni-item.active{background:#EEF2FF;border-left:3px solid #4F46E5}.omni-av{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:#fff;flex-shrink:0;margin-right:12px}.omni-body{flex:1;min-width:0}.omni-name{font-size:13px;font-weight:600;color:#152e4d}.omni-msg{font-size:11px;color:#6B7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}.omni-meta{text-align:right;flex-shrink:0}.omni-time{font-size:10px;color:#9CA3AF}.omni-ch{font-size:9px;padding:1px 5px;border-radius:4px;font-weight:600}.omni-empty{display:flex;align-items:center;justify-content:center;height:100%;color:#8696a0;font-size:15px;flex-direction:column;gap:8px}.omni-empty i{font-size:56px;opacity:.3}.omni-chat-hdr{display:flex;align-items:center;padding:10px 16px;background:#f0f2f5;border-bottom:1px solid #e0e0e0;gap:10px;min-height:56px}.omni-chat-area{flex:1;overflow-y:auto;padding:12px 24px;background-color:#efeae2}.omni-chat-ftr{border-top:1px solid #e0e0e0;padding:8px 16px;background:#f0f2f5}.omni-bubble{max-width:70%;padding:6px 10px;border-radius:8px;word-wrap:break-word;box-shadow:0 1px .5px rgba(0,0,0,.13);font-size:13px;line-height:1.4;margin-bottom:4px}.omni-bubble.in{background:#fff;border-top-left-radius:0}.omni-bubble.out{background:#d9fdd3;border-top-right-radius:0}.omni-cht{font-size:10px;color:#667781;float:right;margin-left:6px;margin-top:2px}.omni-input-wrap{display:flex;align-items:center;gap:8px}.omni-input-wrap textarea{flex:1;resize:none;border-radius:8px;padding:8px 12px;min-height:38px;max-height:100px;border:1px solid #e0e0e0;font-size:13px;outline:none}.omni-input-wrap textarea:focus{border-color:#4F46E5}.omni-input-wrap button{width:38px;height:38px;border-radius:50%;border:none;background:#4F46E5;color:#fff;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}@media(max-width:768px){.omni-wrap{margin:-12px -12px;height:calc(100vh - 120px)}.omni-left{width:100%;min-width:0}.omni-right{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:1050}.omni-right.open{display:flex}}</style>
+<div class="omni-wrap">
+<div style="padding:8px 16px;border-bottom:1px solid #e5e7eb;display:flex;gap:2px;flex-shrink:0;align-items:center">
+<div class="omni-tab active" data-ch="all">All</div>
+<div class="omni-tab" data-ch="wa" style="color:#25D366"><i class="la la-whatsapp"></i> WA <span class="badge" id="badgeWa">0</span></div>
+<div class="omni-tab" data-ch="meta" style="color:#075E54"><i class="la la-cloud"></i> Meta <span class="badge" id="badgeMeta">0</span></div>
+<div class="omni-tab" data-ch="private" style="color:#4F46E5"><i class="la la-user"></i> Private</div>
+<div class="omni-tab" data-ch="group" style="color:#10B981"><i class="la la-users"></i> Group</div>
+<div style="flex:1"></div><input id="omniSearch" placeholder="Cari..." style="width:180px;padding:4px 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:11px" oninput="omniDoSearch()">
+</div><div class="omni-split"><div class="omni-left"><div class="omni-list" id="omniList"><div class="text-center py-5 text-muted" style="font-size:13px">Loading...</div></div></div>
+<div class="omni-right" id="omniChatPanel">
+<div class="omni-empty" id="omniEmpty"><i class="la la-comments"></i><div>Pilih percakapan</div></div>
+<div id="omniChatView" style="display:none;flex-direction:column;height:100%">
+<div class="omni-chat-hdr"><button class="btn btn-sm d-md-none" onclick="omniCloseChat()" style="border:none;background:none;font-size:20px">&larr;</button><div class="omni-av" style="width:38px;height:38px;font-size:13px;background:#4F46E5" id="omniAv">+</div><div class="flex-grow-1"><strong id="omniTitle">-</strong><div><small class="text-muted" id="omniSub"></small></div></div><button class="btn btn-sm btn-outline-secondary" onclick="omniExportCSV()" title="Export CSV" style="border:none;background:none;font-size:16px;cursor:pointer">&#x2B07;</button><select id="omniAcp" class="form-select form-select-sm" style="width:auto">{{range .ConnectedAccounts}}{{if eq .Status "connected"}}<option value="+{{.Phone}}">+{{.Phone}}</option>{{end}}{{end}}</select></div>
+<div class="omni-chat-area" id="omniMsgs"></div>
+<div class="omni-chat-ftr"><div class="omni-input-wrap"><textarea id="omniInput" rows="1" placeholder="Ketik pesan..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();omniSend()}"></textarea><button onclick="omniSend()"><i class="la la-send"></i></button></div></div></div></div></div></div></div>
+<script>
+var omniChatPhone='',omniChatChannel='';
+function omniLoad(ch){var url='/omni/inbox';if(ch&&ch!=='all')url+='?channel='+ch;fetch(url).then(function(r){return r.json()}).then(function(data){var h='';if(!data||!data.length){h='<div class="text-center py-5 text-muted" style="font-size:13px">Belum ada percakapan.</div>'}data.forEach(function(c){var ch2=c.channel||'wa';var isGrp=c.is_group?true:false;var colors={wa:'#25D366',meta:'#075E54',ig:'#E1306C',tg:'#2AABEE',fb:'#1877F2'};var cColor=isGrp?'#10B981':(colors[ch2]||'#6B7280');var cIcon=isGrp?'la-users':({wa:'la-whatsapp',meta:'la-cloud',ig:'la-instagram',tg:'la-telegram',fb:'la-facebook'}[ch2]||'la-comment');var cLabel=isGrp?'Grup':({wa:'WA',meta:'Meta',ig:'IG',tg:'TG',fb:'FB'}[ch2]||ch2.toUpperCase());var name=c.name||c.phone||'Unknown';var msg=(c.message||'').substring(0,60);var time=c.time||'';var initial=isGrp?'G':name.charAt(0).toUpperCase();h+='<div class=omni-item data-phone='+(c.phone||'')+' data-channel='+ch2+' data-name='+name.replace(/"/g,'&quot;')+' data-group='+(isGrp?'1':'0')+'><div class=omni-av style=background:'+cColor+'>'+initial+'</div><div class=omni-body><div class=omni-name>'+name+'</div><div class=omni-msg>'+msg+'</div></div><div class=omni-meta><div class=omni-time>'+time.substring(11,16)+'</div><div class=omni-ch style=background:'+cColor+'20;color:'+cColor+'><i class=\"la '+cIcon+'\"></i> '+cLabel+'</div></div></div>'});document.getElementById('omniList').innerHTML=h;omniUpdateBadges(data,ch)})}
+function omniUpdateBadges(data,filter){var wa=0,mta=0,ig=0,tg=0,fb=0;data.forEach(function(c){var ch=c.channel||'';if(ch==='wa')wa++;else if(ch==='meta')mta++;else if(ch==='ig')ig++;else if(ch==='tg')tg++;else if(ch==='fb')fb++});document.getElementById('badgeWa').textContent=wa;document.getElementById('badgeMeta').textContent=mta;document.getElementById('badgeIg').textContent=ig;document.getElementById('badgeTg').textContent=tg;document.getElementById('badgeFb').textContent=fb}
+document.getElementById('omniList').addEventListener('click',function(e){var el=e.target.closest('.omni-item');if(!el)return;var phone=el.dataset.phone,ch=el.dataset.channel,name=el.dataset.name,isGrp=el.dataset.group==='1';omniOpen(phone,name,ch,isGrp)});
+function omniOpen(phone,name,ch,isGrp){document.querySelectorAll('.omni-item').forEach(function(e){e.classList.remove('active')});var el=document.querySelector('.omni-item[data-phone="'+phone+'"]');if(el)el.classList.add('active');omniChatPhone=phone;omniChatChannel=ch;document.getElementById('omniEmpty').style.display='none';document.getElementById('omniChatView').style.display='flex';document.getElementById('omniTitle').textContent=name;document.getElementById('omniSub').textContent=(isGrp?'Grup':'Pribadi')+' | '+ch.toUpperCase();document.getElementById('omniAv').textContent=name.charAt(0)||'+';if(window.innerWidth<768)document.getElementById('omniChatPanel').classList.add('open');omniLoadMsgs()}
+function omniCloseChat(){document.getElementById('omniChatPanel').classList.remove('open')}
+function omniLoadMsgs(){if(!omniChatPhone)return;fetch('/inbox/messages?phone='+encodeURIComponent(omniChatPhone)).then(function(r){return r.json()}).then(function(msgs){var box=document.getElementById('omniMsgs');if(!msgs||!msgs.length){box.innerHTML='<div class=\"text-center text-muted py-4\">Belum ada pesan.</div>';box.scrollTop=box.scrollHeight;return}var html='';for(var i=0;i<msgs.length;i++){var m=msgs[i],side=m.type==='sent'?'flex-end':'flex-start';var cls=m.type==='sent'?'out':'in';if(m.type==='received'&&m.sender_name)html+='<div class=\"d-flex w-100 mb-1\" style=\"justify-content:'+side+'\"><div class=\"omni-bubble '+cls+'\"><div style=\"font-size:11px;font-weight:600;color:#10B981;margin-bottom:2px\">'+m.sender_name+'</div><div>'+m.message+'<span class=\"omni-cht\">'+m.created.substring(11,16)+'</span></div></div></div>';else html+='<div class=\"d-flex w-100 mb-1\" style=\"justify-content:'+side+'\"><div class=\"omni-bubble '+cls+'\"><div>'+m.message+'<span class=\"omni-cht\">'+m.created.substring(11,16)+'</span></div></div></div>'}box.innerHTML=html;box.scrollTop=box.scrollHeight})}
+function omniSend(){var inp=document.getElementById('omniInput'),msg=inp.value.trim();if(!msg||!omniChatPhone)return;var f=new FormData();f.append('phone',omniChatPhone);f.append('message',msg);var acp=document.getElementById('omniAcp');if(acp)f.append('account_phone',acp.value);fetch('/inbox/send',{method:'POST',body:f}).then(function(r){return r.json()}).then(function(d){if(d.ok){inp.value='';omniLoadMsgs();inp.focus()}})}
+function omniExportCSV(){if(!omniChatPhone)return;fetch('/inbox/messages?phone='+encodeURIComponent(omniChatPhone)).then(function(r){return r.json()}).then(function(msgs){var csv='type,message,time\n';msgs.forEach(function(m){csv+='"'+m.type+'","'+m.message.replace(/"/g,'""')+'","'+m.created+'"\n'});var blob=new Blob(['\uFEFF'+csv],{type:'text/csv'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=omniChatPhone+'.csv';a.click()})}
+document.querySelectorAll('.omni-tab').forEach(function(t){t.addEventListener('click',function(){document.querySelectorAll('.omni-tab').forEach(function(x){x.classList.remove('active')});t.classList.add('active');omniLoad(t.dataset.ch==='all'?'':t.dataset.ch)})});
+omniLoad('');setInterval(function(){var ac=document.querySelector('.omni-tab.active');omniLoad(ac?ac.dataset.ch==='all'?'':ac.dataset.ch:'');if(omniChatPhone)omniLoadMsgs()},15000);
+function omniDoSearch(){var q=document.getElementById('omniSearch').value.toLowerCase();document.querySelectorAll('.omni-item').forEach(function(el){el.style.display=el.textContent.toLowerCase().includes(q)?'':'none'})}
+// SSE real-time
+var omniEvt=new EventSource('/inbox/events');omniEvt.onmessage=function(e){try{var d=JSON.parse(e.data);if(d.phone===omniChatPhone)omniLoadMsgs();var ac=document.querySelector('.omni-tab.active');omniLoad(ac?ac.dataset.ch==='all'?'':ac.dataset.ch:'')}catch(ex){}};
+</script>
 {{end}}{{end}}`
 

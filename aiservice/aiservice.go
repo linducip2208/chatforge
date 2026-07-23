@@ -232,3 +232,42 @@ func (c *Cooldown) RecordSuccess() {}
 // ---- Public guardrail checkers (called from wa.go) ----
 func CheckSpam(phone, msg string) bool { return spam.check(phone, msg) }
 func CheckJailbreak(msg string) bool { return jailbreakRe.MatchString(msg) }
+
+// ImageToText sends an image (base64 or URL) to a vision model for OCR / description.
+// Returns the extracted text, or empty string if OCR not available.
+func ImageToText(apikey, provider, model, baseURL, imageBase64 string) (string, error) {
+	if apikey == "" || imageBase64 == "" { return "", fmt.Errorf("missing key or image") }
+	url := defaultBaseURL(provider, baseURL)
+	if url == "" { return "", fmt.Errorf("unknown provider: %s", provider) }
+
+	messages := []map[string]interface{}{
+		{"role": "system", "content": "Kamu adalah OCR engine. Baca semua teks dalam gambar ini. Output hanya teks yang terbaca, tanpa penjelasan. Jika tidak ada teks, deskripsikan gambar dalam 1 kalimat bahasa Indonesia."},
+		{"role": "user", "content": []map[string]interface{}{
+			{"type": "image_url", "image_url": map[string]string{"url": "data:image/jpeg;base64," + imageBase64}},
+		}},
+	}
+
+	body, _ := json.Marshal(map[string]interface{}{
+		"model": model, "messages": messages, "max_tokens": 200, "temperature": 0.1,
+	})
+	req, _ := http.NewRequest("POST", url, bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+apikey)
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil { return "", err }
+	raw, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != 200 { return "", fmt.Errorf("AI API %d", resp.StatusCode) }
+
+	var result struct {
+		Choices []struct {
+			Message struct{ Content string `json:"content"` } `json:"message"`
+		} `json:"choices"`
+	}
+	json.Unmarshal(raw, &result)
+	if len(result.Choices) > 0 && result.Choices[0].Message.Content != "" {
+		return result.Choices[0].Message.Content, nil
+	}
+	return "", fmt.Errorf("no response")
+}

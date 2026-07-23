@@ -339,7 +339,7 @@ func registerAdminRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/admin/transactions-pay", ap("admin_transactions_pay"))
 
 	// Docs
-	mux.HandleFunc("/docs", ap("docs"))
+	mux.HandleFunc("/docs", authMiddleware(p("docs")))
 }
 
 func handleKnowledgeImport(w http.ResponseWriter, r *http.Request) {

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Omnichannel Inbox | ChatGo</title>
+<style>
+*,::before,::after{box-sizing:border-box;margin:0;padding:0}
+body{font:13px/1.5 Inter,-apple-system,sans-serif;color:#152e4d;height:100vh;display:flex;flex-direction:column;background:#f1f5f9}
+.topbar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:#0f1f33;color:#fff;z-index:10}
+.topbar h1{font-size:15px;font-weight:700}.topbar a{color:#8895b7;text-decoration:none;font-size:11px}
+.channel-tabs{display:flex;gap:4px;background:#fff;border-bottom:1px solid #e5e7eb;padding:6px 12px}
+.channel-tab{padding:6px 14px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;border:1px solid transparent;color:#64748b}
+.channel-tab.active{background:#EEF2FF;color:#4F46E5;border-color:#4F46E5}
+.channel-tab .badge{display:inline-block;background:#EF4444;color:#fff;border-radius:10px;padding:0 6px;font-size:9px;margin-left:4px}
+.main{display:flex;flex:1;overflow:hidden}
+.conv-list{width:280px;background:#fff;border-right:1px solid #e5e7eb;overflow-y:auto;flex-shrink:0}
+.conv-item{padding:10px 14px;border-bottom:1px solid #f3f4f6;cursor:pointer;transition:.15s}
+.conv-item:hover{background:#f8f9fc}.conv-item.active{background:#EEF2FF;border-left:3px solid #4F46E5}
+.conv-item .name{font-weight:600;font-size:12px;margin-bottom:2px}
+.conv-item .msg{font-size:11px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.conv-item .time{font-size:10px;color:#94a3b8}
+.chat-area{flex:1;display:flex;flex-direction:column}
+.chat-header{padding:10px 16px;background:#fff;border-bottom:1px solid #e5e7eb;font-weight:600;font-size:13px}
+.chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px}
+.msg-bubble{max-width:70%;padding:8px 12px;border-radius:10px;font-size:12px;line-height:1.4}
+.msg-in{background:#f1f5f9;align-self:flex-start;border-bottom-left-radius:3px}
+.msg-out{background:#4F46E5;color:#fff;align-self:flex-end;border-bottom-right-radius:3px}
+.msg-time{font-size:9px;opacity:.5;margin-top:3px}
+.chat-input{padding:10px;background:#fff;border-top:1px solid #e5e7eb;display:flex;gap:8px}
+.chat-input input{flex:1;padding:8px 12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px}
+.chat-input input:focus{outline:none;border-color:#4F46E5;box-shadow:0 0 0 3px rgba(79,70,229,.1)}
+.chat-input button{padding:8px 16px;background:#4F46E5;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:12px}
+.empty-state{text-align:center;padding:40px;color:#94a3b8;font-size:13px}
+.channel-wa{color:#25D366}.channel-ig{color:#E1306C}.channel-fb{color:#1877F2}.channel-tg{color:#2AABEE}
+@media(max-width:768px){.conv-list{width:100%;position:absolute;left:0;top:0;bottom:0;z-index:5}.chat-area{flex:1}}
+</style>
+<link href="https://fonts.bunny.net/css?family=inter:400,500,600,700" rel="stylesheet">
+</head>
+<body>
+<div class="topbar">
+  <h1>Omnichannel Inbox</h1>
+  <a href="/">Home</a>
+  <span style="font-size:10px;opacity:.5;margin-left:auto" id="connStatus">Connecting...</span>
+</div>
+<div class="channel-tabs">
+  <div class="channel-tab active" data-channel="wa" onclick="switchChannel('wa')">WhatsApp</div>
+  <div class="channel-tab" data-channel="ig" onclick="switchChannel('ig')">Instagram <span class="badge" id="igBadge" style="display:none">0</span></div>
+  <div class="channel-tab" data-channel="fb" onclick="switchChannel('fb')">Facebook</div>
+  <div class="channel-tab" data-channel="tg" onclick="switchChannel('tg')">Telegram</div>
+</div>
+<div class="main">
+  <div class="conv-list" id="convList"><div class="empty-state">Loading conversations...</div></div>
+  <div class="chat-area">
+    <div class="chat-header" id="chatHeader">Select a conversation</div>
+    <div class="chat-messages" id="chatMessages"><div class="empty-state">No messages yet</div></div>
+    <div class="chat-input">
+      <input id="msgInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendMsg()">
+      <button onclick="sendMsg()">Send</button>
+      <button onclick="sendViaFlow()" style="background:#0891B2">Flow</button>
+    </div>
+  </div>
+</div>
+<script>
+var channel="wa",convos=[],activePhone="",activeName="",eventSource=null;
+var origFetch=window.fetch;window.fetch=function(url,opts){opts=opts||{};opts.credentials=opts.credentials||"same-origin";return origFetch(url,opts)};
+function switchChannel(ch){
+  channel=ch;
+  document.querySelectorAll('.channel-tab').forEach(function(t){t.classList.toggle('active',t.dataset.channel===ch)});
+  loadConversations();
+}
+function addConvo(phone,name,lastMsg,lastTime,unread,ch){
+  var exists=convos.find(function(c){return c.phone===phone&&c.channel===ch});
+  if(exists){exists.name=name;exists.lastMsg=lastMsg;exists.lastTime=lastTime;exists.unread=unread}else{convos.unshift({phone:phone,name:name,lastMsg:lastMsg,lastTime:lastTime,unread:unread,channel:ch})}
+  renderConvos()
+}
+function renderConvos(){
+  var h='';var filtered=convos.filter(function(c){return c.channel===channel});
+  filtered.forEach(function(c){
+    h+='<div class="conv-item'+(activePhone===c.phone&&c.channel===channel?' active':'')+'" onclick="openChat(\''+c.phone+'\',\''+c.name+'\',\''+c.channel+'\')"><div class="name">'+c.name+'</div><div class="msg">'+c.lastMsg+'</div><div class="time">'+c.lastTime+'</div></div>'
+  });
+  if(!filtered.length)h='<div class="empty-state">No conversations yet</div>';
+  document.getElementById('convList').innerHTML=h
+}
+async function loadConversations(){
+  try{
+    var r=await fetch('/pro/omni/conversations?channel='+channel);var data=await r.json();
+    convos=data||[];renderConvos()
+  }catch(e){}
+}
+function openChat(phone,name,ch){activePhone=phone;activeName=name;channel=ch;document.getElementById('chatHeader').textContent=name+' ('+phone+')';renderConvos();loadMessages()}
+async function loadMessages(){
+  if(!activePhone){return}
+  try{
+    var r=await fetch('/pro/omni/messages?phone='+encodeURIComponent(activePhone)+'&channel='+channel);var msgs=await r.json();
+    var h='';msgs.forEach(function(m){
+      h+='<div class="msg-bubble '+(m.type==='out'?'msg-out':'msg-in')+'"><div>'+m.message+'</div><div class="msg-time">'+m.time+'</div></div>'
+    });
+    document.getElementById('chatMessages').innerHTML=h||'<div class="empty-state">No messages</div>';
+    var chatDiv=document.getElementById('chatMessages');chatDiv.scrollTop=chatDiv.scrollHeight
+  }catch(e){}
+}
+async function sendMsg(){
+  var msg=document.getElementById('msgInput').value;if(!msg||!activePhone)return;
+  try{
+    await fetch('/pro/omni/send',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'phone='+encodeURIComponent(activePhone)+'&message='+encodeURIComponent(msg)+'&channel='+channel});
+    document.getElementById('chatMessages').innerHTML+='<div class="msg-bubble msg-out"><div>'+msg+'</div><div class="msg-time">now</div></div>';
+    document.getElementById('msgInput').value='';
+    var chatDiv=document.getElementById('chatMessages');chatDiv.scrollTop=chatDiv.scrollHeight
+  }catch(e){}
+}
+async function sendViaFlow(){
+  var msg=document.getElementById('msgInput').value;if(!activePhone)return;
+  var flowId=prompt('Flow ID:');if(!flowId)return;
+  try{
+    await fetch('/pro/flow/trigger/'+flowId,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:activePhone,message:msg,name:activeName})});
+    document.getElementById('msgInput').value=''
+  }catch(e){}
+}
+function startSSE(){
+  if(eventSource){eventSource.close()}
+  eventSource=new EventSource('/pro/omni/events');
+  eventSource.onmessage=function(e){
+    try{var d=JSON.parse(e.data);
+      var isNew=!convos.find(function(c){return c.phone===d.phone&&c.channel===d.channel});
+      addConvo(d.phone,d.name,d.message,d.time,0,d.channel||'wa');
+      document.getElementById('connStatus').textContent='Live';
+      if(isNew&&!activePhone){openChat(d.phone,d.name,d.channel||'wa')}
+      if(activePhone===d.phone&&d.channel===channel){
+        var h=document.getElementById('chatMessages').innerHTML;
+        h+='<div class="msg-bubble msg-in"><div>'+d.message+'</div><div class="msg-time">'+d.time+'</div></div>';
+        document.getElementById('chatMessages').innerHTML=h;
+        var chatDiv=document.getElementById('chatMessages');chatDiv.scrollTop=chatDiv.scrollHeight
+      }
+    }catch(err){}
+  };
+  eventSource.onerror=function(){document.getElementById('connStatus').textContent='Reconnecting...';setTimeout(startSSE,3000)}
+}
+loadConversations();startSSE();
+</script>
+</body>
+</html>

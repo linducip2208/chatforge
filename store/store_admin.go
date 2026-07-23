@@ -268,6 +268,11 @@ func freeDefault(field string) int {
 }
 
 func (d *DB) getUserLimit(userID int64, field string) int {
+	// Admin bypass — return unlimited for admin users
+	u, err := d.GetUserByID(userID)
+	if err == nil && (u.Role == "Admin" || u.Role == "admin") {
+		return 999999
+	}
 	pkg := d.getActivePackage(userID)
 	if pkg == nil { return freeDefault(field) }
 	switch field {
@@ -296,6 +301,12 @@ func (d *DB) getUserLimit(userID int64, field string) int {
 func (d *DB) GetUserPackageLimit(userID int64) int { return d.getUserLimit(userID, "wa_account_limit") }
 func (d *DB) GetUserSendLimit(userID int64) int   { return d.getUserLimit(userID, "wa_send_limit") }
 func (d *DB) GetUserContactLimit(userID int64) int { return d.getUserLimit(userID, "contact_limit") }
+
+func (d *DB) GetUserRole(userID int64) (string, error) {
+	u, err := d.GetUserByID(userID)
+	if err != nil { return "", err }
+	return u.Role, nil
+}
 func (d *DB) GetUserTemplateLimit(userID int64) int { return d.getUserLimit(userID, "template_limit") }
 func (d *DB) GetUserCannedLimit(userID int64) int   { return d.getUserLimit(userID, "canned_limit") }
 func (d *DB) GetUserDripLimit(userID int64) int     { return d.getUserLimit(userID, "drip_limit") }
@@ -484,7 +495,7 @@ func (d *DB) CountSentByUser(userID int64) int {
 	_, err := d.GetUserByID(userID)
 	if err != nil { return 0 }
 	var n int
-	d.sql.QueryRow(`SELECT COUNT(*) FROM sent WHERE phone IN (SELECT phone FROM wa_accounts WHERE user_id=?) OR status='sent'`, userID).Scan(&n)
+	d.sql.QueryRow(`SELECT COUNT(*) FROM sent WHERE wa_phone IN (SELECT phone FROM wa_session_owners WHERE user_id=?)`, userID).Scan(&n)
 	return n
 }
 func (d *DB) SetUserPassword(id int64, hash string) error {
@@ -543,7 +554,7 @@ func (d *DB) ListRoles() ([]Role, error) {
 func (d *DB) HasPermission(userID int64, perm string) bool {
 	var roleName string
 	d.sql.QueryRow(`SELECT role FROM users WHERE id=?`, userID).Scan(&roleName)
-	if roleName == "admin" { return true }
+	if roleName == "admin" || roleName == "Admin" { return true }
 	var perms string
 	d.sql.QueryRow(`SELECT permissions FROM roles WHERE name=?`, roleName).Scan(&perms)
 	if perms == "" { return roleName == "admin" }

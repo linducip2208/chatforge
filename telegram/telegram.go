@@ -233,3 +233,23 @@ func ParseChatID(body []byte) int64 {
 	if err := json.Unmarshal(body, &update); err != nil { return 0 }
 	return update.Message.Chat.ID
 }
+
+type InlineQuery struct {
+	ID     string `json:"id"`
+	From   struct{ ID int64 `json:"id"` } `json:"from"`
+	Query  string `json:"query"`
+	Offset string `json:"offset"`
+}
+
+func ParseInlineQuery(body []byte) (*InlineQuery, error) {
+	var raw struct{ InlineQuery InlineQuery `json:"inline_query"` }
+	if err := json.Unmarshal(body, &raw); err != nil { return nil, err }
+	return &raw.InlineQuery, nil
+}
+
+func (b *Bot) AnswerInlineQuery(queryID string, results []map[string]interface{}) error {
+	_, err := b.doPost("answerInlineQuery", map[string]interface{}{
+		"inline_query_id": queryID, "results": results,
+	})
+	return err
+}

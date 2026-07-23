@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agency Dashboard | ChatGo</title>
+<style>
+*,::before,::after{box-sizing:border-box;margin:0;padding:0}
+body{font:13px/1.5 Inter,-apple-system,sans-serif;color:#152e4d;background:#f1f5f9;min-height:100vh}
+.topbar{display:flex;align-items:center;gap:12px;padding:10px 20px;background:#0f1f33;color:#fff}
+.topbar h1{font-size:16px;font-weight:700}.topbar a{color:#8895b7;text-decoration:none;font-size:11px;padding:4px 10px;border:1px solid rgba(255,255,255,.15);border-radius:6px}.topbar a:hover{background:rgba(255,255,255,.08)}
+.container{max-width:1200px;margin:0 auto;padding:20px}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:20px}
+.stat-card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.stat-card .value{font-size:28px;font-weight:800;color:#4F46E5}.stat-card .label{font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.04em}
+.client-table{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.client-table table{width:100%;border-collapse:collapse}
+.client-table th{background:#f8f9fc;padding:10px 14px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#64748b;border-bottom:1px solid #e5e7eb}
+.client-table td{padding:10px 14px;border-bottom:1px solid #f3f4f6;font-size:12px}
+.client-table tr:hover{background:#f8f9fc}
+.btn{padding:5px 12px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:600}
+.btn-primary{background:#4F46E5;color:#fff}.btn-danger{background:#FEE2E2;color:#DC2626}
+.btn-sm{padding:3px 8px;font-size:10px}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;justify-content:center;align-items:center}
+.modal-overlay.show{display:flex}
+.modal{background:#fff;border-radius:12px;width:420px;padding:20px}
+.modal label{display:block;font-size:10px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;margin:8px 0 3px}
+.modal input{width:100%;padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:6px;font-size:12px}
+.modal input:focus{outline:none;border-color:#4F46E5}
+.modal .btn{margin-top:12px;width:100%;padding:8px}
+.toast{position:fixed;bottom:20px;right:20px;background:#152e4d;color:#fff;padding:10px 18px;border-radius:8px;font-size:12px;z-index:200}
+@media(max-width:640px){.stats{grid-template-columns:1fr 1fr}.container{padding:10px}}
+</style>
+<link href="https://fonts.bunny.net/css?family=inter:400,500,600,700" rel="stylesheet">
+</head>
+<body>
+<div class="topbar">
+  <h1>Agency Dashboard</h1>
+  <a href="/">Home</a>
+  <span style="margin-left:auto;font-size:10px;opacity:.5">v1.0</span>
+</div>
+<div class="container">
+  <div class="stats" id="stats">
+    <div class="stat-card"><div class="value" id="totalClients">0</div><div class="label">Total Clients</div></div>
+    <div class="stat-card"><div class="value" id="activeFlows">0</div><div class="label">Active Flows</div></div>
+    <div class="stat-card"><div class="value" id="totalMessages">0</div><div class="label">Messages Today</div></div>
+    <div class="stat-card"><div class="value" id="totalRevenue">Rp0</div><div class="label">Revenue MTD</div></div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <h2 style="font-size:15px;font-weight:700">Clients</h2>
+    <button class="btn btn-primary" onclick="showAddModal()">+ Add Client</button>
+  </div>
+  <div class="client-table">
+    <table><thead><tr><th>Client</th><th>Email</th><th>Package</th><th>Flows</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody id="clientTableBody"><tr><td colspan="6" style="text-align:center;padding:20px;color:#94a3b8">Loading...</td></tr></tbody></table>
+  </div>
+</div>
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <h2 style="font-size:15px;margin-bottom:12px">Add Client</h2>
+    <label>Name</label><input id="clientName" placeholder="Client name">
+    <label>Email</label><input id="clientEmail" type="email" placeholder="client@example.com">
+    <label>Password</label><input id="clientPass" type="password" placeholder="Min 8 characters">
+    <label>Package</label><input id="clientPackage" placeholder="Starter / Growth / Pro">
+    <button class="btn btn-primary" onclick="addClient()">Add Client</button>
+    <button class="btn" style="background:#f1f5f9;color:#152e4d;margin-top:4px" onclick="closeModal()">Cancel</button>
+  </div>
+</div>
+<div id="toast"></div>
+<script>
+var origFetch=window.fetch;window.fetch=function(url,opts){opts=opts||{};opts.credentials=opts.credentials||"same-origin";return origFetch(url,opts)};
+function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(function(){t.style.display='none'},2000)}
+function showAddModal(){document.getElementById('addModal').classList.add('show')}
+function closeModal(){document.getElementById('addModal').classList.remove('show')}
+async function addClient(){
+  var name=document.getElementById('clientName').value,email=document.getElementById('clientEmail').value,pass=document.getElementById('clientPass').value,pkg=document.getElementById('clientPackage').value;
+  if(!name||!email||!pass){toast('Fill all fields');return}
+  try{
+    var r=await fetch('/pro/agency/clients/add',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'name='+encodeURIComponent(name)+'&email='+encodeURIComponent(email)+'&password='+encodeURIComponent(pass)+'&package='+encodeURIComponent(pkg)});
+    var j=await r.json();toast('Client added #'+j.client_id);closeModal();loadClients()
+  }catch(e){toast('Error adding client')}
+}
+async function deleteClient(id){
+  if(!confirm('Delete this client?'))return;
+  try{
+    await fetch('/pro/agency/clients/delete',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'id='+id});toast('Deleted');loadClients()
+  }catch(e){toast('Error deleting')}
+}
+async function loadClients(){
+  try{
+    var r=await fetch('/pro/agency/clients');var data=await r.json();
+    document.getElementById('totalClients').textContent=data.clients?data.clients.length:0;
+    document.getElementById('activeFlows').textContent=data.stats?data.stats.active_flows||0:0;
+    document.getElementById('totalMessages').textContent=data.stats?data.stats.messages_today||0:0;
+    document.getElementById('totalRevenue').textContent='Rp'+(data.stats?data.stats.revenue_mtd||0:0);
+    var h='';if(data.clients)data.clients.forEach(function(c){
+      h+='<tr><td><b>'+c.name+'</b></td><td>'+c.email+'</td><td>'+c.package+'</td><td>'+c.flows+'</td><td><span style="color:'+(c.active?'#10B981':'#64748b')+'">'+(c.active?'Active':'Inactive')+'</span></td><td><button class="btn btn-danger btn-sm" onclick="deleteClient('+c.id+')">Delete</button></td></tr>'
+    });document.getElementById('clientTableBody').innerHTML=h||'<tr><td colspan="6" style="text-align:center;padding:20px;color:#94a3b8">No clients yet</td></tr>'
+  }catch(e){}
+}
+loadClients();
+</script>
+</body>
+</html>

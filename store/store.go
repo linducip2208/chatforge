@@ -19,6 +19,14 @@ func (d *DB) QueryRow(query string, args ...interface{}) *sql.Row {
 	return d.sql.QueryRow(query, args...)
 }
 
+func (d *DB) Query(query string, args ...interface{}) (*sql.Rows, error) {
+	return d.sql.Query(query, args...)
+}
+
+func (d *DB) Exec(query string, args ...interface{}) (sql.Result, error) {
+	return d.sql.Exec(query, args...)
+}
+
 type AutoReply struct {
 	ID         int64
 	Keyword    string
@@ -264,11 +272,11 @@ func (d *DB) ListAutoReplies(userID int64) ([]AutoReply, error) {
 	return out, nil
 }
 func (d *DB) FindReply(incoming string) (string, bool) {
-	r, ok := d.FindReplyFull(incoming)
+	r, ok := d.FindReplyFull(0, incoming)
 	return r.Reply, ok
 }
-func (d *DB) FindReplyFullForAccount(incoming string, accountPhone string) (AutoReply, bool) {
-	rules, _ := d.ListAutoReplies(0)
+func (d *DB) FindReplyFullForAccount(userID int64, incoming string, accountPhone string) (AutoReply, bool) {
+	rules, _ := d.ListAutoReplies(userID)
 	msg := strings.ToLower(strings.TrimSpace(incoming))
 	for _, r := range rules {
 		if !r.IsActive { continue }
@@ -307,8 +315,8 @@ func (d *DB) FindReplyFullForAccount(incoming string, accountPhone string) (Auto
 	}
 	return AutoReply{}, false
 }
-func (d *DB) FindReplyFull(incoming string) (AutoReply, bool) {
-	rules, _ := d.ListAutoReplies(0)
+func (d *DB) FindReplyFull(userID int64, incoming string) (AutoReply, bool) {
+	rules, _ := d.ListAutoReplies(userID)
 	msg := strings.ToLower(strings.TrimSpace(incoming))
 	for _, r := range rules {
 		if !r.IsActive { continue }
@@ -349,17 +357,17 @@ func (d *DB) GetSentStatus(messageID string) string {
 	d.sql.QueryRow(`SELECT status FROM sent WHERE msg_id=? LIMIT 1`, messageID).Scan(&s)
 	return s
 }
-func (d *DB) ListSent(limit int) ([]SentMessage, error) { return d.ListSentPaginated(1, limit) }
-func (d *DB) ListSentPaginated(page, perPage int) ([]SentMessage, error) {
+func (d *DB) ListSent(limit int) ([]SentMessage, error) { return d.ListSentPaginated(0, 1, limit) }
+func (d *DB) ListSentPaginated(userID int64, page, perPage int) ([]SentMessage, error) {
 	offset := (page-1)*perPage
-	rows, err := d.sql.Query(`SELECT id,phone,message,status,channel,created_at FROM sent ORDER BY id DESC LIMIT ? OFFSET ?`, perPage, offset)
+	rows, err := d.sql.Query(`SELECT id,phone,message,status,channel,created_at FROM sent WHERE wa_phone IN (SELECT phone FROM wa_session_owners WHERE user_id=?) ORDER BY id DESC LIMIT ? OFFSET ?`, userID, perPage, offset)
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []SentMessage
 	for rows.Next() { var m SentMessage; rows.Scan(&m.ID,&m.Phone,&m.Message,&m.Status,&m.Channel,&m.Created); out = append(out, m) }
 	return out, nil
 }
-func (d *DB) CountSent() int { var n int; d.sql.QueryRow(`SELECT COUNT(*) FROM sent`).Scan(&n); return n }
+func (d *DB) CountSent(userID int64) int { var n int; d.sql.QueryRow(`SELECT COUNT(*) FROM sent WHERE wa_phone IN (SELECT phone FROM wa_session_owners WHERE user_id=?)`, userID).Scan(&n); return n }
 
 // Received log
 func (d *DB) LogReceived(phone, name, message string, isGroup bool, senderPhone, senderName, channel string) {
@@ -372,17 +380,17 @@ func (d *DB) LogReceivedForWA(waPhone, phone, name, message string, isGroup bool
 	if channel == "" { channel = "whatsmeow" }
 	d.sql.Exec(`INSERT INTO received (wa_phone,phone,name,message,is_group,sender_phone,sender_name,channel) VALUES (?,?,?,?,?,?,?,?)`, waPhone, phone, name, message, g, senderPhone, senderName, channel)
 }
-func (d *DB) ListReceived(limit int) ([]ReceivedMessage, error) { return d.ListReceivedPaginated(1, limit) }
-func (d *DB) ListReceivedPaginated(page, perPage int) ([]ReceivedMessage, error) {
+func (d *DB) ListReceived(limit int) ([]ReceivedMessage, error) { return d.ListReceivedPaginated(0, 1, limit) }
+func (d *DB) ListReceivedPaginated(userID int64, page, perPage int) ([]ReceivedMessage, error) {
 	offset := (page-1)*perPage
-	rows, err := d.sql.Query(`SELECT id,phone,name,message,is_group,is_read,sender_phone,sender_name,channel,created_at FROM received ORDER BY id DESC LIMIT ? OFFSET ?`, perPage, offset)
+	rows, err := d.sql.Query(`SELECT id,phone,name,message,is_group,is_read,sender_phone,sender_name,channel,created_at FROM received WHERE wa_phone IN (SELECT phone FROM wa_session_owners WHERE user_id=?) ORDER BY id DESC LIMIT ? OFFSET ?`, userID, perPage, offset)
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []ReceivedMessage
 	for rows.Next() { var m ReceivedMessage; var g, r int; rows.Scan(&m.ID,&m.Phone,&m.Name,&m.Message,&g,&r,&m.SenderPhone,&m.SenderName,&m.Channel,&m.Created); m.IsGroup = g==1; m.IsRead = r==1; out = append(out, m) }
 	return out, nil
 }
-func (d *DB) CountReceived() int { var n int; d.sql.QueryRow(`SELECT COUNT(*) FROM received`).Scan(&n); return n }
+func (d *DB) CountReceived(userID int64) int { var n int; d.sql.QueryRow(`SELECT COUNT(*) FROM received WHERE wa_phone IN (SELECT phone FROM wa_session_owners WHERE user_id=?)`, userID).Scan(&n); return n }
 
 func (d *DB) GroupInboxPaginated(userID int64, page, perPage int) ([]InboxConversation, error) {
 	offset := (page - 1) * perPage
@@ -431,8 +439,8 @@ func (d *DB) GroupInbox(userID int64) ([]InboxConversation, error) {
 	return d.GroupInboxPaginated(userID, 1, 100)
 }
 
-func (d *DB) ChatHistory(phone string, limit int) ([]ChatMessage, error) {
-	rows, err := d.sql.Query(`SELECT 'received' as type, id, phone, name, message, created_at, is_read, sender_name, is_group, channel FROM received WHERE phone=? UNION ALL SELECT 'sent' as type, id, phone, '' as name, message, created_at, 1 as is_read, '' as sender_name, 0 as is_group, channel FROM sent WHERE phone=? ORDER BY created_at ASC LIMIT ?`, phone, phone, limit)
+func (d *DB) ChatHistory(userID int64, phone string, limit int) ([]ChatMessage, error) {
+	rows, err := d.sql.Query(`SELECT 'received' as type, id, phone, name, message, created_at, is_read, sender_name, is_group, channel FROM received WHERE phone=? AND wa_phone IN (SELECT phone FROM wa_session_owners WHERE user_id=?) UNION ALL SELECT 'sent' as type, id, phone, '' as name, message, created_at, 1 as is_read, '' as sender_name, 0 as is_group, channel FROM sent WHERE phone=? AND wa_phone IN (SELECT phone FROM wa_session_owners WHERE user_id=?) ORDER BY created_at ASC LIMIT ?`, phone, userID, phone, userID, limit)
 	if err != nil { return nil, err }
 	defer rows.Close()
 	var out []ChatMessage

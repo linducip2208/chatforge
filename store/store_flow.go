@@ -1,5 +1,10 @@
 package store
 
+import (
+	"database/sql"
+	"fmt"
+)
+
 type ChatFlow struct {
 	ID        int64  `json:"id"`
 	UserID    int64  `json:"user_id"`
@@ -21,12 +26,19 @@ func (d *DB) migrateFlow() error {
 		nodes JSON NOT NULL,
 		edges JSON NOT NULL,
 		active TINYINT NOT NULL DEFAULT 1,
+		public TINYINT DEFAULT 0,
+		downloads INT DEFAULT 0,
+		ai_key_id BIGINT NOT NULL DEFAULT 0,
 		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 		INDEX idx_flow_user (user_id),
 		INDEX idx_flow_active (active)
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`)
-	return err
+	if err != nil {
+		return err
+	}
+	d.safeAddColumn("chat_flows", "ai_key_id", "BIGINT NOT NULL DEFAULT 0")
+	return nil
 }
 
 func (d *DB) SaveFlow(uid int64, name, trigger, nodes, edges string) (int64, error) {
@@ -39,14 +51,22 @@ func (d *DB) SaveFlow(uid int64, name, trigger, nodes, edges string) (int64, err
 }
 
 func (d *DB) UpdateFlow(id, uid int64, name, trigger, nodes, edges string) error {
-	_, err := d.sql.Exec(`UPDATE chat_flows SET name=?, `+"`trigger`"+`=?, nodes=?, edges=?, updated_at=NOW() WHERE id=? AND user_id=?`,
+	res, err := d.sql.Exec(`UPDATE chat_flows SET name=?, `+"`trigger`"+`=?, nodes=?, edges=?, updated_at=NOW() WHERE id=? AND user_id=?`,
 		name, trigger, nodes, edges, id, uid)
-	return err
+	if err != nil { return err }
+	if n, _ := res.RowsAffected(); n == 0 {
+		return fmt.Errorf("not found")
+	}
+	return nil
 }
 
 func (d *DB) DeleteFlow(id, uid int64) error {
-	_, err := d.sql.Exec(`DELETE FROM chat_flows WHERE id=? AND user_id=?`, id, uid)
-	return err
+	res, err := d.sql.Exec(`DELETE FROM chat_flows WHERE id=? AND user_id=?`, id, uid)
+	if err != nil { return err }
+	if n, _ := res.RowsAffected(); n == 0 {
+		return fmt.Errorf("not found")
+	}
+	return nil
 }
 
 func (d *DB) ToggleFlow(id, uid int64) (bool, error) {
@@ -55,7 +75,7 @@ func (d *DB) ToggleFlow(id, uid int64) (bool, error) {
 		return false, err
 	}
 	var active int
-	d.sql.QueryRow(`SELECT active FROM chat_flows WHERE id=?`, id).Scan(&active)
+	d.sql.QueryRow(`SELECT active FROM chat_flows WHERE id=? AND user_id=?`, id, uid).Scan(&active)
 	return active == 1, nil
 }
 
@@ -126,8 +146,12 @@ func (d *DB) LoadActiveFlows(uid int64) ([]ChatFlow, error) {
 func (d *DB) migrateFlowStats() error {
 	d.sql.Exec(`CREATE TABLE IF NOT EXISTS flow_stats (flow_id BIGINT NOT NULL PRIMARY KEY, trigger_count INT DEFAULT 0, completion_count INT DEFAULT 0) ENGINE=InnoDB`)
 	d.sql.Exec(`CREATE TABLE IF NOT EXISTS flow_node_hits (flow_id BIGINT NOT NULL, node_id VARCHAR(64) NOT NULL, hit_count INT DEFAULT 0, PRIMARY KEY(flow_id, node_id)) ENGINE=InnoDB`)
-	d.sql.Exec(`CREATE TABLE IF NOT EXISTS flow_counters (counter_key VARCHAR(255) NOT NULL PRIMARY KEY, count_value INT DEFAULT 0) ENGINE=InnoDB`)
+	d.sql.Exec(`CREATE TABLE IF NOT EXISTS flow_counters (counter_key VARCHAR(255) NOT NULL PRIMARY KEY, count_value INT DEFAULT 0, expires_at DATETIME NULL) ENGINE=InnoDB`)
 	d.sql.Exec(`CREATE TABLE IF NOT EXISTS flow_execution_log (id BIGINT AUTO_INCREMENT PRIMARY KEY, flow_id BIGINT NOT NULL, flow_name VARCHAR(255), phone VARCHAR(64), `+"`trigger`"+` VARCHAR(32), nodes_visited INT DEFAULT 0, replies_count INT DEFAULT 0, status VARCHAR(20) DEFAULT 'completed', error_msg TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, INDEX idx_fel_flow(flow_id)) ENGINE=InnoDB`)
+	d.sql.Exec(`CREATE TABLE IF NOT EXISTS flow_paused (phone VARCHAR(64) NOT NULL PRIMARY KEY, flow_id BIGINT NOT NULL, account_phone VARCHAR(64), variables JSON, current_node VARCHAR(64), visited_nodes JSON, contact_name VARCHAR(255), message TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, INDEX idx_fp_flow(flow_id)) ENGINE=InnoDB`)
+	d.sql.Exec(`CREATE TABLE IF NOT EXISTS flow_reviews (id BIGINT AUTO_INCREMENT PRIMARY KEY, flow_id BIGINT NOT NULL, user_id BIGINT NOT NULL, rating TINYINT NOT NULL DEFAULT 5, review TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, INDEX idx_fr_flow(flow_id)) ENGINE=InnoDB`)
+	d.sql.Exec(`CREATE TABLE IF NOT EXISTS flow_downloads (flow_id BIGINT NOT NULL, user_id BIGINT NOT NULL, PRIMARY KEY(flow_id, user_id)) ENGINE=InnoDB`)
+	d.safeAddColumn("flow_counters", "expires_at", "DATETIME NULL")
 	return nil
 }
 
@@ -201,12 +225,16 @@ func (d *DB) migrateFlowMarket() error {
 	return nil
 }
 func (d *DB) PublishFlow(fid, uid int64) error {
-	_, err := d.sql.Exec(`UPDATE chat_flows SET public=1 WHERE id=? AND user_id=?`, fid, uid)
-	return err
+	res, err := d.sql.Exec(`UPDATE chat_flows SET public=1 WHERE id=? AND user_id=?`, fid, uid)
+	if err != nil { return err }
+	if n, _ := res.RowsAffected(); n == 0 { return fmt.Errorf("not found") }
+	return nil
 }
 func (d *DB) UnpublishFlow(fid, uid int64) error {
-	_, err := d.sql.Exec(`UPDATE chat_flows SET public=0 WHERE id=? AND user_id=?`, fid, uid)
-	return err
+	res, err := d.sql.Exec(`UPDATE chat_flows SET public=0 WHERE id=? AND user_id=?`, fid, uid)
+	if err != nil { return err }
+	if n, _ := res.RowsAffected(); n == 0 { return fmt.Errorf("not found") }
+	return nil
 }
 func (d *DB) ListPublicFlows() ([]ChatFlow, error) {
 	rows, err := d.sql.Query("SELECT id, user_id, name, `trigger`, nodes, edges, active, created_at, updated_at FROM chat_flows WHERE public=1 ORDER BY downloads DESC LIMIT 50")
@@ -219,4 +247,70 @@ func (d *DB) ListPublicFlows() ([]ChatFlow, error) {
 		f.Trigger = string(trig); out = append(out, f)
 	}
 	return out, nil
+}
+
+// Flow AI key per flow
+func (d *DB) GetFlowAIKey(fid int64) int64 {
+	var aiKeyID int64
+	d.sql.QueryRow(`SELECT ai_key_id FROM chat_flows WHERE id=?`, fid).Scan(&aiKeyID)
+	return aiKeyID
+}
+func (d *DB) SetFlowAIKey(fid int64, aiKeyID int64) {
+	d.sql.Exec(`UPDATE chat_flows SET ai_key_id=? WHERE id=?`, aiKeyID, fid)
+}
+
+// Paused flows — persistent across server restarts
+func (d *DB) SavePausedFlow(phone string, flowID int64, accountPhone, variablesJSON, currentNode, visitedNodesJSON, contactName, message string) {
+	d.sql.Exec(`REPLACE INTO flow_paused (phone, flow_id, account_phone, variables, current_node, visited_nodes, contact_name, message, created_at) VALUES (?,?,?,?,?,?,?,?,NOW())`,
+		phone, flowID, accountPhone, variablesJSON, currentNode, visitedNodesJSON, contactName, message)
+}
+func (d *DB) LoadPausedFlow(phone string) (flowID int64, accountPhone, variablesJSON, currentNode, visitedNodesJSON, contactName, message string, err error) {
+	err = d.sql.QueryRow(`SELECT flow_id, account_phone, variables, current_node, visited_nodes, contact_name, message FROM flow_paused WHERE phone=?`, phone).
+		Scan(&flowID, &accountPhone, &variablesJSON, &currentNode, &visitedNodesJSON, &contactName, &message)
+	return
+}
+func (d *DB) DeletePausedFlow(phone string) {
+	d.sql.Exec(`DELETE FROM flow_paused WHERE phone=?`, phone)
+}
+
+// Flow counter with expiry (hourly windows)
+func (d *DB) IncFlowCounterWithExpiry(key string, ttlHours int) int {
+	d.sql.Exec(`INSERT INTO flow_counters (counter_key, count_value, expires_at) VALUES (?,1,DATE_ADD(NOW(),INTERVAL ? HOUR)) ON DUPLICATE KEY UPDATE count_value=CASE WHEN expires_at<NOW() THEN 1 ELSE count_value+1 END, expires_at=CASE WHEN expires_at<NOW() THEN DATE_ADD(NOW(),INTERVAL ? HOUR) ELSE expires_at END`, key, ttlHours, ttlHours)
+	var c int
+	d.sql.QueryRow(`SELECT count_value FROM flow_counters WHERE counter_key=?`, key).Scan(&c)
+	return c
+}
+
+// Flow reviews
+func (d *DB) AddFlowReview(flowID, uid int64, rating int, review string) error {
+	_, err := d.sql.Exec(`INSERT INTO flow_reviews (flow_id, user_id, rating, review) VALUES (?,?,?,?)`, flowID, uid, rating, review)
+	return err
+}
+func (d *DB) GetFlowReviews(flowID int64) ([]map[string]interface{}, error) {
+	rows, err := d.sql.Query(`SELECT r.rating, r.review, u.name, r.created_at FROM flow_reviews r LEFT JOIN users u ON r.user_id=u.id WHERE r.flow_id=? ORDER BY r.id DESC LIMIT 50`, flowID)
+	if err != nil { return nil, err }
+	defer rows.Close()
+	var out []map[string]interface{}
+	for rows.Next() {
+		var rating int; var review, name, created string; var rname sql.NullString
+		rows.Scan(&rating, &review, &rname, &created)
+		name = rname.String
+		out = append(out, map[string]interface{}{"rating": rating, "review": review, "user_name": name, "time": created})
+	}
+	return out, nil
+}
+func (d *DB) GetFlowAvgRating(flowID int64) float64 {
+	var avg float64
+	d.sql.QueryRow(`SELECT IFNULL(AVG(rating),0) FROM flow_reviews WHERE flow_id=?`, flowID).Scan(&avg)
+	return avg
+}
+
+// Check if flow download has been counted
+func (d *DB) HasDownloadedFlow(flowID int64, uid int64) bool {
+	var c int
+	d.sql.QueryRow(`SELECT COUNT(*) FROM flow_downloads WHERE flow_id=? AND user_id=?`, flowID, uid).Scan(&c)
+	return c > 0
+}
+func (d *DB) MarkFlowDownloaded(flowID, uid int64) {
+	d.sql.Exec(`INSERT IGNORE INTO flow_downloads (flow_id, user_id) VALUES (?,?)`, flowID, uid)
 }

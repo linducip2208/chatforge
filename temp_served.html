@@ -1,0 +1,280 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flow Builder Pro ï¿½ ChatGo</title>
+<style>
+*,::before,::after{box-sizing:border-box;margin:0;padding:0}
+body{font:14px/1.5 Inter,-apple-system,sans-serif;color:#152e4d;overflow:hidden;height:100vh;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:10px;padding:6px 14px;background:#0f1f33;color:#fff;z-index:100;flex-wrap:wrap}
+.topbar input,.topbar select{border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;padding:5px 10px;border-radius:6px;font-size:11px}
+.topbar input{width:150px}
+.topbar button{padding:5px 12px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:600;white-space:nowrap}
+.btn-save{background:#4F46E5;color:#fff}.btn-save:hover{background:#4338CA}
+.btn-list{background:rgba(255,255,255,.1);color:#fff}.btn-list:hover{background:rgba(255,255,255,.2)}
+.btn-ghost{background:transparent;color:#8895b7;border:1px solid rgba(255,255,255,.15)!important}
+.btn-ghost:hover{background:rgba(255,255,255,.08);color:#fff}
+.flow-name{font-weight:700;font-size:13px;margin-right:6px}
+.main{display:flex;flex:1;overflow:hidden}
+.palette{width:190px;background:#f8f9fc;border-right:1px solid #e5e7eb;padding:10px;overflow-y:auto;flex-shrink:0}
+.palette h3{font-size:10px;text-transform:uppercase;color:#8895b7;letter-spacing:.06em;margin:10px 0 6px}
+.palette h3:first-child{margin-top:0}
+.node-item{display:flex;align-items:center;gap:6px;padding:7px 8px;border-radius:7px;cursor:grab;font-size:11px;font-weight:600;margin-bottom:3px;transition:.15s;border:2px solid transparent;user-select:none}
+.node-item:active{cursor:grabbing}
+.node-item:hover{background:#fff;border-color:#4F46E5}
+.node-color{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.nc-msg{background:#4F46E5}.nc-q{background:#0891B2}.nc-cond{background:#F59E0B}.nc-wait{background:#8B5CF6}
+.nc-api{background:#EC4899}.nc-set{background:#6366F1}.nc-tag{background:#F97316}
+.nc-transfer{background:#EF4444}.nc-close{background:#6B7280}
+.canvas-wrap{flex:1;position:relative;overflow:hidden;background:#f1f5f9;
+  background-image:radial-gradient(circle,#cbd5e1 1px,transparent 1px);background-size:20px 20px;cursor:default}
+.canvas-wrap.grabbing{cursor:grabbing}
+.canvas-wrap svg{width:100%;height:100%;display:block}
+.flow-node{cursor:move;user-select:none}
+.flow-node rect.node-bg{fill:#fff;stroke:#d1d5db;stroke-width:2;rx:8}
+.flow-node:hover rect.node-bg{stroke:#4F46E5;filter:drop-shadow(0 2px 8px rgba(79,70,229,.2))}
+.flow-node.selected rect.node-bg{stroke:#4F46E5;stroke-width:3}
+.flow-edge{fill:none;stroke:#cbd5e1;stroke-width:2}
+.flow-edge:hover{stroke:#4F46E5;stroke-width:3}
+.handle{fill:#fff;stroke:#4F46E5;stroke-width:2;cursor:crosshair;r:5}
+.handle:hover{fill:#4F46E5}
+.handle-out-multi{cursor:crosshair}
+.props{width:260px;background:#fff;border-left:1px solid #e5e7eb;padding:14px;overflow-y:auto;flex-shrink:0}
+.props h3{font-size:12px;font-weight:700;margin-bottom:10px}
+.props label{display:block;font-size:10px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;margin:8px 0 3px}
+.props textarea,.props input,.props select{width:100%;padding:5px 8px;border:1.5px solid #e5e7eb;border-radius:6px;font-size:11px;font-family:inherit}
+.props textarea{min-height:50px;resize:vertical}
+.props textarea:focus,.props input:focus,.props select:focus{outline:none;border-color:#4F46E5;box-shadow:0 0 0 3px rgba(79,70,229,.1)}
+.props .empty{color:#8895b7;font-size:11px;text-align:center;padding:20px 0}
+.props .node-info{font-size:10px;color:#8895b7;margin-bottom:10px}
+.props .btn-delete{width:100%;margin-top:10px;padding:7px;background:#FEE2E2;color:#DC2626;border:none;border-radius:6px;font-weight:600;font-size:11px;cursor:pointer}
+.props .btn-delete:hover{background:#FECACA}
+.branch-row{display:flex;gap:3px;align-items:center;margin-bottom:3px}
+.branch-row input,.branch-row select{flex:1}
+.branch-row button{background:#FEE2E2;color:#DC2626;border:none;border-radius:4px;width:22px;height:22px;cursor:pointer;font-size:12px;padding:0}
+.add-branch{padding:3px 8px;background:#EEF2FF;color:#4F46E5;border:none;border-radius:4px;font-size:10px;font-weight:600;cursor:pointer;margin-top:3px}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;justify-content:center;align-items:center}
+.modal-overlay.show{display:flex}
+.modal{background:#fff;border-radius:12px;width:500px;max-height:80vh;overflow-y:auto;padding:20px}
+.modal h2{font-size:15px;margin-bottom:14px}
+.modal .flow-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f3f4f6}
+.modal .flow-row .name{font-weight:600;font-size:12px}
+.modal .flow-row .meta{font-size:10px;color:#8895b7}
+.modal .flow-row button{margin-left:3px;padding:3px 8px;border-radius:4px;border:1px solid #e5e7eb;background:#fff;cursor:pointer;font-size:10px}
+.modal .flow-row button:hover{background:#f8f9fc}
+.toast{position:fixed;bottom:20px;right:20px;background:#152e4d;color:#fff;padding:10px 18px;border-radius:8px;font-size:12px;z-index:300;animation:fadeIn .3s}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.minimap{position:absolute;bottom:12px;right:12px;width:160px;height:100px;background:rgba(255,255,255,.9);border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;z-index:50;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.minimap svg{width:100%;height:100%}
+.toolbar{position:absolute;bottom:12px;left:12px;display:flex;gap:4px;z-index:50}
+.toolbar button{width:28px;height:28px;border-radius:6px;border:1px solid #e5e7eb;background:#fff;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
+.toolbar button:hover{background:#f8f9fc}
+.edge-label{font-size:9px;fill:#8895b7;text-anchor:middle}
+@media(max-width:768px){.palette{display:none}.props{width:100%;position:absolute;right:0;top:0;bottom:0;z-index:50;box-shadow:-4px 0 12px rgba(0,0,0,.1)}.toolbar{bottom:80px}.minimap{display:none}}
+</style>
+<link href="https://fonts.bunny.net/css?family=inter:400,500,600,700" rel="stylesheet">
+</head>
+<body>
+<script>var origFetch=window.fetch;window.fetch=function(url,opts){opts=opts||{};opts.credentials=opts.credentials||"same-origin";return origFetch(url,opts)};
+var L=document.cookie.indexOf('chatgo_lang=id')>=0?'id':'en';
+var T={
+'en':{save:'Save',load:'Load',test:'Test',stats:'Stats',new:'New Flow',name:'Flow Name',keyword:'Keyword',account:'WA Account',priority:'Priority',nodes:'Nodes',select:'Click a node to edit',del:'Delete Node',undo:'Undo',redo:'Redo',templates:'Saved Flows',close:'Close',simulator:'Flow Simulator',send:'Send',analytics:'Analytics',triggers:'Triggers',completed:'Completed',quick:'Quick:',imported:'Template imported',saved:'Saved',deleted:'Deleted',duplicated:'Duplicated',noFlows:'No flows yet.',palette:'Nodes',msg:'Message',ask:'Ask Question',cond:'Condition',w:'Wait',vp:'Set Var',tag:'Tag',api:'API Call',tran:'Transfer',cls:'Close',ai1:'AI Reply',ai2:'AI Decide',car:'Carousel',ord:'Order',pay:'Payment',math:'Math',str:'String',date:'Date',lookup:'Lookup',cnt:'Counter',seq:'Sequence',poll:'Poll',loc:'Location',doc:'Document',typ:'Typing',delay:'Delay Until',gal:'Gallery',voice:'Voice',vcard:'vCard',db:'DB Query',split:'Split',sticker:'Sticker',readr:'Rd Recpt',loop:'Loop',sub:'Sub-flow',rand:'Random',title:'Flow Builder Pro',props:'Properties',text:'Message Text',media:'Media URL',mediat:'Media Type',var:'Variable Name',check:'Check Variable',branches:'Branches',label:'Label',operator:'Operator',value:'Value',addBranch:'+ Add Branch',seconds:'Seconds',vars:'Variables (key=value)',tags:'Tags (comma)',url:'URL',method:'Method',resultVar:'Result Variable',sysPrompt:'System Prompt',saveTo:'Save Reply To',options:'Options (comma)',saveChoice:'Save Choice To',cat:'Category',maxItems:'Max Items',prodVar:'Product Var',qtyVar:'Qty Var',orderVar:'Order Var',amountVar:'Amount Var',formula:'Formula',template:'Template',operation:'Operation',iterations:'Max Iterations',condVar:'Condition Var',loopStart:'Loop Start',flowID:'Flow ID',inputs:'Inputs',outputs:'Outputs',weights:'Weights',fields:'Fields',key:'Key',maxCount:'Max Count',question:'Question',delayS:'Delay (seconds)',time:'Time',images:'Images',caption:'Caption',tts:'TTS Text',phone2:'Phone',org:'Org',query:'Query','log':'Test Log','logReady':'Simulator ready. Type a message to test.','bot':'Bot','you':'You','msg_help':'Messages','logic_help':'Logic','ai_help':'AI','store_help':'Store','tools_help':'Tools','flow_help':'Flow','end_help':'End','wa_help':'WA','howto':'How to use:','drag':'Drag nodes to canvas','click':'Click node to edit','connect':'Connect nodes by dragging handles','shortcuts':'Shortcuts:','delKey':'Delete node','undoKey':'Undo','redoKey':'Redo','saveKey':'Save','copyKey':'Copy','pasteKey':'Paste'},
+'id':{save:'Simpan',load:'Buka',test:'Tes',stats:'Stat',new:'Baru',name:'Nama Flow',keyword:'Keyword',account:'Akun WA',priority:'Prioritas',nodes:'Node',select:'Klik node untuk edit',del:'Hapus Node',undo:'Undo',redo:'Redo',templates:'Flow Tersimpan',close:'Tutup',simulator:'Simulator Flow',send:'Kirim',analytics:'Analitik',triggers:'Trigger',completed:'Selesai',quick:'Cepat:',imported:'Template diimpor',saved:'Tersimpan',deleted:'Dihapus',duplicated:'Diduplikasi',noFlows:'Belum ada flow.',palette:'Node',msg:'Pesan',ask:'Tanya',cond:'Kondisi',w:'Tunggu',vp:'Set Var',tag:'Tag',api:'API',tran:'Transfer',cls:'Tutup',ai1:'AI Balas',ai2:'AI Pilih',car:'Katalog',ord:'Order',pay:'Bayar',math:'Math',str:'String',date:'Tgl',lookup:'Cari',cnt:'Counter',seq:'Sequence',poll:'Polling',loc:'Lokasi',doc:'Dokumen',typ:'Ketik',delay:'Tunda',gal:'Galeri',voice:'Suara',vcard:'vCard',db:'DB',split:'Pisah',sticker:'Stiker',readr:'Baca',loop:'Loop',sub:'Sub-flow',rand:'Acak',title:'Flow Builder Pro',props:'Properti',text:'Teks Pesan',media:'URL Media',mediat:'Tipe Media',var:'Nama Variabel',check:'Cek Variabel',branches:'Cabang',label:'Label',operator:'Operator',value:'Nilai',addBranch:'+ Cabang',seconds:'Detik',vars:'Variabel (kunci=nilai)',tags:'Tag (koma)',url:'URL',method:'Metode',resultVar:'Simpan ke',sysPrompt:'System Prompt',saveTo:'Simpan ke',options:'Pilihan (koma)',saveChoice:'Simpan Pilihan',cat:'Kategori',maxItems:'Maks Item',prodVar:'Var Produk',qtyVar:'Var Jumlah',orderVar:'Var Order',amountVar:'Var Jumlah',formula:'Formula',template:'Template',operation:'Operasi',iterations:'Maks Iterasi',condVar:'Var Kondisi',loopStart:'Mulai Loop',flowID:'ID Flow',inputs:'Input',outputs:'Output',weights:'Bobot',fields:'Field',key:'Kunci',maxCount:'Maks',question:'Pertanyaan',delayS:'Delay (detik)',time:'Jam',images:'Gambar',caption:'Caption',tts:'Teks TTS',phone2:'Telepon',org:'Organisasi',query:'Query','log':'Log Tes','logReady':'Simulator siap. Ketik pesan untuk tes.','bot':'Bot','you':'Anda','msg_help':'Pesan','logic_help':'Logika','ai_help':'AI','store_help':'Toko','tools_help':'Alat','flow_help':'Flow','end_help':'Akhir','wa_help':'WA','howto':'Cara pakai:','drag':'Drag node ke canvas','click':'Klik node untuk edit','connect':'Tarik handle untuk hubungkan','shortcuts':'Shortcut:','delKey':'Hapus node','undoKey':'Undo','redoKey':'Redo','saveKey':'Simpan','copyKey':'Salin','pasteKey':'Tempel'}
+};
+function _(key){return (T[L]||T['en'])[key]||key}
+</script><div class="topbar">
+  <span class="flow-name">Flow Builder Pro</span>
+  <input id="flowName" placeholder="" id="flowNamePH" value="New Flow">
+  <input id="triggerValue" placeholder="" id="kwPH" value="halo,menu" style="width:170px">
+  <select id="triggerType"><option value="keyword">Keyword</option><option value="exact">Exact Match</option><option value="welcome">Welcome</option><option value="fallback">Fallback</option><option value="always">Always</option><option value="drip">Drip</option><option value="broadcast">Broadcast</option>    <option value="csat">CSAT</option><option value="close_chat">Close Chat</option><option value="cron">Cron/Schedule</option><option value="inactivity">Inactivity</option><option value="button">Button Click</option></select>
+  <input id="accountPhone" placeholder="" id="waPH" style="width:150px;font-size:10px">
+  <input id="flowTags" placeholder="Tags (sales,support)" style="width:130px;font-size:10px"><input id="rateLimit" placeholder="Rate/hr" type="number" style="width:60px;font-size:10px" value="0"><select id="priority" style="width:50px"><option value="0">P0</option><option value="1">P1</option><option value="2">P2</option><option value="5">P5</option><option value="10">P10</option></select>
+  <button class="btn-save" onclick="saveFlow()">[Save]</button>
+  <button class="btn-list" onclick="showFlowList()">[Load]</button>
+  <button class="btn-ghost" onclick="testFlow()">[Test]</button> <button class="btn-ghost" onclick="showAnalytics()">[Stats]</button> <button class="btn-ghost" onclick="publishFlow()">[Pub]</button><button class="btn-ghost" onclick="showVersions()">[Ver]</button><button class="btn-ghost" onclick="aiGenerate()">[AI Gen]</button><button class="btn-ghost" onclick="showMarketplace()">[Market]</button><button class="btn-ghost" onclick="newFlow()">+ Neww</button>
+  <span id="saveStatus" style="font-size:10px;opacity:.7"></span>
+</div>
+
+<div style="background:#f8f9fc;border-bottom:1px solid #e5e7eb;padding:6px 14px;display:flex;gap:6px;flex-wrap:wrap;font-size:10px" id="quickActions"><span style="color:#8895b7;font-weight:600;margin-right:4px">Quick:</span><button onclick="importTemplate('restaurant')" style="padding:3px 8px;background:#fff;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer">Resto</button><button onclick="importTemplate('csat')" style="padding:3px 8px;background:#fff;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer">CSAT</button><button onclick="importTemplate('lead')" style="padding:3px 8px;background:#fff;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer">Lead</button><button onclick="importTemplate('support')" style="padding:3px 8px;background:#fff;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer">Support</button><button onclick="importTemplate('product_reco')" style="padding:3px 8px;background:#fff;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer">Reco</button><button onclick="importTemplate('event')" style="padding:3px 8px;background:#fff;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer">Event</button><button onclick="importTemplate('order_status')" style="padding:3px 8px;background:#fff;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer">Order</button><button onclick="importTemplate('payment_reminder')" style="padding:3px 8px;background:#fff;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer">Remind</button><button onclick="importTemplate('delivery')" style="padding:3px 8px;background:#fff;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer">Delivery</button><button onclick="importTemplate('complaint')" style="padding:3px 8px;background:#fff;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer">Complain</button><button onclick="importTemplate('onboarding')" style="padding:3px 8px;background:#fff;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer">Onboard</button></div><div class="main">
+  <div class="palette">
+    <h3>Messages</h3>
+    <div class="node-item" draggable="true" data-type="message"><span class="node-color nc-msg"></span>Send Message</div>
+    <div class="node-item" draggable="true" data-type="question"><span class="node-color nc-q"></span>Ask Question</div>
+    <h3>AI</h3>
+    <div class="node-item" draggable="true" data-type="ai_reply"><span class="node-color" style="background:#06B6D4"></span>AI Reply</div>
+    <div class="node-item" draggable="true" data-type="ai_decide"><span class="node-color" style="background:#06B6D4"></span>AI Decide</div>
+    <h3>Store</h3>
+    <div class="node-item" draggable="true" data-type="product_carousel"><span class="node-color" style="background:#F97316"></span>Product Carousel</div>
+    <div class="node-item" draggable="true" data-type="order_create"><span class="node-color" style="background:#F97316"></span>Order Create</div>
+    <div class="node-item" draggable="true" data-type="payment_link"><span class="node-color" style="background:#F97316"></span>Payment Link</div>
+    <h3>Tools</h3>
+    <div class="node-item" draggable="true" data-type="math"><span class="node-color" style="background:#14B8A6"></span>Math / Formula</div>
+    <div class="node-item" draggable="true" data-type="string_template"><span class="node-color" style="background:#14B8A6"></span>String Template</div>
+    <div class="node-item" draggable="true" data-type="date_math"><span class="node-color" style="background:#14B8A6"></span>Date / Time</div>
+    <div class="node-item" draggable="true" data-type="contact_lookup"><span class="node-color" style="background:#14B8A6"></span>Contact Lookup</div>
+    <div class="node-item" draggable="true" data-type="counter"><span class="node-color" style="background:#14B8A6"></span>Counter</div>
+    <h3>Flow</h3>
+    <div class="node-item" draggable="true" data-type="loop"><span class="node-color" style="background:#A855F7"></span>Loop</div>
+    <div class="node-item" draggable="true" data-type="subflow"><span class="node-color" style="background:#A855F7"></span>Sub-flow Call</div>
+    <div class="node-item" draggable="true" data-type="random"><span class="node-color" style="background:#A855F7"></span>Random / A/B</div>
+    <h3>WA</h3>
+    <div class="node-item" draggable="true" data-type="poll"><span class="node-color" style="background:#22C55E"></span>Poll</div>
+    <div class="node-item" draggable="true" data-type="location"><span class="node-color" style="background:#22C55E"></span>Location</div>
+    <div class="node-item" draggable="true" data-type="document"><span class="node-color" style="background:#22C55E"></span>Document/PDF</div>
+    <div class="node-item" draggable="true" data-type="typing"><span class="node-color" style="background:#22C55E"></span>Typing...</div>
+    <div class="node-item" draggable="true" data-type="message_sequence"><span class="node-color" style="background:#22C55E"></span>Message Sequence</div><div class="node-item" draggable="true" data-type="delay_until"><span class="node-color" style="background:#22C55E"></span>Delay Until</div>
+    <div class="node-item" draggable="true" data-type="media_gallery"><span class="node-color" style="background:#D946EF"></span>Media Gallery</div>
+    <div class="node-item" draggable="true" data-type="voice_note"><span class="node-color" style="background:#D946EF"></span>Voice Note</div>
+    <div class="node-item" draggable="true" data-type="contact_card"><span class="node-color" style="background:#D946EF"></span>Contact Card</div>
+    <div class="node-item" draggable="true" data-type="db_query"><span class="node-color" style="background:#14B8A6"></span>DB Query</div>
+    <div class="node-item" draggable="true" data-type="split_merge"><span class="node-color" style="background:#8B5CF6"></span>Split/Merge</div>
+    <div class="node-item" draggable="true" data-type="sticker"><span class="node-color" style="background:#22C55E"></span>Sticker</div>
+    <div class="node-item" draggable="true" data-type="read_receipt"><span class="node-color" style="background:#F59E0B"></span>Read Receipt</div>
+    <div class="node-item" draggable="true" data-type="google_sheets"><span class="node-color" style="background:#0EA5E9"></span>Google Sheets</div>
+    <div class="node-item" draggable="true" data-type="warmer"><span class="node-color" style="background:#F43F5E"></span>WA Warmer</div>
+    <h3>Logic</h3>
+    <div class="node-item" draggable="true" data-type="condition"><span class="node-color nc-cond"></span>Condition</div>
+    <div class="node-item" draggable="true" data-type="wait"><span class="node-color nc-wait"></span>Wait/Delay</div>
+    <h3>Actions</h3>
+    <div class="node-item" draggable="true" data-type="set_variable"><span class="node-color nc-set"></span>Set Variable</div>
+    <div class="node-item" draggable="true" data-type="tag_contact"><span class="node-color nc-tag"></span>Tag Contact</div>
+    <div class="node-item" draggable="true" data-type="api_call"><span class="node-color nc-api"></span>API Call</div>
+    <h3>End</h3>
+    <div class="node-item" draggable="true" data-type="transfer_agent"><span class="node-color nc-transfer"></span>Transfer Agent</div>
+    <div class="node-item" draggable="true" data-type="close_chat"><span class="node-color nc-close"></span>Close Chat</div>
+  </div>
+  <div class="canvas-wrap" id="canvas">
+    <svg id="svg"></svg>
+    <div class="toolbar">
+      <button onclick="zoomIn()" title="Zoom In">+</button>
+      <button onclick="zoomOut()" title="Zoom Out">-</button>
+      <button onclick="zoomFit()" title="Fit All">?</button>
+      <button onclick="undo()" title="Undo (Ctrl+Z)">?</button>
+      <button onclick="redo()" title="Redo (Ctrl+Y)">?</button>
+    </div>
+    <div class="minimap" id="minimap"><svg id="minisvg"></svg></div>
+  </div>
+  <div class="props" id="props">
+    <h3>Properties</h3>
+    <div class="empty">Click a node to edit</div>
+    <div id="propContent"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal"><div class="modal"><h2>[Save]d Flows</h2><div id="flowList"></div><button class="btn-ghost" style="margin-top:10px;width:100%;padding:7px;border:1px solid #e5e7eb;background:#fff;color:#152e4d;border-radius:6px;cursor:pointer" onclick="closeModal()">Close</button></div></div>
+<div id="toast"></div>
+
+<script>var origFetch=window.fetch;window.fetch=function(url,opts){opts=opts||{};opts.credentials=opts.credentials||"same-origin";return origFetch(url,opts)};
+const SNAP=20; // snap grid
+let nodes=[],edges=[],selectedNode=null,nextId=0;
+let isDragging=false,isPanning=false,isConnecting=false;
+let dragNode=null,connectSource=null,offsetX=0,offsetY=0;
+let panX=0,panY=0,scale=1,panStartX=0,panStartY=0;
+let currentFlowId=null,clipboard=null;
+const W=160,H=60;
+
+// History for undo/redo
+let history=[],historyIdx=-1;
+function saveState(){history=history.slice(0,historyIdx+1);history.push({nodes:JSON.parse(JSON.stringify(nodes)),edges:JSON.parse(JSON.stringify(edges))});historyIdx++;if(history.length>50)history.shift()}
+function undo(){if(historyIdx>0){historyIdx--;var s=history[historyIdx];nodes=s.nodes;edges=s.edges;selectedNode=null;render();document.getElementById('propContent').innerHTML='';saveState();saveState();historyIdx--;toast('Undo')}}
+function redo(){if(historyIdx<history.length-1){historyIdx++;var s=history[historyIdx];nodes=s.nodes;edges=s.edges;selectedNode=null;render();document.getElementById('propContent').innerHTML='';toast('Redo')}}
+
+function id(){return'n'+(nextId++)}
+function snap(v){return Math.round(v/SNAP)*SNAP}
+
+// Drag from palette
+document.querySelectorAll('.node-item').forEach(function(el){el.addEventListener('dragstart',function(e){e.dataTransfer.setData('type',el.dataset.type)})});
+var canvas=document.getElementById('canvas');
+canvas.addEventListener('dragover',function(e){e.preventDefault()});
+canvas.addEventListener('drop',function(e){e.preventDefault();var t=e.dataTransfer.getData('type');if(!t)return;var r=canvas.getBoundingClientRect();saveState();addNode(t,toWorldX(e.clientX-r.left-W/2),toWorldY(e.clientY-r.top-H/2));render()});
+
+// Zoom
+canvas.addEventListener('wheel',function(e){e.preventDefault();var r=canvas.getBoundingClientRect();var mx=e.clientX-r.left,my=e.clientY-r.top;var ds=e.deltaY>0?0.9:1.1;var ns=Math.max(0.2,Math.min(3,scale*ds));panX=mx-(mx-panX)*(ns/scale);panY=my-(my-panY)*(ns/scale);scale=ns;render()});
+function zoomIn(){scale=Math.min(3,scale*1.2);render()}
+function zoomOut(){scale=Math.max(0.2,scale/1.2);render()}
+function zoomFit(){if(!nodes.length)return;var minX=nodes[0].position.x,maxX=minX,minY=nodes[0].position.y,maxY=minY;nodes.forEach(function(n){minX=Math.min(minX,n.position.x);maxX=Math.max(maxX,n.position.x+W);minY=Math.min(minY,n.position.y);maxY=Math.max(maxY,n.position.y+H)});var r=canvas.getBoundingClientRect();var w=maxX-minX+40,h=maxY-minY+40;scale=Math.min((r.width-40)/w,(r.height-40)/h,1.5);panX=(r.width/2-(minX+w/2)*scale);panY=(r.height/2-(minY+h/2)*scale);render()}
+
+function toWorldX(sx){return(sx-panX)/scale}
+function toWorldY(sy){return(sy-panY)/scale}
+
+// Pan
+canvas.addEventListener('mousedown',function(e){if(e.target===canvas||e.target.id==='svg'||e.target.classList.contains('canvas-wrap')){isPanning=true;panStartX=e.clientX-panX;panStartY=e.clientY-panY;canvas.classList.add('grabbing')}});
+document.addEventListener('mousemove',function(e){if(isPanning){panX=e.clientX-panStartX;panY=e.clientY-panStartY;render()}if(isDragging&&dragNode){var n=findNode(dragNode);if(n){n.position.x=snap(toWorldX(e.clientX-offsetX));n.position.y=snap(toWorldY(e.clientY-offsetY));render()}}});
+document.addEventListener('mouseup',function(e){if(isPanning){isPanning=false;canvas.classList.remove('grabbing')}if(isConnecting&&e.target.classList.contains('handle')){var th=e.target,si=connectSource.dataset.node,ti=th.dataset.node;if(si!==ti){var sh=connectSource.dataset.handle,label=connectSource.dataset.label||'';if(!edges.find(function(ed){return ed.source===si&&ed.target===ti&&ed.sourceHandle===sh})){saveState();edges.push({id:'e'+edges.length,source:si,target:ti,sourceHandle:sh,label:label});render()}}}isDragging=false;dragNode=null;isConnecting=false;connectSource=null});
+
+function addNode(type,x,y,data){var node={id:id(),type:type,position:{x:x||100,y:y||100},data:data||getDefault(type)};nodes.push(node);return node}
+function getDefault(type){switch(type){case'message':return{text:'Hello!'};case'question':return{question:'What is your name?',var_name:'name',type:'text'};case'condition':return{variable:'{{input}}',branches:[{id:'b1',label:'Yes',operator:'contains',value:'yes'},{id:'b2',label:'No',operator:'contains',value:'no'}]};case'wait':return{seconds:60};case'set_variable':return{variables:{}};case'tag_contact':return{tags:[]};case'api_call':return{url:'',method:'GET',var_name:''};case'ai_reply':return{system_prompt:'You are a helpful assistant.',var_result:'ai_reply'};case'ai_decide':return{system_prompt:'Classify the user message.',options:['A','B','C'],var_result:'ai_choice'};case'product_carousel':return{category:'',max_items:5};case'order_create':return{product_var:'{{input}}',qty_var:'1',var_result:'order_id'};case'payment_link':return{order_var:'{{var.order_id}}',amount_var:'0',var_result:'payment_url'};case'math':return{formula:'{{var.a}}+{{var.b}}',var_result:'result'};case'string_template':return{template:'Halo {{name}}!',var_result:'message'};case'date_math':return{operation:'now',value:0,var_result:'date'};case'contact_lookup':return{fields:['name','phone']};case'counter':return{key:'',max_count:3,var_result:'count'};case'loop':return{max_iterations:3,condition_var:'',loop_start:''};case'subflow':return{flow_id:0,inputs:{},outputs:{}};case'random':return{weights:[50,30,20]};case'poll':return{question:'Pilih:',options:['A','B','C'],max_select:1,var_result:'poll'};case'location':return{action:'send',lat:-6.2,lng:106.8,name:'Kantor'};case'document':return{url:'/uploads/doc.pdf',caption:'Dokumen'};case'typing':return{seconds:2};case'delay_until':return{time:'09:00',timezone:'Asia/Jakarta'};case'media_gallery':return{images:[{url:'/uploads/1.jpg',caption:'Foto 1'}],caption:'Album'};case'voice_note':return{url:'/uploads/audio.ogg',tts:''};case'contact_card':return{name:'CS Kami',phone:'62812',org:'ChatGo'};case'db_query':return{query:'SELECT COUNT(*) FROM contacts',var_result:'count'};case'split_merge':return{};case'sticker':return{url:'/uploads/sticker.webp',text:''};case'read_receipt':return{};case'google_sheets':return{action:'append',sheet_id:'',range:'Sheet1',data:''};case'warmer':return{};case'tg_keyboard':return{text:'',buttons:[]};case'tg_payment':return{title:'',amount:'0'};case'ig_comment_dm':return{trigger:''};case'ig_story_reply':return{text:''};case'ig_quick_reply':return{text:'',replies:[]};case'fb_carousel':return{title:'',items:[]};case'fb_persistent_menu':return{menu:''};case'fb_webview':return{url:'',title:''};case'buttons':return{title:'Pilih:',footer:'',buttons:['Ya','Tidak']};default:return{}}}
+
+// Render
+function render(){var svg=document.getElementById('svg');var h='<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#cbd5e1"/></marker></defs>';h+='<g transform="translate('+panX+','+panY+') scale('+scale+')">';
+edges.forEach(function(e){var s=findNode(e.source),t=findNode(e.target);if(!s||!t)return;var sx,sy;if(e.sourceHandle&&s.type==='condition'){var bi=parseInt(e.sourceHandle.replace('out-',''));var br=(s.data&&s.data.branches)?s.data.branches.length:2;var bh=H/(br+1);sy=s.position.y+bh*(bi+1);sx=s.position.x+W}else{sx=s.position.x+W;sy=s.position.y+H/2}var tx=t.position.x,ty=t.position.y+H/2,mx=(sx+tx)/2;h+='<path class="flow-edge" d="M'+sx+','+sy+' C'+mx+','+sy+' '+mx+','+ty+' '+tx+','+ty+'" marker-end="url(#arrow)"/><text class="edge-label" x="'+mx+'" y="'+(sy<ty?(sy+ty)/2-4:(sy+ty)/2+10)+'">'+(e.label||'')+'</text>'});
+nodes.forEach(function(n){var x=n.position.x,y=n.position.y,color=getColor(n.type),label=getLabel(n.type),text=getText(n.type,n.data);h+='<g class="flow-node'+(selectedNode===n.id?' selected':'')+'" data-id="'+n.id+'" transform="translate('+x+','+y+')">';h+='<rect class="node-bg" width="'+W+'" height="'+H+'"/>';h+='<rect width="'+W+'" height="20" fill="'+color+'" rx="8"/><rect x="0" y="12" width="'+W+'" height="8" fill="'+color+'"/>';h+='<text x="'+(W/2)+'" y="14" fill="#fff" font-size="10" font-weight="700" text-anchor="middle">'+label+'</text>';if(text)h+='<text x="'+(W/2)+'" y="32" font-size="10" fill="#64748b" text-anchor="middle">'+text.substring(0,22)+'</text>';h+='<circle class="handle" cx="0" cy="'+(H/2)+'" data-node="'+n.id+'" data-handle="in"/>';
+if(n.type==='condition'){var br=(n.data&&n.data.branches)?n.data.branches.length:2;for(var i=0;i<br;i++){var bh=H/(br+1);var by=bh*(i+1);var blabel=(n.data&&n.data.branches&&n.data.branches[i])?n.data.branches[i].label:'';h+='<circle class="handle handle-out-multi" cx="'+W+'" cy="'+by+'" data-node="'+n.id+'" data-handle="out-'+i+'" data-label="'+blabel+'"/>';h+='<text x="'+(W+10)+'" y="'+(by+3)+'" font-size="8" fill="#4F46E5" font-weight="600">'+blabel+'</text>'}}else{h+='<circle class="handle" cx="'+W+'" cy="'+(H/2)+'" data-node="'+n.id+'" data-handle="out"/>'}h+='</g>'});
+h+='</g>';svg.innerHTML=h;attachEvents();renderMinimap()}
+
+function renderMinimap(){var ms=document.getElementById('minisvg');if(!nodes.length){ms.innerHTML='';return}var minX=nodes[0].position.x,maxX=minX,minY=nodes[0].position.y,maxY=minY;nodes.forEach(function(n){minX=Math.min(minX,n.position.x);maxX=Math.max(maxX,n.position.x+W);minY=Math.min(minY,n.position.y);maxY=Math.max(maxY,n.position.y+H)});var mw=156,mh=96,pad=20;var sx=mw/(maxX-minX+2*pad),sy=mh/(maxY-minY+2*pad),s=Math.min(sx,sy);var h='<rect width="'+mw+'" height="'+mh+'" fill="#fff" rx="6"/>';nodes.forEach(function(n){var nx=(n.position.x-minX+pad)*s,ny=(n.position.y-minY+pad)*s,nw=W*s,nh=H*s;h+='<rect x="'+nx+'" y="'+ny+'" width="'+nw+'" height="'+nh+'" fill="'+getColor(n.type)+'" opacity=".5" rx="4"/>'});ms.innerHTML=h}
+
+function getColor(t){var m={message:'#4F46E5',question:'#0891B2',condition:'#F59E0B',wait:'#8B5CF6',set_variable:'#6366F1',tag_contact:'#F97316',api_call:'#EC4899',transfer_agent:'#EF4444',close_chat:'#6B7280',ai_reply:'#06B6D4',ai_decide:'#06B6D4',product_carousel:'#F97316',order_create:'#F97316',payment_link:'#F97316',math:'#14B8A6',string_template:'#14B8A6',date_math:'#14B8A6',contact_lookup:'#14B8A6',counter:'#14B8A6',loop:'#A855F7',subflow:'#A855F7',random:'#A855F7',poll:'#22C55E',location:'#22C55E',document:'#22C55E',typing:'#22C55E',delay_until:'#22C55E',media_gallery:'#D946EF',voice_note:'#D946EF',contact_card:'#D946EF',db_query:'#14B8A6',split_merge:'#8B5CF6',sticker:'#22C55E',read_receipt:'#F59E0B',google_sheets:'#0EA5E9',warmer:'#F43F5E',tg_keyboard:'#2AABEE',tg_payment:'#2AABEE',ig_comment_dm:'#E1306C',ig_story_reply:'#E1306C',ig_quick_reply:'#E1306C',fb_carousel:'#1877F2',fb_persistent_menu:'#1877F2',fb_webview:'#1877F2',buttons:'#25D366'};return m[t]||'#4F46E5'}
+function getLabel(t){var m={message:'Message',question:'Question',condition:'Condition',wait:'Wait',set_variable:'Set Var',tag_contact:'Tag',api_call:'API Call',transfer_agent:'Transfer',close_chat:'Close',ai_reply:'AI Reply',ai_decide:'AI Decide',product_carousel:'Carousel',order_create:'Order',payment_link:'Payment',math:'Math',string_template:'String',date_math:'Date',contact_lookup:'Lookup',counter:'Counter',loop:'Loop',subflow:'Sub-flow',random:'Random',poll:'Poll',location:'Location',document:'Document',typing:'Typing',delay_until:'Delay Until',media_gallery:'Gallery',voice_note:'Voice',contact_card:'vCard',db_query:'DB Query',split_merge:'Split',sticker:'Sticker',read_receipt:'Rd Recpt',google_sheets:'Sheets',warmer:'Warmer',tg_keyboard:'TG Keybrd',tg_payment:'TG Pay',ig_comment_dm:'IG Comment',ig_story_reply:'IG Story',ig_quick_reply:'IG Quick',fb_carousel:'FB Carousel',fb_persistent_menu:'FB Menu',fb_webview:'FB Webview',buttons:'Buttons'};return m[t]||t}
+function getText(t,d){if(!d)return'';return d.text||d.question||d.variable||''}
+function findNode(id){return nodes.find(function(n){return n.id===id})}
+
+function attachEvents(){document.querySelectorAll('.flow-node').forEach(function(g){g.addEventListener('mousedown',function(e){if(e.target.classList.contains('handle')){startConnect(e.target);return}selectNode(g.dataset.id);isDragging=true;dragNode=g.dataset.id;var n=findNode(dragNode);var r=canvas.getBoundingClientRect();offsetX=e.clientX-r.left-panX-n.position.x*scale;offsetY=e.clientY-r.top-panY-n.position.y*scale})});document.querySelectorAll('.handle').forEach(function(h){h.addEventListener('mousedown',function(e){e.stopPropagation();e.preventDefault();startConnect(h)})})}
+function startConnect(h){isConnecting=true;connectSource=h;saveState()}
+function selectNode(id){selectedNode=id;render();showProps(id)}
+
+// Properties panel
+function showProps(nid){var n=findNode(nid);if(!n){document.getElementById('propContent').innerHTML='';return}var d=n.data||{},h='<div class="node-info">'+n.type+' ï¿½ '+n.id+'</div>';switch(n.type){case'message':h+='<label>Message Text</label><textarea onchange="upd(\''+nid+'\',\'text\',this.value)">'+(d.text||'')+'</textarea><label>Media URL (optional)</label><input placeholder="/uploads/img.jpg" value="'+(d.media_url||'')+'" onchange="upd(\''+nid+'\',\'media_url\',this.value)"><label>Media Type</label><select onchange="upd(\''+nid+'\',\'media_type\',this.value)"><option value="">None</option><option value="image"'+(d.media_type==='image'?' selected':'')+'>Image</option><option value="video"'+(d.media_type==='video'?' selected':'')+'>Video</option><option value="document"'+(d.media_type==='document'?' selected':'')+'>Document</option></select>';break;case'question':h+='<label>Question</label><textarea onchange="upd(\''+nid+'\',\'question\',this.value)">'+(d.question||'')+'</textarea><label>Variable Name</label><input value="'+(d.var_name||'')+'" onchange="upd(\''+nid+'\',\'var_name\',this.value)">';break;case'ai_reply':h+='<label>System Prompt</label><textarea onchange="upd(\''+nid+'\',\'system_prompt\',this.value)">'+(d.system_prompt||'')+'</textarea><label>Save Reply</label><input value="'+(d.var_result||'')+'" onchange="upd(\''+nid+'\',\'var_result\',this.value)">';break;case'ai_decide':h+='<label>System Prompt</label><textarea onchange="upd(\''+nid+'\',\'system_prompt\',this.value)">'+(d.system_prompt||'')+'</textarea><label>Options (comma)</label><input value="'+(d.options||[]).join(', ')+'" onchange="upd(\''+nid+'\',\'options\',this.value.split(\',\').map(function(s){return s.trim()}).filter(Boolean))"><label>Save Choice</label><input value="'+(d.var_result||'')+'" onchange="upd(\''+nid+'\',\'var_result\',this.value)">';break;case'condition':h+='<label>Check Variable</label><input value="'+(d.variable||'')+'" onchange="upd(\''+nid+'\',\'variable\',this.value)" placeholder="{{input}}"><label>Branches</label>';if(d.branches)d.branches.forEach(function(b,i){h+='<div class="branch-row"><input value="'+(b.label||'')+'" onchange="brUpd(\''+nid+'\','+i+',\'label\',this.value)" placeholder="Label"><select onchange="brUpd(\''+nid+'\','+i+',\'operator\',this.value)"><option value="equals"'+(b.operator==='equals'?' selected':'')+'>equals</option><option value="contains"'+(b.operator==='contains'?' selected':'')+'>contains</option><option value="starts_with"'+(b.operator==='starts_with'?' selected':'')+'>starts</option></select><input value="'+(b.value||'')+'" onchange="brUpd(\''+nid+'\','+i+',\'value\',this.value)" placeholder="Value"><button onclick="rmBr(\''+nid+'\','+i+')">x</button></div>'});h+='<button class="add-branch" onclick="addBr(\''+nid+'\')">+ Add Branch</button>';break;case'wait':h+='<label>Delay (seconds)</label><input type="number" value="'+(d.seconds||60)+'" onchange="upd(\''+nid+'\',\'seconds\',parseInt(this.value))">';break;case'set_variable':h+='<label>Variables (key=value)</label><textarea onchange="pv(\''+nid+'\',this.value)" placeholder="greeting=Halo">'+vt(d.variables)+'</textarea>';break;case'tag_contact':h+='<label>Tags (comma separated)</label><input value="'+((d.tags||[]).join(', '))+'" onchange="pt(\''+nid+'\',this.value)">';break;case'api_call':h+='<label>URL</label><input value="'+(d.url||'')+'" onchange="upd(\''+nid+'\',\'url\',this.value)"><label>Method</label><select onchange="upd(\''+nid+'\',\'method\',this.value)"><option'+(d.method==='GET'?' selected':'')+'>GET</option><option'+(d.method==='POST'?' selected':'')+'>POST</option></select><label>Result Variable</label><input value="'+(d.var_name||'')+'" onchange="upd(\''+nid+'\',\'var_name\',this.value)">';break}h+='<button class="btn-delete" onclick="delNode(\''+n.id+'\')">?? Delete Node</button>';document.getElementById('propContent').innerHTML=h}
+
+function upd(id,k,v){var n=findNode(id);if(!n)return;if(!n.data)n.data={};n.data[k]=v;render();saveState()}
+function brUpd(nid,i,k,v){var n=findNode(nid);if(!n||!n.data||!n.data.branches)return;n.data.branches[i][k]=v;render()}
+function addBr(nid){var n=findNode(nid);if(!n)return;if(!n.data)n.data={};if(!n.data.branches)n.data.branches=[];n.data.branches.push({id:'b'+n.data.branches.length,label:'',operator:'equals',value:''});showProps(nid);render()}
+function rmBr(nid,i){var n=findNode(nid);if(!n||!n.data||!n.data.branches)return;n.data.branches.splice(i,1);showProps(nid);render()}
+function pv(id,text){var v={};text.split('\n').forEach(function(l){var p=l.split('=');if(p[0]&&p.length>1)v[p[0].trim()]=p.slice(1).join('=').trim()});upd(id,'variables',v)}
+function vt(v){if(!v)return'';return Object.entries(v).map(function(e){return e[0]+'='+e[1]}).join('\n')}
+function pt(id,text){upd(id,'tags',text.split(',').map(function(t){return t.trim()}).filter(Boolean))}
+function delNode(id){saveState();nodes=nodes.filter(function(n){return n.id!==id});edges=edges.filter(function(e){return e.source!==id&&e.target!==id});selectedNode=null;render();document.getElementById('propContent').innerHTML=''}
+
+// Keyboard shortcuts
+document.addEventListener('keydown',function(e){
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT')return;
+  if(e.key==='Delete'&&selectedNode){delNode(selectedNode);toast('Deleted')}
+  if(e.ctrlKey&&e.key==='z'){e.preventDefault();undo()}
+  if(e.ctrlKey&&e.key==='y'){e.preventDefault();redo()}
+  if(e.ctrlKey&&e.key==='s'){e.preventDefault();saveFlow()}
+  if(e.ctrlKey&&e.key==='c'&&selectedNode){var n=findNode(selectedNode);if(n){clipboard={type:n.type,data:JSON.parse(JSON.stringify(n.data||{})),position:{x:n.position.x+30,y:n.position.y+30}};toast('Copied')}}
+  if(e.ctrlKey&&e.key==='v'&&clipboard){saveState();addNode(clipboard.type,clipboard.position.x,clipboard.position.y,clipboard.data);render();toast('Pasted')}
+});
+
+// Save/Load
+function buildFlow(){return{id:currentFlowId||0,name:document.getElementById('flowName').value||'New Flow',trigger:{type:document.getElementById('triggerType').value,value:document.getElementById('triggerValue').value,account_phone:document.getElementById('accountPhone').value,priority:parseInt(document.getElementById('priority').value)||0},tags:document.getElementById('flowTags').value,rate_limit:parseInt(document.getElementById('rateLimit').value)||0,nodes:nodes.map(function(n){return{id:n.id,type:n.type,position:n.position,data:n.data||{}}}),edges:edges,active:true}}
+async function saveFlow(){var f=buildFlow();var r=await fetch('/pro/flow-builder/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(f)});var j=await r.json();if(j.id){currentFlowId=j.id;toast('Saved #'+j.id)}else toast('Save failed')}
+async function showFlowList(){var r=await fetch('/pro/flow-builder/list');var flows=await r.json();var h='';flows.forEach(function(f){h+='<div class="flow-row"><div><div class="name">'+f.name+'</div><div class="meta">'+f.trigger.type+': '+f.trigger.value+' ï¿½ '+f.nodes.length+' nodes</div></div><div><button onclick="loadFlow('+f.id+')">Load</button><button onclick="dupFlow('+f.id+')">Copy</button><button onclick="togFlow('+f.id+')">'+(f.active?'??':'?')+'</button><button onclick="delFlow('+f.id+')" style="color:#DC2626">Del</button></div></div>'});if(!flows.length)h='<div style="text-align:center;padding:20px;color:#8895b7">No flows yet.</div>';document.getElementById('flowList').innerHTML=h;document.getElementById('modal').classList.add('show')}
+async function loadFlow(id){var r=await fetch('/pro/flow-builder/load?id='+id);var f=await r.json();currentFlowId=f.id;document.getElementById('flowName').value=f.name;document.getElementById('triggerType').value=f.trigger.type;document.getElementById('triggerValue').value=f.trigger.value;document.getElementById('accountPhone').value=f.trigger.account_phone||'';document.getElementById('priority').value=f.trigger.priority||0;document.getElementById('flowTags').value=f.tags||'';document.getElementById('rateLimit').value=f.rate_limit||0;nodes=f.nodes||[];edges=f.edges||[];nextId=nodes.length;selectedNode=null;panX=0;panY=0;scale=1;history=[];historyIdx=-1;render();document.getElementById('propContent').innerHTML='';closeModal();toast('Loaded: '+f.name)}
+async function delFlow(id){if(!confirm('Delete?'))return;await fetch('/pro/flow-builder/delete',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'id='+id});showFlowList()}
+async function dupFlow(id){await fetch('/pro/flow-builder/duplicate',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'id='+id});showFlowList();toast('Duplicated')}
+async function togFlow(id){await fetch('/pro/flow-builder/toggle',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'id='+id});showFlowList()}
+async function publishFlow(){if(!currentFlowId){toast("Save first");return}var r=await fetch("/pro/flow-builder/publish",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"id="+currentFlowId});var j=await r.json();toast(j.status)}async function showVersions(){if(!currentFlowId){toast("Save first");return}var r=await fetch("/pro/flow-builder/versions?id="+currentFlowId);var versions=await r.json();var h="<h2>[Ver]sion History</h2>";versions.forEach(function(v,i){h+="<div class=\"flow-row\"><div><div class=\"name\">v"+(versions.length-i)+" · "+v.name+"</div><div class=\"meta\">"+v.saved_at+"</div></div><div><button onclick=\"rollbackFlow("+v.id+")\">Rollback</button></div></div>"});if(!versions.length)h="<div style=\"text-align:center;padding:20px\">No versions yet. Save flow to create versions.</div>";document.getElementById("flowList").innerHTML=h;document.getElementById("modal").classList.add("show")}async function rollbackFlow(vid){if(!confirm("Rollback to this version?"))return;var r=await fetch("/pro/flow-builder/rollback",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"flow_id="+currentFlowId+"&version_id="+vid});var j=await r.json();if(j.status==="rolled_back"){loadFlow(currentFlowId);toast("Rolled back")}}async function aiGenerate(){var prompt=prompt("Deskripsikan flow yang diinginkan:");if(!prompt)return;toast("AI generating...");var r=await fetch("/pro/flow-builder/ai-generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt:prompt})});var j=await r.json();if(j.id){loadFlow(j.id);toast(j.name+" generated!")}else{toast("AI failed: "+j)}}async function showMarketplace(){var r=await fetch("/pro/flow-builder/marketplace");var flows=await r.json();var h="<h2>[Market]place</h2>";flows.forEach(function(f){h+="<div class=\"flow-row\"><div><div class=\"name\">"+f.name+"</div><div class=\"meta\">"+f.trigger.type+": "+f.trigger.value+" · "+f.nodes.length+" nodes</div></div><div><button onclick=\"loadMarketFlow("+f.id+")\">Import</button></div></div>"});if(!flows.length)h="<div style=\"text-align:center;padding:20px\">No public flows yet.</div>";document.getElementById("flowList").innerHTML=h;document.getElementById("modal").classList.add("show")}async function loadMarketFlow(id){var r=await fetch("/pro/flow-builder/load?id="+id);var f=await r.json();f.id=0;f.name=f.name+" (imported)";var sr=await fetch("/pro/flow-builder/save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(f)});var j=await sr.json();if(j.id){loadFlow(j.id);closeModal();toast("Imported from marketplace")}}function newFlow(){currentFlowId=null;document.getElementById('flowName').value='New Flow';nodes=[];edges=[];selectedNode=null;panX=0;panY=0;scale=1;history=[];historyIdx=-1;render();document.getElementById('propContent').innerHTML='';toast('New flow')}
+function closeModal(){document.getElementById('modal').classList.remove('show')}
+async function testFlow(){document.getElementById('testPanel').style.display='block';var log=document.getElementById('testLog');log.innerHTML='<div style="color:#8895b7;font-size:11px">Simulator ready. Ketik pesan untuk test flow.</div>'}
+async function runTest(){var inp=document.getElementById('testInput');var msg=inp.value;if(!msg)return;var log=document.getElementById('testLog');log.innerHTML+='<div style="margin:4px 0;font-size:11px"><b style="color:#4F46E5">You:</b> '+msg+'</div>';log.innerHTML+='<div style="margin:4px 0;font-size:11px"><b style="color:#10B981">Bot:</b> [flow would reply here based on trigger: '+document.getElementById('triggerType').value+':'+document.getElementById('triggerValue').value+']</div>';log.scrollTop=log.scrollHeight;inp.value='';var flow=buildFlow();fetch('/pro/flow-builder/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(flow)}).then(function(r){return r.json()}).then(function(j){if(j.id)currentFlowId=j.id})}
+async function showAnalytics(){var id=currentFlowId;if(!id){toast('Save flow first');return}var r=await fetch('/pro/flow-builder/analytics?id='+id);var a=await r.json();var h='<div style="padding:8px;font-size:11px"><b>Triggers:</b> '+(a.trigger_count||0)+' | <b>Completed:</b> '+(a.completion_count||0)+'</div>';if(a.node_hits){var keys=Object.keys(a.node_hits);if(keys.length){h+='<div style="padding:0 8px 8px;font-size:10px;max-height:200px;overflow-y:auto">';keys.forEach(function(k){h+='<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid #f3f4f6">'+k+' <b>'+a.node_hits[k]+'x</b></div>'});h+='</div>'}}document.getElementById('flowList').innerHTML='<h2>?? Analytics: '+document.getElementById('flowName').value+'</h2>'+h;document.getElementById('modal').classList.add('show')}
+async function importTemplate(id){var r=await fetch("/pro/flow-builder/templates/import",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"id="+id});var j=await r.json();if(j.id){loadFlow(j.id);toast("Template: "+j.name)}else toast("Import failed")}function showInlineMetrics(){var svg=document.getElementById("svg");nodes.forEach(function(n){var el=svg.querySelector(`.flow-node[data-id="${n.id}"]`);if(el){var badge=el.querySelector(".metric-badge");if(!badge){badge=document.createElementNS("http://www.w3.org/2000/svg","text");badge.classList.add("metric-badge");badge.setAttribute("x",W-8);badge.setAttribute("y",H-6);badge.setAttribute("font-size","9");badge.setAttribute("fill","#4F46E5");badge.setAttribute("font-weight","700");badge.setAttribute("text-anchor","end");el.appendChild(badge)}badge.textContent=""}});if(currentFlowId)loadNodeMetrics(currentFlowId)}async function loadNodeMetrics(fid){var r=await fetch("/pro/flow-builder/analytics?id="+fid);var a=await r.json();if(a.node_hits){var svg=document.getElementById("svg");Object.keys(a.node_hits).forEach(function(nid){var el=svg.querySelector(`.flow-node[data-id="${nid}"]`);if(el){var badge=el.querySelector(".metric-badge");if(!badge){badge=document.createElementNS("http://www.w3.org/2000/svg","text");badge.classList.add("metric-badge");badge.setAttribute("x",W-8);badge.setAttribute("y",H-6);badge.setAttribute("font-size","9");badge.setAttribute("fill","#4F46E5");badge.setAttribute("font-weight","700");badge.setAttribute("text-anchor","end");el.appendChild(badge)}badge.textContent=a.node_hits[nid]+"x"}})}}function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(function(){t.style.display='none'},2000)}
+
+saveState();render();
+</script>
+</body>
+</html>
+
+<div style="display:none;position:fixed;bottom:0;right:280px;width:360px;height:300px;background:#fff;border:1px solid #e5e7eb;border-radius:12px 12px 0 0;z-index:100;box-shadow:0 -4px 12px rgba(0,0,0,.1)" id="testPanel">
+<div style="padding:10px 14px;background:#0f1f33;color:#fff;border-radius:10px 10px 0 0;display:flex;justify-content:space-between;align-items:center">
+<span style="font-weight:700;font-size:12px">Flow Simulator</span>
+<button onclick="document.getElementById('testPanel').style.display='none'" style="background:none;border:none;color:#fff;cursor:pointer;font-size:16px">&times;</button>
+</div>
+<div style="padding:10px;overflow-y:auto;height:200px" id="testLog"></div>
+<div style="padding:8px;border-top:1px solid #e5e7eb;display:flex;gap:6px">
+<input id="testInput" placeholder="Ketik pesan..." style="flex:1;padding:6px 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:11px" onkeydown="if(event.key==='Enter')runTest()">
+<button onclick="runTest()" style="padding:6px 12px;background:#4F46E5;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer">Send</button>
+</div>
+</div>

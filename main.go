@@ -130,7 +130,9 @@ func main() {
 	mux.HandleFunc("/send/media", authMiddleware(handleSendMedia))
 	mux.HandleFunc("/sent", p("sent"))
 	mux.HandleFunc("/received", p("received"))
-	mux.HandleFunc("/inbox", p("inbox"))
+	mux.HandleFunc("/inbox", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/omni/inbox", http.StatusMovedPermanently)
+	})
 	mux.HandleFunc("/inbox/chat", authMiddleware(handleInboxChat))
 	mux.HandleFunc("/inbox/events", authMiddleware(handleInboxEvents))
 	mux.HandleFunc("/inbox/send", authMiddleware(handleInboxSend))
@@ -401,6 +403,7 @@ func main() {
 	mux.HandleFunc("/buttons-builder", authMiddleware(handleButtonsBuilder))
 	mux.HandleFunc("/warmer", authMiddleware(requireAdmin(handleWarmer)))
 	mux.HandleFunc("/flow-search", authMiddleware(handleFlowSearch))
+	mux.HandleFunc("/flow-builder", p("flowbuilder"))
 	mux.HandleFunc("/dark-mode", authMiddleware(handleDarkMode))
 	mux.HandleFunc("/flow-logs", authMiddleware(handleFlowLogs))
 	mux.HandleFunc("/healthz", handleHealthz)
@@ -609,6 +612,7 @@ type pageData struct {
 	InboxPages     []int
 	LogTotal       int
 	LogPages       []int
+	IsPro          bool
 }
 
 type DocsStep struct {
@@ -677,8 +681,8 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 	status, phone := engine.Status()
 	uid := getUserID(r)
 	ars, _ := db.ListAutoReplies(uid)
-	sent, _ := db.ListSentPaginated(1, 20)
-	received, _ := db.ListReceivedPaginated(1, 20)
+	sent, _ := db.ListSentPaginated(uid, 1, 20)
+	received, _ := db.ListReceivedPaginated(uid, 1, 20)
 
 	langs := make([]langInfo, 0)
 	for _, l := range i18n.List() {
@@ -690,7 +694,7 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		Page: page, Active: page, Status: status, Phone: phone,
 		Flash:       r.URL.Query().Get("msg"),
 		AutoReplies: ars, Sent: sent, Received: received,
-		CountSent: db.CountSent(), CountReceived: db.CountReceived(),
+		CountSent: db.CountSent(uid), CountReceived: db.CountReceived(uid),
 		LangCode: cur.Code, LangName: cur.Name, LangFlag: cur.Flag,
 		Languages: langs,
 		SentPerPage: 10, ReceivedPerPage: 10,
@@ -786,6 +790,7 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 			d.UserPackage = "Free"
 		}
 	}
+	d.IsPro = isProBuild()
 
 	// load entity lists per page (only what's needed)
 	switch page {
@@ -873,8 +878,8 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Scheduleds, _ = db.ListScheduled()
 	case "sent":
 		d.SentPage = pageFromQuery(r)
-		d.Sent, _ = db.ListSentPaginated(d.SentPage, d.SentPerPage)
-		d.SentTotal = db.CountSent()
+		d.Sent, _ = db.ListSentPaginated(uid, d.SentPage, d.SentPerPage)
+		d.SentTotal = db.CountSent(uid)
 		d.SentPages = pageNums(d.SentPage, (d.SentTotal+d.SentPerPage-1)/d.SentPerPage)
 	case "inbox":
 		d.PageNum = pageFromQuery(r)
@@ -882,7 +887,7 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.InboxTotal = db.CountInbox(uid)
 		d.InboxPages = pageNums(d.PageNum, (d.InboxTotal+9)/10)
 	case "omni_inbox":
-		recv, _ := db.ListReceivedPaginated(1, 50)
+		recv, _ := db.ListReceivedPaginated(uid, 1, 50)
 		for _, msg := range recv {
 			d.InboxConversations = append(d.InboxConversations, store.InboxConversation{
 				Phone: msg.Phone, Name: msg.Name,
@@ -892,13 +897,13 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.Canned, _ = db.ListCanned()
 	case "inbox_chat":
 		d.Phone = r.URL.Query().Get("phone")
-		d.ChatMessages, _ = db.ChatHistory(d.Phone, 100)
+		d.ChatMessages, _ = db.ChatHistory(uid, d.Phone, 100)
 		d.Templates, _ = db.ListTemplates()
 		d.Canned, _ = db.ListCanned()
 		d.Users, _ = db.ListUsers()
 		d.Notes, _ = db.GetNotes(d.Phone)
 		d.MetaAccounts, _ = db.ListMetaAccounts()
-		if msgs, _ := db.ChatHistory(d.Phone, 1); len(msgs) > 0 {
+		if msgs, _ := db.ChatHistory(uid, d.Phone, 1); len(msgs) > 0 {
 			d.IsGroup = msgs[0].IsGroup
 			d.Channel = msgs[0].Channel
 			if d.IsGroup {
@@ -909,8 +914,8 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		}
 	case "received":
 		d.ReceivedPage = pageFromQuery(r)
-		d.Received, _ = db.ListReceivedPaginated(d.ReceivedPage, d.ReceivedPerPage)
-		d.ReceivedTotal = db.CountReceived()
+		d.Received, _ = db.ListReceivedPaginated(uid, d.ReceivedPage, d.ReceivedPerPage)
+		d.ReceivedTotal = db.CountReceived(uid)
 		d.ReceivedPages = pageNums(d.ReceivedPage, (d.ReceivedTotal+d.ReceivedPerPage-1)/d.ReceivedPerPage)
 			case "logger":
 		d.PageNum = pageFromQuery(r)
@@ -1218,6 +1223,14 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 			}
 			return template.HTML(buf.String())
 		},
+		"hasService": func(services string, service string, isAdmin bool) bool {
+			if isAdmin { return true }
+			if services == "" { return false }
+			for _, s := range strings.Split(services, ",") {
+				if strings.TrimSpace(s) == service { return true }
+			}
+			return false
+		},
 		"dict": func(values ...interface{}) map[string]interface{} {
 			if len(values)%2 != 0 { return nil }
 			dict := make(map[string]interface{}, len(values)/2)
@@ -1494,7 +1507,8 @@ func handleInboxMessages(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "phone required", 400)
 		return
 	}
-	msgs, _ := db.ChatHistory(phone, 100)
+	uid := getUserID(r)
+	msgs, _ := db.ChatHistory(uid, phone, 100)
 	db.MarkRead(phone)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprint(w, "[")
@@ -2269,7 +2283,7 @@ func handleInboxSuggest(w http.ResponseWriter, r *http.Request) {
 	ak := keys[0]
 	dec, _ := secret.Decrypt(ak.APIKey)
 	if dec == "" { dec = ak.APIKey }
-	msgs, _ := db.ChatHistory(phone, 10)
+	msgs, _ := db.ChatHistory(getUserID(r), phone, 10)
 	context := ""
 	for i := len(msgs) - 1; i >= 0; i-- {
 		prefix := "Customer"
@@ -2775,7 +2789,7 @@ func handleMetaWebhook(w http.ResponseWriter, r *http.Request) {
 				// Webhook dispatch
 				db.Log("meta", "received", fmt.Sprintf("%s -> %s: %s", m.From, acc.Name, text))
 
-				if ar, found := db.FindReplyFullForAccount(text, ""); found && ar.IsActive {
+				if ar, found := db.FindReplyFullForAccount(acc.UserID, text, ""); found && ar.IsActive {
 					reply := msgtemplate.Render(ar.Reply, msgtemplate.Vars{Phone: m.From, Name: "", Message: text})
 					if ar.UseAI && ar.AiKeyID > 0 {
 						if aik, err := db.GetAiKey(ar.AiKeyID); err == nil {
@@ -2810,6 +2824,7 @@ func handleMetaWebhook(w http.ResponseWriter, r *http.Request) {
 
 func handleMetaFlows(w http.ResponseWriter, r *http.Request) {
 	accounts, _ := db.ListMetaAccounts()
+	if len(accounts) == 0 { noMetaAccountHTML(w); return }
 	var result []map[string]interface{}
 	for _, acc := range accounts {
 		mc := meta.New(acc.PhoneNumberID, decryptOrPlain(acc.AccessToken), acc.VerifyToken)
@@ -2822,6 +2837,7 @@ func handleMetaFlows(w http.ResponseWriter, r *http.Request) {
 
 func handleMetaCatalog(w http.ResponseWriter, r *http.Request) {
 	accounts, _ := db.ListMetaAccounts()
+	if len(accounts) == 0 { noMetaAccountHTML(w); return }
 	if r.Method == http.MethodPost {
 		for _, acc := range accounts {
 			mc := meta.New(acc.PhoneNumberID, decryptOrPlain(acc.AccessToken), acc.VerifyToken)
@@ -2842,8 +2858,8 @@ func handleMetaCatalog(w http.ResponseWriter, r *http.Request) {
 
 func handleMetaCalling(w http.ResponseWriter, r *http.Request) {
 	accounts, _ := db.ListMetaAccounts()
+	if len(accounts) == 0 { noMetaAccountHTML(w); return }
 	w.Header().Set("Content-Type", "application/json")
-	if len(accounts) == 0 { json.NewEncoder(w).Encode(map[string]string{"status":"no_meta_account"}); return }
 	mc := meta.New(accounts[0].PhoneNumberID, decryptOrPlain(accounts[0].AccessToken), accounts[0].VerifyToken)
 	voices, _ := mc.FetchElevenLabsVoices()
 	status, _ := mc.GetHealthStatus()
@@ -2854,8 +2870,8 @@ func handleMetaProfile(w http.ResponseWriter, r *http.Request) { http.Redirect(w
 
 func handleMetaQR(w http.ResponseWriter, r *http.Request) {
 	accounts, _ := db.ListMetaAccounts()
+	if len(accounts) == 0 { noMetaAccountHTML(w); return }
 	w.Header().Set("Content-Type", "application/json")
-	if len(accounts) == 0 { json.NewEncoder(w).Encode(map[string]string{"status":"no_meta_account"}); return }
 	mc := meta.New(accounts[0].PhoneNumberID, decryptOrPlain(accounts[0].AccessToken), accounts[0].VerifyToken)
 	msg := r.URL.Query().Get("message"); if msg == "" { msg = "Hello!" }
 	qr, _ := mc.GenerateQRCode(msg)
@@ -2864,6 +2880,7 @@ func handleMetaQR(w http.ResponseWriter, r *http.Request) {
 
 func handleMetaHealth(w http.ResponseWriter, r *http.Request) {
 	accounts, _ := db.ListMetaAccounts()
+	if len(accounts) == 0 { noMetaAccountHTML(w); return }
 	w.Header().Set("Content-Type", "application/json")
 	var result []map[string]interface{}
 	for _, acc := range accounts {
@@ -2878,10 +2895,28 @@ func handleMetaHealth(w http.ResponseWriter, r *http.Request) {
 
 func parseFloat(s string) float64 { f, _ := strconv.ParseFloat(s, 64); return f }
 
+func cleanPhone(p string) string {
+	p = strings.TrimPrefix(p, "+")
+	if idx := strings.Index(p, "@"); idx >= 0 { p = p[:idx] }
+	return p
+}
+
+func noMetaAccountHTML(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fmt.Fprint(w, `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Meta Cloud API — ChatGo</title>
+<style>body{font-family:Inter,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f1f5f9;color:#152e4d;text-align:center}
+.box{background:#fff;border-radius:12px;padding:48px 40px;max-width:520px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+h1{font-size:22px;margin:16px 0 8px}h1 span{color:#4F46E5}p{color:#6B7280;font-size:14px;line-height:1.6;margin:0 0 20px}
+.btn{display:inline-block;background:#4F46E5;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px}.btn:hover{background:#4338CA}</style></head><body>
+<div class="box"><div style="font-size:48px">&#x2601;&#xFE0F;</div><h1>Meta Cloud API <span>Belum Terhubung</span></h1>
+<p>Anda perlu mengkonfigurasi Meta Cloud API terlebih dahulu untuk mengakses fitur ini.<br>Buka halaman <b>Admin &rarr; Meta Config</b> untuk menambahkan Phone Number ID dan Access Token.</p>
+<a href="/admin/meta" class="btn">&#x2699; Buka Meta Config</a></div></body></html>`)
+}
+
 func handleMetaTemplates(w http.ResponseWriter, r *http.Request) {
 	accounts, _ := db.ListMetaAccounts()
+	if len(accounts) == 0 { noMetaAccountHTML(w); return }
 	w.Header().Set("Content-Type", "application/json")
-	if len(accounts) == 0 { json.NewEncoder(w).Encode(map[string]string{"status":"no_meta_account"}); return }
 	mc := meta.New(accounts[0].PhoneNumberID, decryptOrPlain(accounts[0].AccessToken), accounts[0].VerifyToken)
 	if r.Method == http.MethodPost {
 		name := r.FormValue("name"); language := r.FormValue("language"); category := r.FormValue("category")
@@ -2893,8 +2928,8 @@ func handleMetaTemplates(w http.ResponseWriter, r *http.Request) {
 
 func handleMetaCarousel(w http.ResponseWriter, r *http.Request) {
 	accounts, _ := db.ListMetaAccounts()
+	if len(accounts) == 0 { noMetaAccountHTML(w); return }
 	w.Header().Set("Content-Type", "application/json")
-	if len(accounts) == 0 { json.NewEncoder(w).Encode(map[string]string{"status":"no_meta_account"}); return }
 	mc := meta.New(accounts[0].PhoneNumberID, decryptOrPlain(accounts[0].AccessToken), accounts[0].VerifyToken)
 	if r.Method == http.MethodPost {
 		var products []map[string]string
@@ -2906,8 +2941,8 @@ func handleMetaCarousel(w http.ResponseWriter, r *http.Request) {
 
 func handleMetaWebhooks(w http.ResponseWriter, r *http.Request) {
 	accounts, _ := db.ListMetaAccounts()
+	if len(accounts) == 0 { noMetaAccountHTML(w); return }
 	w.Header().Set("Content-Type", "application/json")
-	if len(accounts) == 0 { json.NewEncoder(w).Encode(map[string]string{"status":"no_meta_account"}); return }
 	mc := meta.New(accounts[0].PhoneNumberID, decryptOrPlain(accounts[0].AccessToken), accounts[0].VerifyToken)
 	if r.Method == http.MethodPost {
 		fields := r.Form["fields"]
@@ -2921,8 +2956,8 @@ func handleMetaWebhooks(w http.ResponseWriter, r *http.Request) {
 
 func handleMetaPayment(w http.ResponseWriter, r *http.Request) {
 	accounts, _ := db.ListMetaAccounts()
+	if len(accounts) == 0 { noMetaAccountHTML(w); return }
 	w.Header().Set("Content-Type", "application/json")
-	if len(accounts) == 0 { json.NewEncoder(w).Encode(map[string]string{"status":"no_meta_account"}); return }
 	mc := meta.New(accounts[0].PhoneNumberID, decryptOrPlain(accounts[0].AccessToken), accounts[0].VerifyToken)
 	if r.Method == http.MethodPost {
 		result, _ := mc.SendPaymentRequest(r.FormValue("to"), r.FormValue("token"), r.FormValue("amount"), r.FormValue("currency"))
@@ -2934,8 +2969,8 @@ func handleMetaPayment(w http.ResponseWriter, r *http.Request) {
 
 func handleMetaRegister(w http.ResponseWriter, r *http.Request) {
 	accounts, _ := db.ListMetaAccounts()
+	if len(accounts) == 0 { noMetaAccountHTML(w); return }
 	w.Header().Set("Content-Type", "application/json")
-	if len(accounts) == 0 { json.NewEncoder(w).Encode(map[string]string{"status":"no_meta_account"}); return }
 	mc := meta.New(accounts[0].PhoneNumberID, decryptOrPlain(accounts[0].AccessToken), accounts[0].VerifyToken)
 	if r.Method == http.MethodPost {
 		if r.FormValue("action") == "register" { mc.RegisterPhoneNumber(r.FormValue("pin")) }
@@ -2980,8 +3015,8 @@ func handleN8NTemplates(w http.ResponseWriter, r *http.Request) {
 
 func handleMetaInsights(w http.ResponseWriter, r *http.Request) {
 	accounts, _ := db.ListMetaAccounts()
+	if len(accounts) == 0 { noMetaAccountHTML(w); return }
 	w.Header().Set("Content-Type", "application/json")
-	if len(accounts) == 0 { json.NewEncoder(w).Encode(map[string]string{"status":"no_meta_account"}); return }
 	mc := meta.New(accounts[0].PhoneNumberID, decryptOrPlain(accounts[0].AccessToken), accounts[0].VerifyToken)
 	msgID := r.URL.Query().Get("message_id")
 	var insights map[string]interface{}
@@ -3092,14 +3127,68 @@ func handleOmniInbox(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	channel := r.URL.Query().Get("channel")
 	var conversations []map[string]interface{}
+	uid := getUserID(r)
 
-	// WhatsApp conversations
-	if channel == "" || channel == "wa" {
-		recv, _ := db.ListReceivedPaginated(1, 50)
+	// WhatsApp conversations (received + sent, separate by whatsmeow vs meta)
+	allWA := channel == "" || channel == "wa" || channel == "meta"
+	if allWA {
+		recv, _ := db.ListReceivedPaginated(uid, 1, 300)
+		sent, _ := db.ListSentPaginated(uid, 1, 300)
+		seen := map[string]bool{}
 		for _, msg := range recv {
+			rawPhone := msg.Phone
+			p := cleanPhone(rawPhone)
+			if p == "" || p == "status" { continue }
+			ch := msg.Channel
+			if ch == "" { ch = "whatsmeow" }
+			if channel != "" && ch != channel && !(channel == "wa" && ch == "whatsmeow") { continue }
+			if ch == "whatsmeow" { ch = "wa" }
+			key := p + "|" + ch
+			if seen[key] { continue }
+			seen[key] = true
+			isGroup := msg.IsGroup && (strings.Contains(rawPhone, "@g.us") || strings.HasPrefix(p, "120363"))
+			name := msg.Name
+			if name == "" { name = p }
+			if isGroup {
+				if gn := db.GetGroupName(p); gn != "" {
+					name = gn
+				} else if gn := db.GetGroupName(p + "@g.us"); gn != "" {
+					name = gn
+				} else {
+					if gn := engine.FetchGroupName(p + "@g.us"); gn != "" {
+						name = gn
+					} else if len(p) > 10 {
+						name = "Grup " + p[:10]
+					} else {
+						name = "Grup " + p
+					}
+				}
+			}
 			conversations = append(conversations, map[string]interface{}{
-				"id": msg.ID, "phone": msg.Phone, "message": msg.Message,
-				"channel": "wa", "time": msg.Created, "name": msg.Name,
+				"id": msg.ID, "phone": p, "message": msg.Message,
+				"channel": ch, "time": msg.Created, "name": name, "is_group": isGroup,
+			})
+		}
+		for _, msg := range sent {
+			ch := msg.Channel
+			if ch == "" { ch = "whatsmeow" }
+			if ch == "phone_sync" { continue } // skip status sync, bukan chat
+			p := cleanPhone(msg.Phone)
+			if ch == "" { ch = "whatsmeow" }
+			if channel != "" && ch != channel && !(channel == "wa" && ch == "whatsmeow") { continue }
+			if ch == "whatsmeow" { ch = "wa" }
+			key := p + "|" + ch
+			if seen[key] { continue }
+			seen[key] = true
+			isGroup := strings.HasPrefix(p, "120363")
+			name := msg.Phone
+			if name == "" { name = p }
+			if isGroup {
+				if gn := db.GetGroupName(p); gn != "" { name = gn }
+			}
+			conversations = append(conversations, map[string]interface{}{
+				"id": msg.ID, "phone": p, "message": msg.Message,
+				"channel": ch, "time": msg.Created, "name": name, "is_group": isGroup,
 			})
 		}
 	}
@@ -3123,8 +3212,8 @@ func handleOmniInbox(w http.ResponseWriter, r *http.Request) {
 
 func handleOmniAnalytics(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	waSent := db.CountSent()
-	waRecv := db.CountReceived()
+	waSent := db.CountSent(0)
+	waRecv := db.CountReceived(0)
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"channels": map[string]interface{}{
 			"whatsapp": map[string]int{"sent": waSent, "received": waRecv},

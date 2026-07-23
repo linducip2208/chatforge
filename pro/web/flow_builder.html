@@ -1,0 +1,393 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flow Builder Pro | ChatGo</title>
+<style>
+*,::before,::after{box-sizing:border-box;margin:0;padding:0}
+body{font:15px/1.6 Inter,-apple-system,sans-serif;color:#1e293b;overflow:hidden;height:100vh;display:flex;flex-direction:column;background:#eef1f5}
+.topbar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:linear-gradient(135deg,#0a1628 0%,#13203d 100%);color:#fff;z-index:100;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,.06)}
+.topbar input,.topbar select{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:#fff;padding:7px 12px;border-radius:8px;font-size:13px;font-family:inherit;transition:border-color .2s}
+.topbar input:focus,.topbar select:focus{outline:none;border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.1)}
+.topbar input{width:160px}.topbar input::placeholder{color:rgba(255,255,255,.3)}
+.topbar select{color:#fff}.topbar select option{color:#0f172a;background:#fff}
+.topbar button{padding:7px 14px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;transition:all .2s;font-family:inherit}
+.btn-save{background:linear-gradient(135deg,#4F46E5,#6366F1);color:#fff;box-shadow:0 2px 8px rgba(79,70,229,.3)}.btn-save:hover{background:linear-gradient(135deg,#4338CA,#4F46E5);transform:translateY(-1px);box-shadow:0 4px 12px rgba(79,70,229,.4)}
+.btn-list{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.1)!important}.btn-list:hover{background:rgba(255,255,255,.2)}
+.btn-ghost{background:transparent;color:#a0b3d9;border:1px solid rgba(255,255,255,.12)!important}.btn-ghost:hover{background:rgba(255,255,255,.08);color:#fff}
+.flow-name{font-weight:700;font-size:16px;margin-right:8px;letter-spacing:-.02em}
+.main{display:flex;flex:1;overflow:hidden}
+.palette{width:220px;background:#f8f9fc;border-right:1px solid #e2e8f0;padding:12px 10px;overflow-y:auto;flex-shrink:0}
+.palette h3{font-size:11px;text-transform:uppercase;color:#64748b;letter-spacing:.07em;margin:14px 0 6px;padding-left:4px}
+.palette h3:first-child{margin-top:2px}
+.node-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:grab;font-size:13px;font-weight:600;margin-bottom:3px;transition:.15s;border:2px solid transparent;user-select:none;color:#334155}
+.node-item:active{cursor:grabbing}
+.node-item:hover{background:#fff;border-color:#4F46E5;box-shadow:0 2px 8px rgba(79,70,229,.1);transform:translateX(2px)}
+.node-color{width:12px;height:12px;border-radius:4px;flex-shrink:0}
+.nc-msg{background:#4F46E5}.nc-q{background:#0891B2}.nc-cond{background:#F59E0B}.nc-wait{background:#8B5CF6}
+.nc-api{background:#EC4899}.nc-set{background:#6366F1}.nc-tag{background:#F97316}
+.nc-transfer{background:#EF4444}.nc-close{background:#6B7280}
+.canvas-wrap{flex:1;position:relative;overflow:hidden;background:#eef1f5;
+  background-image:radial-gradient(circle,#cbd5e1 1px,transparent 1px);background-size:24px 24px;cursor:default}
+.canvas-wrap.grabbing{cursor:grabbing}
+.canvas-wrap svg{width:100%;height:100%;display:block}
+.flow-node{cursor:move;user-select:none}
+.flow-node rect.node-bg{fill:#fff;stroke:#cbd5e1;stroke-width:2;rx:10;filter:drop-shadow(0 1px 3px rgba(0,0,0,.06))}
+.flow-node:hover rect.node-bg{stroke:#4F46E5;filter:drop-shadow(0 4px 12px rgba(79,70,229,.2))}
+.flow-node.selected rect.node-bg{stroke:#4F46E5;stroke-width:3}
+.flow-edge{fill:none;stroke:#94a3b8;stroke-width:2.5}
+.flow-edge:hover{stroke:#4F46E5;stroke-width:3.5}
+.handle{fill:#fff;stroke:#4F46E5;stroke-width:2.5;cursor:crosshair;r:6}
+.handle:hover{fill:#4F46E5}
+.handle-out-multi{cursor:crosshair}
+.props{width:280px;background:#fff;border-left:1px solid #e2e8f0;padding:16px;overflow-y:auto;flex-shrink:0}
+.props h3{font-size:14px;font-weight:700;margin-bottom:12px;color:#0f172a}
+.props label{display:block;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin:10px 0 4px}
+.props textarea,.props input,.props select{width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;color:#1e293b;transition:border-color .2s}
+.props textarea{min-height:50px;resize:vertical;line-height:1.5}
+.props textarea:focus,.props input:focus,.props select:focus{outline:none;border-color:#4F46E5;box-shadow:0 0 0 3px rgba(79,70,229,.1)}
+.props .empty{color:#94a3b8;font-size:13px;text-align:center;padding:30px 0}
+.props .node-info{font-size:12px;color:#64748b;margin-bottom:12px;padding:6px 10px;background:#f8f9fc;border-radius:6px}
+.props .btn-delete{width:100%;margin-top:12px;padding:9px;background:#FEE2E2;color:#DC2626;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;transition:background .2s}
+.props .btn-delete:hover{background:#FECACA}
+.branch-row{display:flex;gap:4px;align-items:center;margin-bottom:4px}
+.branch-row input,.branch-row select{flex:1}
+.branch-row button{background:#FEE2E2;color:#DC2626;border:none;border-radius:5px;width:26px;height:26px;cursor:pointer;font-size:14px;padding:0;flex-shrink:0}
+.add-branch{padding:5px 10px;background:#EEF2FF;color:#4F46E5;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;margin-top:4px;transition:background .2s}
+.add-branch:hover{background:#E0E7FF}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:200;justify-content:center;align-items:center;backdrop-filter:blur(4px)}
+.modal-overlay.show{display:flex}
+.modal{background:#fff;border-radius:14px;width:560px;max-height:82vh;overflow-y:auto;padding:24px;box-shadow:0 20px 60px rgba(15,23,42,.2)}
+.modal h2{font-size:17px;font-weight:700;margin-bottom:16px;color:#0f172a}
+.modal .flow-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9}
+.modal .flow-row .name{font-weight:600;font-size:14px}
+.modal .flow-row .meta{font-size:11px;color:#64748b}
+.modal .flow-row button{margin-left:4px;padding:4px 10px;border-radius:6px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;font-size:12px;font-weight:600;transition:all .15s;font-family:inherit}
+.modal .flow-row button:hover{background:#f1f5f9}
+.toast{position:fixed;bottom:24px;right:24px;background:#0f172a;color:#fff;padding:12px 22px;border-radius:10px;font-size:13px;z-index:300;animation:fadeIn .3s;box-shadow:0 8px 24px rgba(0,0,0,.25);font-weight:500;letter-spacing:-.01em}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.minimap{position:absolute;bottom:14px;right:14px;width:170px;height:110px;background:rgba(255,255,255,.92);border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;z-index:50;box-shadow:0 4px 16px rgba(0,0,0,.1)}
+.minimap svg{width:100%;height:100%}
+.toolbar{position:absolute;bottom:14px;left:14px;display:flex;gap:6px;z-index:50}
+.toolbar button{width:34px;height:34px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:#475569;transition:all .15s;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.toolbar button:hover{background:#f1f5f9;color:#0f172a;border-color:#cbd5e1}
+.edge-label{font-size:10px;fill:#64748b;text-anchor:middle;font-weight:600;pointer-events:none}
+@media(max-width:768px){.palette{display:none}.props{width:100%;position:absolute;right:0;top:0;bottom:0;z-index:50;box-shadow:-4px 0 12px rgba(0,0,0,.1)}.toolbar{bottom:80px}.minimap{display:none}}
+</style>
+<link href="https://fonts.bunny.net/css?family=inter:400,500,600,700" rel="stylesheet">
+</head>
+<body>
+<script>var origFetch=window.fetch;window.fetch=function(url,opts){opts=opts||{};opts.credentials=opts.credentials||"same-origin";return origFetch(url,opts)};
+var L=document.cookie.indexOf('chatgo_lang=id')>=0?'id':'en';
+var T={
+'en':{save:'Save',load:'Load',test:'Test',stats:'Stats',new:'New Flow',name:'Flow Name',keyword:'Keyword',account:'WA Account',priority:'Priority',nodes:'Nodes',select:'Click a node to edit',del:'Delete Node',undo:'Undo',redo:'Redo',templates:'Saved Flows',close:'Close',simulator:'Flow Simulator',send:'Send',analytics:'Analytics',triggers:'Triggers',completed:'Completed',quick:'Quick:',imported:'Template imported',saved:'Saved',deleted:'Deleted',duplicated:'Duplicated',noFlows:'No flows yet.',palette:'Nodes',msg:'Message',ask:'Ask Question',cond:'Condition',w:'Wait',vp:'Set Var',tag:'Tag',api:'API Call',tran:'Transfer',cls:'Close',ai1:'AI Reply',ai2:'AI Decide',car:'Carousel',ord:'Order',pay:'Payment',math:'Math',str:'String',date:'Date',lookup:'Lookup',cnt:'Counter',seq:'Sequence',poll:'Poll',loc:'Location',doc:'Document',typ:'Typing',delay:'Delay Until',gal:'Gallery',voice:'Voice',vcard:'vCard',db:'DB Query',split:'Split',sticker:'Sticker',readr:'Rd Recpt',loop:'Loop',sub:'Sub-flow',rand:'Random',title:'Flow Builder Pro',props:'Properties',text:'Message Text',media:'Media URL',mediat:'Media Type',var:'Variable Name',check:'Check Variable',branches:'Branches',label:'Label',operator:'Operator',value:'Value',addBranch:'+ Add Branch',seconds:'Seconds',vars:'Variables (key=value)',tags:'Tags (comma)',url:'URL',method:'Method',resultVar:'Result Variable',sysPrompt:'System Prompt',saveTo:'Save Reply To',options:'Options (comma)',saveChoice:'Save Choice To',cat:'Category',maxItems:'Max Items',prodVar:'Product Var',qtyVar:'Qty Var',orderVar:'Order Var',amountVar:'Amount Var',formula:'Formula',template:'Template',operation:'Operation',iterations:'Max Iterations',condVar:'Condition Var',loopStart:'Loop Start',flowID:'Flow ID',inputs:'Inputs',outputs:'Outputs',weights:'Weights',fields:'Fields',key:'Key',maxCount:'Max Count',question:'Question',delayS:'Delay (seconds)',time:'Time',images:'Images',caption:'Caption',tts:'TTS Text',phone2:'Phone',org:'Org',query:'Query','log':'Test Log','logReady':'Simulator ready. Type a message to test.','bot':'Bot','you':'You','msg_help':'Messages','logic_help':'Logic','ai_help':'AI','store_help':'Store','tools_help':'Tools','flow_help':'Flow','end_help':'End','wa_help':'WA','howto':'How to use:','drag':'Drag nodes to canvas','click':'Click node to edit','connect':'Connect nodes by dragging handles','shortcuts':'Shortcuts:','delKey':'Delete node','undoKey':'Undo','redoKey':'Redo','saveKey':'Save','copyKey':'Copy','pasteKey':'Paste'},
+'id':{save:'Simpan',load:'Buka',test:'Tes',stats:'Stat',new:'Baru',name:'Nama Flow',keyword:'Keyword',account:'Akun WA',priority:'Prioritas',nodes:'Node',select:'Klik node untuk edit',del:'Hapus Node',undo:'Undo',redo:'Redo',templates:'Flow Tersimpan',close:'Tutup',simulator:'Simulator Flow',send:'Kirim',analytics:'Analitik',triggers:'Trigger',completed:'Selesai',quick:'Cepat:',imported:'Template diimpor',saved:'Tersimpan',deleted:'Dihapus',duplicated:'Diduplikasi',noFlows:'Belum ada flow.',palette:'Node',msg:'Pesan',ask:'Tanya',cond:'Kondisi',w:'Tunggu',vp:'Set Var',tag:'Tag',api:'API',tran:'Transfer',cls:'Tutup',ai1:'AI Balas',ai2:'AI Pilih',car:'Katalog',ord:'Order',pay:'Bayar',math:'Math',str:'String',date:'Tgl',lookup:'Cari',cnt:'Counter',seq:'Sequence',poll:'Polling',loc:'Lokasi',doc:'Dokumen',typ:'Ketik',delay:'Tunda',gal:'Galeri',voice:'Suara',vcard:'vCard',db:'DB',split:'Pisah',sticker:'Stiker',readr:'Baca',loop:'Loop',sub:'Sub-flow',rand:'Acak',title:'Flow Builder Pro',props:'Properti',text:'Teks Pesan',media:'URL Media',mediat:'Tipe Media',var:'Nama Variabel',check:'Cek Variabel',branches:'Cabang',label:'Label',operator:'Operator',value:'Nilai',addBranch:'+ Cabang',seconds:'Detik',vars:'Variabel (kunci=nilai)',tags:'Tag (koma)',url:'URL',method:'Metode',resultVar:'Simpan ke',sysPrompt:'System Prompt',saveTo:'Simpan ke',options:'Pilihan (koma)',saveChoice:'Simpan Pilihan',cat:'Kategori',maxItems:'Maks Item',prodVar:'Var Produk',qtyVar:'Var Jumlah',orderVar:'Var Order',amountVar:'Var Jumlah',formula:'Formula',template:'Template',operation:'Operasi',iterations:'Maks Iterasi',condVar:'Var Kondisi',loopStart:'Mulai Loop',flowID:'ID Flow',inputs:'Input',outputs:'Output',weights:'Bobot',fields:'Field',key:'Kunci',maxCount:'Maks',question:'Pertanyaan',delayS:'Delay (detik)',time:'Jam',images:'Gambar',caption:'Caption',tts:'Teks TTS',phone2:'Telepon',org:'Organisasi',query:'Query','log':'Log Tes','logReady':'Simulator siap. Ketik pesan untuk tes.','bot':'Bot','you':'Anda','msg_help':'Pesan','logic_help':'Logika','ai_help':'AI','store_help':'Toko','tools_help':'Alat','flow_help':'Flow','end_help':'Akhir','wa_help':'WA','howto':'Cara pakai:','drag':'Drag node ke canvas','click':'Klik node untuk edit','connect':'Tarik handle untuk hubungkan','shortcuts':'Shortcut:','delKey':'Hapus node','undoKey':'Undo','redoKey':'Redo','saveKey':'Simpan','copyKey':'Salin','pasteKey':'Tempel'}
+};
+function _(key){return (T[L]||T['en'])[key]||key}
+</script><div class="topbar">
+  <span class="flow-name">Flow Builder Pro</span>
+  <a href="/" style="color:#a0b3d9;text-decoration:none;font-size:13px;font-weight:600;padding:6px 12px;border:1px solid rgba(255,255,255,.12);border-radius:8px;margin-right:8px;transition:all .15s" onmouseover="this.style.background='rgba(255,255,255,.08)'" onmouseout="this.style.background='transparent'">&#x2302; Home</a>
+  <input id="flowName" placeholder="Nama flow" value="New Flow" style="width:170px">
+  <input id="triggerValue" placeholder="Keyword" value="halo,menu" style="width:180px">
+  <select id="triggerType"><option value="keyword">Keyword</option><option value="exact">Exact Match</option><option value="welcome">Welcome</option><option value="fallback">Fallback</option><option value="always">Always</option><option value="drip">Drip</option><option value="broadcast">Broadcast</option>    <option value="csat">CSAT</option><option value="close_chat">Close Chat</option><option value="cron">Cron/Schedule</option><option value="inactivity">Inactivity</option><option value="button">Button Click</option></select>
+  <select id="accountPhone" style="width:190px;font-size:11px"><option value="">— Semua nomor (Global) —</option></select>
+  <input id="flowTags" placeholder="Tags (sales,support)" style="width:140px;font-size:11px"><input id="rateLimit" placeholder="Rate/hr" type="number" style="width:60px;font-size:11px" value="0"><select id="priority" style="width:55px"><option value="0">P0</option><option value="1">P1</option><option value="2">P2</option><option value="5">P5</option><option value="10">P10</option></select>
+  <select id="aiKeyId" style="width:160px;font-size:11px"><option value="0">— Default AI —</option></select>
+  <button class="btn-ghost" onclick="toggleConditional()" title="Time-based enable" style="font-size:16px">⏰</button>
+  <div id="condPanel" style="display:none;position:absolute;top:44px;left:200px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:12px;z-index:150;box-shadow:0 8px 24px rgba(0,0,0,.15)"><label style="font-size:11px;font-weight:600;color:#64748b;display:block;text-transform:uppercase;letter-spacing:.04em">Time Start</label><input id="condStart" placeholder="08:00" style="width:90px;padding:5px;font-size:12px;border:1px solid #e2e8f0;border-radius:6px"><label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-top:6px;text-transform:uppercase;letter-spacing:.04em">Time End</label><input id="condEnd" placeholder="18:00" style="width:90px;padding:5px;font-size:12px;border:1px solid #e2e8f0;border-radius:6px"><label style="font-size:11px;font-weight:600;color:#64748b;display:block;margin-top:6px;text-transform:uppercase;letter-spacing:.04em">Days (1-7)</label><input id="condDays" placeholder="1,2,3,4,5" style="width:110px;padding:5px;font-size:12px;border:1px solid #e2e8f0;border-radius:6px"></div>
+  <button class="btn-save" onclick="saveFlow()">Save</button>
+  <button class="btn-list" onclick="showFlowList()">Load</button>
+  <button class="btn-ghost" onclick="testFlow()">Test</button> <button class="btn-ghost" onclick="showAnalytics()">Stats</button> <button class="btn-ghost" onclick="showFlowLog()">Log</button> <button class="btn-ghost" onclick="publishFlow()">Pub</button><button class="btn-ghost" onclick="showVersions()">Ver</button><button class="btn-ghost" onclick="aiGenerate()">AI Gen</button><button class="btn-ghost" onclick="showMarketplace()">Market</button><button class="btn-ghost" onclick="toggleDebugger()">Debug</button><button class="btn-ghost" onclick="newFlow()">+ New</button>
+  <span id="saveStatus" style="font-size:11px;opacity:.6;font-weight:500"></span>
+</div>
+
+<div style="background:#fff;border-bottom:1px solid #e2e8f0;padding:6px 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center" id="quickActions">
+<span style="color:#64748b;font-weight:700;margin-right:6px;font-size:12px">⚡ Quick:</span>
+<select id="quickCategory" onchange="loadQuickTemplates(this.value)" style="padding:6px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;color:#1e293b;background:#fff;cursor:pointer;font-family:inherit">
+<option value="">— Pilih Industri —</option>
+</select>
+<select id="quickTemplate" onchange="importTemplate(this.value)" style="padding:6px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;color:#1e293b;background:#fff;cursor:pointer;font-family:inherit;min-width:200px">
+<option value="">— Pilih Template —</option>
+</select>
+<span style="font-size:11px;color:#64748b" id="quickCount"></span>
+</div><div class="main">
+  <div class="palette">
+    <h3>Messages</h3>
+    <div class="node-item" draggable="true" data-type="message"><span class="node-color nc-msg"></span>Send Message</div>
+    <div class="node-item" draggable="true" data-type="question"><span class="node-color nc-q"></span>Ask Question</div>
+    <h3>AI</h3>
+    <div class="node-item" draggable="true" data-type="ai_reply"><span class="node-color" style="background:#06B6D4"></span>AI Reply</div>
+    <div class="node-item" draggable="true" data-type="ai_decide"><span class="node-color" style="background:#06B6D4"></span>AI Decide</div>
+    <h3>Store</h3>
+    <div class="node-item" draggable="true" data-type="product_carousel"><span class="node-color" style="background:#F97316"></span>Product Carousel</div>
+    <div class="node-item" draggable="true" data-type="order_create"><span class="node-color" style="background:#F97316"></span>Order Create</div>
+    <div class="node-item" draggable="true" data-type="payment_link"><span class="node-color" style="background:#F97316"></span>Payment Link</div>
+    <h3>Tools</h3>
+    <div class="node-item" draggable="true" data-type="math"><span class="node-color" style="background:#14B8A6"></span>Math / Formula</div>
+    <div class="node-item" draggable="true" data-type="string_template"><span class="node-color" style="background:#14B8A6"></span>String Template</div>
+    <div class="node-item" draggable="true" data-type="date_math"><span class="node-color" style="background:#14B8A6"></span>Date / Time</div>
+    <div class="node-item" draggable="true" data-type="contact_lookup"><span class="node-color" style="background:#14B8A6"></span>Contact Lookup</div>
+    <div class="node-item" draggable="true" data-type="counter"><span class="node-color" style="background:#14B8A6"></span>Counter</div>
+    <h3>Flow</h3>
+    <div class="node-item" draggable="true" data-type="loop"><span class="node-color" style="background:#A855F7"></span>Loop</div>
+    <div class="node-item" draggable="true" data-type="subflow"><span class="node-color" style="background:#A855F7"></span>Sub-flow Call</div>
+    <div class="node-item" draggable="true" data-type="random"><span class="node-color" style="background:#A855F7"></span>Random / A/B</div>
+    <h3>WA</h3>
+    <div class="node-item" draggable="true" data-type="poll"><span class="node-color" style="background:#22C55E"></span>Poll</div>
+    <div class="node-item" draggable="true" data-type="receive_media"><span class="node-color" style="background:#F59E0B"></span>📎 Receive Media</div>
+    <div class="node-item" draggable="true" data-type="location"><span class="node-color" style="background:#22C55E"></span>Location</div>
+    <div class="node-item" draggable="true" data-type="document"><span class="node-color" style="background:#22C55E"></span>Document/PDF</div>
+    <div class="node-item" draggable="true" data-type="typing"><span class="node-color" style="background:#22C55E"></span>Typing...</div>
+    <div class="node-item" draggable="true" data-type="message_sequence"><span class="node-color" style="background:#22C55E"></span>Message Sequence</div><div class="node-item" draggable="true" data-type="delay_until"><span class="node-color" style="background:#22C55E"></span>Delay Until</div>
+    <div class="node-item" draggable="true" data-type="media_gallery"><span class="node-color" style="background:#D946EF"></span>Media Gallery</div>
+    <div class="node-item" draggable="true" data-type="voice_note"><span class="node-color" style="background:#D946EF"></span>Voice Note</div>
+    <div class="node-item" draggable="true" data-type="contact_card"><span class="node-color" style="background:#D946EF"></span>Contact Card</div>
+    <div class="node-item" draggable="true" data-type="db_query"><span class="node-color" style="background:#14B8A6"></span>DB Query</div>
+    <div class="node-item" draggable="true" data-type="split_merge"><span class="node-color" style="background:#8B5CF6"></span>Split/Merge</div>
+    <div class="node-item" draggable="true" data-type="sticker"><span class="node-color" style="background:#22C55E"></span>Sticker</div>
+    <div class="node-item" draggable="true" data-type="read_receipt"><span class="node-color" style="background:#F59E0B"></span>Read Receipt</div>
+    <div class="node-item" draggable="true" data-type="google_sheets"><span class="node-color" style="background:#0EA5E9"></span>Google Sheets</div>
+    <div class="node-item" draggable="true" data-type="warmer"><span class="node-color" style="background:#F43F5E"></span>WA Warmer</div>
+    <h3>Logic</h3>
+    <div class="node-item" draggable="true" data-type="condition"><span class="node-color nc-cond"></span>Condition</div>
+    <div class="node-item" draggable="true" data-type="wait"><span class="node-color nc-wait"></span>Wait/Delay</div>
+    <h3>Actions</h3>
+    <div class="node-item" draggable="true" data-type="set_variable"><span class="node-color nc-set"></span>Set Variable</div>
+    <div class="node-item" draggable="true" data-type="tag_contact"><span class="node-color nc-tag"></span>Tag Contact</div>
+    <div class="node-item" draggable="true" data-type="api_call"><span class="node-color nc-api"></span>API Call</div>
+    <h3>End</h3>
+    <div class="node-item" draggable="true" data-type="transfer_agent"><span class="node-color nc-transfer"></span>Transfer Agent</div>
+    <div class="node-item" draggable="true" data-type="close_chat"><span class="node-color nc-close"></span>Close Chat</div>
+  </div>
+  <div class="canvas-wrap" id="canvas">
+    <svg id="svg"></svg>
+    <div class="toolbar">
+      <button onclick="zoomIn()" title="Zoom In">+</button>
+      <button onclick="zoomOut()" title="Zoom Out">-</button>
+      <button onclick="zoomFit()" title="Fit All">⊞</button>
+      <button onclick="undo()" title="Undo (Ctrl+Z)">↩</button>
+      <button onclick="redo()" title="Redo (Ctrl+Y)">↪</button>
+    </div>
+    <div class="minimap" id="minimap"><svg id="minisvg"></svg></div>
+  </div>
+  <div class="props" id="props">
+    <h3>Properties</h3>
+    <div class="empty">Click a node to edit</div>
+    <div id="propContent"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal"><div class="modal"><h2>Saved Flows</h2><div id="flowList"></div><div id="bulkActions" style="display:none;margin-top:8px"><button style="padding:5px 12px;background:#DC2626;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600" onclick="bulkDelete()">Delete Selected</button> <span id="bulkCount" style="font-size:11px;color:#6B7280"></span></div><button class="btn-ghost" style="margin-top:10px;width:100%;padding:7px;border:1px solid #e5e7eb;background:#fff;color:#152e4d;border-radius:6px;cursor:pointer" onclick="closeModal()">Close</button></div></div>
+<div id="toast"></div>
+
+<script>
+const SNAP=24;
+let nodes=[],edges=[],selectedNode=null,nextId=0;
+let isDragging=false,isPanning=false,isConnecting=false;
+let dragNode=null,connectSource=null,offsetX=0,offsetY=0;
+let panX=0,panY=0,scale=1,panStartX=0,panStartY=0;
+let currentFlowId=null,clipboard=null;
+const W=180,H=68;
+
+// History for undo/redo
+let history=[],historyIdx=-1;
+function saveState(){history=history.slice(0,historyIdx+1);history.push({nodes:JSON.parse(JSON.stringify(nodes)),edges:JSON.parse(JSON.stringify(edges))});historyIdx++;if(history.length>50)history.shift()}
+function undo(){if(historyIdx>0){historyIdx--;var s=history[historyIdx];nodes=JSON.parse(JSON.stringify(s.nodes));edges=JSON.parse(JSON.stringify(s.edges));selectedNode=null;render();document.getElementById('propContent').innerHTML='';toast('Undo')}}
+function redo(){if(historyIdx<history.length-1){historyIdx++;var s=history[historyIdx];nodes=JSON.parse(JSON.stringify(s.nodes));edges=JSON.parse(JSON.stringify(s.edges));selectedNode=null;render();document.getElementById('propContent').innerHTML='';toast('Redo')}}
+
+function id(){return'n'+(nextId++)}
+function snap(v){return Math.round(v/SNAP)*SNAP}
+
+// Drag from palette
+document.querySelectorAll('.node-item').forEach(function(el){el.addEventListener('dragstart',function(e){e.dataTransfer.setData('type',el.dataset.type)})});
+var canvas=document.getElementById('canvas');
+canvas.addEventListener('dragover',function(e){e.preventDefault()});
+canvas.addEventListener('drop',function(e){e.preventDefault();var t=e.dataTransfer.getData('type');if(!t)return;var r=canvas.getBoundingClientRect();addNode(t,toWorldX(e.clientX-r.left-W/2),toWorldY(e.clientY-r.top-H/2));saveState();render()});
+
+// Zoom
+canvas.addEventListener('wheel',function(e){e.preventDefault();var r=canvas.getBoundingClientRect();var mx=e.clientX-r.left,my=e.clientY-r.top;var ds=e.deltaY>0?0.9:1.1;var ns=Math.max(0.2,Math.min(3,scale*ds));panX=mx-(mx-panX)*(ns/scale);panY=my-(my-panY)*(ns/scale);scale=ns;render()});
+function zoomIn(){scale=Math.min(3,scale*1.2);render()}
+function zoomOut(){scale=Math.max(0.2,scale/1.2);render()}
+function zoomFit(){if(!nodes.length)return;var minX=nodes[0].position.x,maxX=minX,minY=nodes[0].position.y,maxY=minY;nodes.forEach(function(n){minX=Math.min(minX,n.position.x);maxX=Math.max(maxX,n.position.x+W);minY=Math.min(minY,n.position.y);maxY=Math.max(maxY,n.position.y+H)});var r=canvas.getBoundingClientRect();var w=maxX-minX+40,h=maxY-minY+40;scale=Math.min((r.width-40)/w,(r.height-40)/h,1.5);panX=(r.width/2-(minX+w/2)*scale);panY=(r.height/2-(minY+h/2)*scale);render()}
+
+function toWorldX(sx){return(sx-panX)/scale}
+function toWorldY(sy){return(sy-panY)/scale}
+
+// Pan
+canvas.addEventListener('mousedown',function(e){if(e.target===canvas||e.target.id==='svg'||e.target.classList.contains('canvas-wrap')){isPanning=true;panStartX=e.clientX-panX;panStartY=e.clientY-panY;canvas.classList.add('grabbing')}});
+document.addEventListener('mousemove',function(e){if(isPanning){panX=e.clientX-panStartX;panY=e.clientY-panStartY;render()}if(isDragging&&dragNode){var n=findNode(dragNode);if(n){n.position.x=snap(toWorldX(e.clientX-offsetX));n.position.y=snap(toWorldY(e.clientY-offsetY));render()}}});
+document.addEventListener('mouseup',function(e){if(isPanning){isPanning=false;canvas.classList.remove('grabbing')}if(isConnecting&&e.target.classList.contains('handle')){var th=e.target,si=connectSource.dataset.node,ti=th.dataset.node;if(si!==ti){var sh=connectSource.dataset.handle,label=connectSource.dataset.label||'';if(!edges.find(function(ed){return ed.source===si&&ed.target===ti&&ed.sourceHandle===sh})){edges.push({id:'e'+edges.length,source:si,target:ti,sourceHandle:sh,label:label});saveState();render()}}}var wasDragging=isDragging;isDragging=false;dragNode=null;isConnecting=false;connectSource=null;if(wasDragging)saveState()});
+
+function addNode(type,x,y,data){var node={id:id(),type:type,position:{x:x||100,y:y||100},data:data||getDefault(type)};nodes.push(node);return node}
+function getDefault(type){switch(type){case'message':return{text:'Hello!'};case'question':return{question:'What is your name?',var_name:'name',type:'text'};case'condition':return{variable:'{{input}}',branches:[{id:'b1',label:'Yes',operator:'contains',value:'yes'},{id:'b2',label:'No',operator:'contains',value:'no'}]};case'wait':return{seconds:60};case'set_variable':return{variables:{}};case'tag_contact':return{tags:[]};case'api_call':return{url:'',method:'GET',var_name:''};case'ai_reply':return{system_prompt:'You are a helpful assistant.',var_result:'ai_reply'};case'ai_decide':return{system_prompt:'Classify the user message.',options:['A','B','C'],var_result:'ai_choice'};case'product_carousel':return{category:'',max_items:5};case'order_create':return{product_var:'{{input}}',qty_var:'1',var_result:'order_id'};case'payment_link':return{order_var:'{{var.order_id}}',amount_var:'0',var_result:'payment_url'};case'math':return{formula:'{{var.a}}+{{var.b}}',var_result:'result'};case'string_template':return{template:'Halo {{name}}!',var_result:'message'};case'date_math':return{operation:'now',value:0,var_result:'date'};case'contact_lookup':return{fields:['name','phone']};case'counter':return{key:'',max_count:3,var_result:'count'};case'loop':return{max_iterations:3,condition_var:'',loop_start:''};case'subflow':return{flow_id:0,inputs:{},outputs:{}};case'random':return{weights:[50,30,20]};case'poll':return{question:'Pilih:',options:['A','B','C'],max_select:1,var_result:'poll'};case'location':return{action:'send',lat:-6.2,lng:106.8,name:'Kantor'};case'document':return{url:'/uploads/doc.pdf',caption:'Dokumen'};case'typing':return{seconds:2};case'delay_until':return{time:'09:00',timezone:'Asia/Jakarta'};case'media_gallery':return{images:[{url:'/uploads/1.jpg',caption:'Foto 1'}],caption:'Album'};case'voice_note':return{url:'/uploads/audio.ogg',tts:''};case'contact_card':return{name:'CS Kami',phone:'62812',org:'ChatGo'};case'db_query':return{query:'SELECT COUNT(*) FROM contacts',var_result:'count'};case'split_merge':return{};case'sticker':return{url:'/uploads/sticker.webp',text:''};case'read_receipt':return{};case'google_sheets':return{action:'append',sheet_id:'',range:'Sheet1',data:''};case'warmer':return{};case'tg_keyboard':return{text:'',buttons:[]};case'tg_payment':return{title:'',amount:'0'};case'ig_comment_dm':return{trigger:''};case'ig_story_reply':return{text:''};case'ig_quick_reply':return{text:'',replies:[]};case'fb_carousel':return{title:'',items:[]};case'fb_persistent_menu':return{menu:''};case'fb_webview':return{url:'',title:''};case'buttons':return{title:'Pilih:',footer:'',buttons:['Ya','Tidak']};case'receive_media':return{prompt:'📎 Kirim foto KTP / dokumen Anda',var_result:'media_url',media_type:'image'};default:return{}}}
+
+// Render
+function render(){var svg=document.getElementById('svg');var h='<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#cbd5e1"/></marker></defs>';h+='<g transform="translate('+panX+','+panY+') scale('+scale+')">';
+edges.forEach(function(e){var s=findNode(e.source),t=findNode(e.target);if(!s||!t)return;var sx,sy;if(e.sourceHandle&&s.type==='condition'){var bi=parseInt(e.sourceHandle.replace('out-',''));var br=(s.data&&s.data.branches)?s.data.branches.length:2;var bh=H/(br+1);sy=s.position.y+bh*(bi+1);sx=s.position.x+W}else{sx=s.position.x+W;sy=s.position.y+H/2}var tx=t.position.x,ty=t.position.y+H/2,mx=(sx+tx)/2;h+='<path class="flow-edge" d="M'+sx+','+sy+' C'+mx+','+sy+' '+mx+','+ty+' '+tx+','+ty+'" marker-end="url(#arrow)"/><text class="edge-label" x="'+mx+'" y="'+(sy<ty?(sy+ty)/2-4:(sy+ty)/2+10)+'">'+(e.label||'')+'</text>'});
+nodes.forEach(function(n){var x=n.position.x,y=n.position.y,color=getColor(n.type),label=getLabel(n.type),text=getText(n.type,n.data);h+='<g class="flow-node'+(selectedNode===n.id?' selected':'')+'" data-id="'+n.id+'" transform="translate('+x+','+y+')">';h+='<rect class="node-bg" width="'+W+'" height="'+H+'"/>';h+='<rect width="'+W+'" height="24" fill="'+color+'" rx="10"/><rect x="0" y="16" width="'+W+'" height="8" fill="'+color+'"/>';h+='<text x="'+(W/2)+'" y="17" fill="#fff" font-size="11" font-weight="700" text-anchor="middle">'+label+'</text>';if(text)h+='<text x="'+(W/2)+'" y="38" font-size="11" fill="#475569" text-anchor="middle" font-weight="500">'+text.substring(0,26)+'</text>';h+='<circle class="handle" cx="0" cy="'+(H/2)+'" data-node="'+n.id+'" data-handle="in"/>';
+if(n.type==='condition'){var br=(n.data&&n.data.branches)?n.data.branches.length:2;for(var i=0;i<br;i++){var bh=H/(br+1);var by=bh*(i+1);var blabel=(n.data&&n.data.branches&&n.data.branches[i])?n.data.branches[i].label:'';h+='<circle class="handle handle-out-multi" cx="'+W+'" cy="'+by+'" data-node="'+n.id+'" data-handle="out-'+i+'" data-label="'+blabel+'"/>';h+='<text x="'+(W+10)+'" y="'+(by+3)+'" font-size="8" fill="#4F46E5" font-weight="600">'+blabel+'</text>'}}else{h+='<circle class="handle" cx="'+W+'" cy="'+(H/2)+'" data-node="'+n.id+'" data-handle="out"/>'}h+='</g>'});
+h+='</g>';svg.innerHTML=h;attachEvents();renderMinimap()}
+
+function renderMinimap(){var ms=document.getElementById('minisvg');if(!nodes.length){ms.innerHTML='';return}var minX=nodes[0].position.x,maxX=minX,minY=nodes[0].position.y,maxY=minY;nodes.forEach(function(n){minX=Math.min(minX,n.position.x);maxX=Math.max(maxX,n.position.x+W);minY=Math.min(minY,n.position.y);maxY=Math.max(maxY,n.position.y+H)});var mw=156,mh=96,pad=20;var sx=mw/(maxX-minX+2*pad),sy=mh/(maxY-minY+2*pad),s=Math.min(sx,sy);var h='<rect width="'+mw+'" height="'+mh+'" fill="#fff" rx="6"/>';nodes.forEach(function(n){var nx=(n.position.x-minX+pad)*s,ny=(n.position.y-minY+pad)*s,nw=W*s,nh=H*s;h+='<rect x="'+nx+'" y="'+ny+'" width="'+nw+'" height="'+nh+'" fill="'+getColor(n.type)+'" opacity=".5" rx="4"/>'});var cr=canvas.getBoundingClientRect();var vx=(-panX/scale-minX+pad)*s,vy=(-panY/scale-minY+pad)*s,vw=cr.width/scale*s,vh=cr.height/scale*s;vx=Math.max(0,Math.min(mw-vw,vx));vy=Math.max(0,Math.min(mh-vh,vy));vw=Math.min(mw,vw);vh=Math.min(mh,vh);h+='<rect x="'+vx+'" y="'+vy+'" width="'+vw+'" height="'+vh+'" fill="none" stroke="#4F46E5" stroke-width="2" stroke-dasharray="4,2" rx="2"/>';ms.innerHTML=h}
+document.getElementById('minisvg').addEventListener('click',function(e){if(!nodes.length)return;var minX=nodes[0].position.x,maxX=minX,minY=nodes[0].position.y,maxY=minY;nodes.forEach(function(n){minX=Math.min(minX,n.position.x);maxX=Math.max(maxX,n.position.x+W);minY=Math.min(minY,n.position.y);maxY=Math.max(maxY,n.position.y+H)});var mw=156,mh=96,pad=20;var sx=mw/(maxX-minX+2*pad),sy=mh/(maxY-minY+2*pad),s=Math.min(sx,sy);var r=document.getElementById('minisvg').getBoundingClientRect();var cx=(e.clientX-r.left)/s+minX-pad,cy=(e.clientY-r.top)/s+minY-pad;var cr=canvas.getBoundingClientRect();panX=cr.width/2-cx*scale;panY=cr.height/2-cy*scale;render()});
+
+function getColor(t){var m={message:'#4F46E5',question:'#0891B2',condition:'#F59E0B',wait:'#8B5CF6',set_variable:'#6366F1',tag_contact:'#F97316',api_call:'#EC4899',transfer_agent:'#EF4444',close_chat:'#6B7280',ai_reply:'#06B6D4',ai_decide:'#06B6D4',product_carousel:'#F97316',order_create:'#F97316',payment_link:'#F97316',math:'#14B8A6',string_template:'#14B8A6',date_math:'#14B8A6',contact_lookup:'#14B8A6',counter:'#14B8A6',loop:'#A855F7',subflow:'#A855F7',random:'#A855F7',poll:'#22C55E',location:'#22C55E',document:'#22C55E',typing:'#22C55E',delay_until:'#22C55E',media_gallery:'#D946EF',voice_note:'#D946EF',contact_card:'#D946EF',db_query:'#14B8A6',split_merge:'#8B5CF6',sticker:'#22C55E',read_receipt:'#F59E0B',google_sheets:'#0EA5E9',warmer:'#F43F5E',tg_keyboard:'#2AABEE',tg_payment:'#2AABEE',ig_comment_dm:'#E1306C',ig_story_reply:'#E1306C',ig_quick_reply:'#E1306C',fb_carousel:'#1877F2',fb_persistent_menu:'#1877F2',fb_webview:'#1877F2',buttons:'#25D366',receive_media:'#F59E0B'};return m[t]||'#4F46E5'}
+function getLabel(t){var m={message:'Message',question:'Question',condition:'Condition',wait:'Wait',set_variable:'Set Var',tag_contact:'Tag',api_call:'API Call',transfer_agent:'Transfer',close_chat:'Close',ai_reply:'AI Reply',ai_decide:'AI Decide',product_carousel:'Carousel',order_create:'Order',payment_link:'Payment',math:'Math',string_template:'String',date_math:'Date',contact_lookup:'Lookup',counter:'Counter',loop:'Loop',subflow:'Sub-flow',random:'Random',poll:'Poll',location:'Location',document:'Document',typing:'Typing',delay_until:'Delay Until',media_gallery:'Gallery',voice_note:'Voice',contact_card:'vCard',db_query:'DB Query',split_merge:'Split',sticker:'Sticker',read_receipt:'Rd Recpt',google_sheets:'Sheets',warmer:'Warmer',tg_keyboard:'TG Keybrd',tg_payment:'TG Pay',ig_comment_dm:'IG Comment',ig_story_reply:'IG Story',ig_quick_reply:'IG Quick',fb_carousel:'FB Carousel',fb_persistent_menu:'FB Menu',fb_webview:'FB Webview',buttons:'Buttons',receive_media:'📎 Media'};return m[t]||t}
+function getText(t,d){if(!d)return'';return d.text||d.question||d.variable||''}
+function findNode(id){return nodes.find(function(n){return n.id===id})}
+
+function attachEvents(){document.querySelectorAll('.flow-node').forEach(function(g){g.addEventListener('mousedown',function(e){if(e.target.classList.contains('handle')){startConnect(e.target);return}selectNode(g.dataset.id);isDragging=true;dragNode=g.dataset.id;var n=findNode(dragNode);var r=canvas.getBoundingClientRect();offsetX=e.clientX-r.left-panX-n.position.x*scale;offsetY=e.clientY-r.top-panY-n.position.y*scale})});document.querySelectorAll('.handle').forEach(function(h){h.addEventListener('mousedown',function(e){e.stopPropagation();e.preventDefault();startConnect(h)})})}
+function startConnect(h){isConnecting=true;connectSource=h}
+function selectNode(id){selectedNode=id;render();showProps(id)}
+
+// Properties panel
+function showProps(nid){var n=findNode(nid);if(!n){document.getElementById('propContent').innerHTML='';return}var d=n.data||{},h='<div class="node-info">'+n.type+'  ·  '+n.id+'</div>';switch(n.type){case'message':h+='<label>Message Text</label><textarea onchange="upd(\''+nid+'\',\'text\',this.value)">'+(d.text||'')+'</textarea><label>Media URL (optional)</label><input placeholder="/uploads/img.jpg" value="'+(d.media_url||'')+'" onchange="upd(\''+nid+'\',\'media_url\',this.value)"><label>Media Type</label><select onchange="upd(\''+nid+'\',\'media_type\',this.value)"><option value="">None</option><option value="image"'+(d.media_type==='image'?' selected':'')+'>Image</option><option value="video"'+(d.media_type==='video'?' selected':'')+'>Video</option><option value="document"'+(d.media_type==='document'?' selected':'')+'>Document</option></select>';break;case'question':h+='<label>Question</label><textarea onchange="upd(\''+nid+'\',\'question\',this.value)">'+(d.question||'')+'</textarea><label>Variable Name</label><input value="'+(d.var_name||'')+'" onchange="upd(\''+nid+'\',\'var_name\',this.value)">';break;case'ai_reply':h+='<label>System Prompt</label><textarea onchange="upd(\''+nid+'\',\'system_prompt\',this.value)">'+(d.system_prompt||'')+'</textarea><label>Save Reply</label><input value="'+(d.var_result||'')+'" onchange="upd(\''+nid+'\',\'var_result\',this.value)">';break;case'ai_decide':h+='<label>System Prompt</label><textarea onchange="upd(\''+nid+'\',\'system_prompt\',this.value)">'+(d.system_prompt||'')+'</textarea><label>Options (comma)</label><input value="'+(d.options||[]).join(', ')+'" onchange="upd(\''+nid+'\',\'options\',this.value.split(\',\').map(function(s){return s.trim()}).filter(Boolean))"><label>Save Choice</label><input value="'+(d.var_result||'')+'" onchange="upd(\''+nid+'\',\'var_result\',this.value)">';break;case'condition':h+='<label>Check Variable</label><input value="'+(d.variable||'')+'" onchange="upd(\''+nid+'\',\'variable\',this.value)" placeholder="{{input}}"><label>Branches</label>';if(d.branches)d.branches.forEach(function(b,i){h+='<div class="branch-row"><input value="'+(b.label||'')+'" onchange="brUpd(\''+nid+'\','+i+',\'label\',this.value)" placeholder="Label"><select onchange="brUpd(\''+nid+'\','+i+',\'operator\',this.value)"><option value="equals"'+(b.operator==='equals'?' selected':'')+'>equals</option><option value="contains"'+(b.operator==='contains'?' selected':'')+'>contains</option><option value="starts_with"'+(b.operator==='starts_with'?' selected':'')+'>starts</option></select><input value="'+(b.value||'')+'" onchange="brUpd(\''+nid+'\','+i+',\'value\',this.value)" placeholder="Value"><button onclick="rmBr(\''+nid+'\','+i+')">x</button></div>'});h+='<button class="add-branch" onclick="addBr(\''+nid+'\')">+ Add Branch</button>';break;case'wait':h+='<label>Delay (seconds)</label><input type="number" value="'+(d.seconds||60)+'" onchange="upd(\''+nid+'\',\'seconds\',parseInt(this.value))">';break;case'set_variable':h+='<label>Variables (key=value)</label><textarea onchange="pv(\''+nid+'\',this.value)" placeholder="greeting=Halo">'+vt(d.variables)+'</textarea>';break;case'tag_contact':h+='<label>Tags (comma separated)</label><input value="'+((d.tags||[]).join(', '))+'" onchange="pt(\''+nid+'\',this.value)">';break;case'api_call':h+='<label>URL</label><input value="'+(d.url||'')+'" onchange="upd(\''+nid+'\',\'url\',this.value)"><label>Method</label><select onchange="upd(\''+nid+'\',\'method\',this.value)"><option'+(d.method==='GET'?' selected':'')+'>GET</option><option'+(d.method==='POST'?' selected':'')+'>POST</option></select><label>Result Variable</label><input value="'+(d.var_name||'')+'" onchange="upd(\''+nid+'\',\'var_name\',this.value)">';break}h+='<button class="btn-delete" onclick="delNode(\''+n.id+'\')">✕ Delete Node</button>';document.getElementById('propContent').innerHTML=h}
+
+function upd(id,k,v){var n=findNode(id);if(!n)return;if(!n.data)n.data={};saveState();n.data[k]=v;render()}
+function brUpd(nid,i,k,v){var n=findNode(nid);if(!n||!n.data||!n.data.branches)return;saveState();n.data.branches[i][k]=v;render()}
+function addBr(nid){var n=findNode(nid);if(!n)return;if(!n.data)n.data={};if(!n.data.branches)n.data.branches=[];saveState();n.data.branches.push({id:'b'+n.data.branches.length,label:'',operator:'equals',value:''});showProps(nid);render()}
+function rmBr(nid,i){var n=findNode(nid);if(!n||!n.data||!n.data.branches)return;saveState();n.data.branches.splice(i,1);showProps(nid);render()}
+function pv(id,text){var v={};text.split('\n').forEach(function(l){var p=l.split('=');if(p[0]&&p.length>1)v[p[0].trim()]=p.slice(1).join('=').trim()});upd(id,'variables',v)}
+function vt(v){if(!v)return'';return Object.entries(v).map(function(e){return e[0]+'='+e[1]}).join('\n')}
+function pt(id,text){upd(id,'tags',text.split(',').map(function(t){return t.trim()}).filter(Boolean))}
+function delNode(id){nodes=nodes.filter(function(n){return n.id!==id});edges=edges.filter(function(e){return e.source!==id&&e.target!==id});selectedNode=null;saveState();render();document.getElementById('propContent').innerHTML=''}
+
+// Keyboard shortcuts
+document.addEventListener('keydown',function(e){
+  if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT')return;
+  if(e.key==='Delete'&&selectedNode){delNode(selectedNode);toast('Deleted')}
+  if(e.ctrlKey&&e.key==='z'){e.preventDefault();undo()}
+  if(e.ctrlKey&&e.key==='y'){e.preventDefault();redo()}
+  if(e.ctrlKey&&e.key==='s'){e.preventDefault();saveFlow()}
+  if(e.ctrlKey&&e.key==='c'&&selectedNode){var n=findNode(selectedNode);if(n){clipboard={type:n.type,data:JSON.parse(JSON.stringify(n.data||{})),position:{x:n.position.x+30,y:n.position.y+30}};toast('Copied')}}
+  if(e.ctrlKey&&e.key==='v'&&clipboard){addNode(clipboard.type,clipboard.position.x,clipboard.position.y,clipboard.data);saveState();render();toast('Pasted')}
+});
+
+// Save/Load
+function buildFlow(){var cond={};var cs=document.getElementById('condStart').value,ce=document.getElementById('condEnd').value,cd=document.getElementById('condDays').value;if(cs||ce||cd){cond={time_start:cs,time_end:ce,days_of_week:cd}}return{id:currentFlowId||0,name:document.getElementById('flowName').value||'New Flow',trigger:{type:document.getElementById('triggerType').value,value:document.getElementById('triggerValue').value,account_phone:document.getElementById('accountPhone').value,priority:parseInt(document.getElementById('priority').value)||0},tags:document.getElementById('flowTags').value,rate_limit:parseInt(document.getElementById('rateLimit').value)||0,ai_key_id:parseInt(document.getElementById('aiKeyId').value)||0,conditional:(cs||ce||cd)?cond:null,nodes:nodes.map(function(n){return{id:n.id,type:n.type,position:n.position,data:n.data||{}}}),edges:edges,active:true}}
+async function saveFlow(){var f=buildFlow();var r=await fetch('/pro/flow-builder/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(f)});var j=await r.json();if(j.id){currentFlowId=j.id;toast('Saved #'+j.id)}else toast('Save failed')}
+async function showFlowList(){var r=await fetch('/pro/flow-builder/list');var flows=await r.json();var h='';flows.forEach(function(f){var phoneLabel=f.trigger.account_phone?' · '+f.trigger.account_phone:' · Global';h+='<div class="flow-row"><div style="display:flex;align-items:center;gap:8px"><input type="checkbox" value="'+f.id+'" class="bulk-cb" onchange="updateBulk()"><div><div class="name">'+f.name+'</div><div class="meta">'+f.trigger.type+': '+f.trigger.value+' · '+f.nodes.length+' nodes'+phoneLabel+'</div></div></div><div><button onclick="loadFlow('+f.id+')">Load</button><button onclick="dupFlow('+f.id+')">Copy</button><button onclick="togFlow('+f.id+')">'+(f.active?'⏸':'▶')+'</button><button onclick="delFlow('+f.id+')" style="color:#DC2626">Del</button></div></div>'});if(!flows.length)h='<div style="text-align:center;padding:20px;color:#8895b7">No flows yet.</div>';document.getElementById('flowList').innerHTML=h;document.getElementById('modal').classList.add('show');document.getElementById('bulkActions').style.display='none'}
+function updateBulk(){var cbs=document.querySelectorAll('.bulk-cb:checked');document.getElementById('bulkActions').style.display=cbs.length?'block':'none';document.getElementById('bulkCount').textContent=cbs.length+' selected'}
+async function bulkDelete(){var cbs=document.querySelectorAll('.bulk-cb:checked');if(!cbs.length||!confirm('Delete '+cbs.length+' flows?'))return;for(var i=0;i<cbs.length;i++){await fetch('/pro/flow-builder/delete',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'id='+cbs[i].value})}showFlowList();toast('Deleted '+cbs.length+' flows')}
+async function loadFlow(id){var r=await fetch('/pro/flow-builder/load?id='+id);var f=await r.json();currentFlowId=f.id;document.getElementById('flowName').value=f.name;document.getElementById('triggerType').value=f.trigger.type;document.getElementById('triggerValue').value=f.trigger.value;document.getElementById('accountPhone').value=f.trigger.account_phone||'';document.getElementById('priority').value=f.trigger.priority||0;document.getElementById('flowTags').value=f.tags||'';document.getElementById('rateLimit').value=f.rate_limit||0;document.getElementById('aiKeyId').value=f.ai_key_id||0;if(f.conditional){document.getElementById('condStart').value=f.conditional.time_start||'';document.getElementById('condEnd').value=f.conditional.time_end||'';document.getElementById('condDays').value=f.conditional.days_of_week||''}nodes=f.nodes||[];edges=f.edges||[];nextId=nodes.length;selectedNode=null;panX=0;panY=0;scale=1;history=[];historyIdx=-1;render();document.getElementById('propContent').innerHTML='';closeModal();toast('Loaded: '+f.name)}
+async function delFlow(id){if(!confirm('Delete?'))return;await fetch('/pro/flow-builder/delete',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'id='+id});showFlowList()}
+async function dupFlow(id){await fetch('/pro/flow-builder/duplicate',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'id='+id});showFlowList();toast('Duplicated')}
+async function togFlow(id){await fetch('/pro/flow-builder/toggle',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'id='+id});showFlowList()}
+async function publishFlow(){if(!currentFlowId){toast("Save first");return}var r=await fetch("/pro/flow-builder/publish",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"id="+currentFlowId});var j=await r.json();toast(j.status)}async function showVersions(){if(!currentFlowId){toast("Save first");return}var r=await fetch("/pro/flow-builder/versions?id="+currentFlowId);var versions=await r.json();var h="<h2>Version History</h2>";versions.forEach(function(v,i){h+="<div class=\"flow-row\"><div><div class=\"name\">v"+(versions.length-i)+" · "+v.name+"</div><div class=\"meta\">"+v.saved_at+"</div></div><div><button onclick=\"rollbackFlow("+v.id+")\">Rollback</button></div></div>"});if(!versions.length)h="<div style=\"text-align:center;padding:20px\">No versions yet. Save flow to create versions.</div>";document.getElementById("flowList").innerHTML=h;document.getElementById("modal").classList.add("show")}async function rollbackFlow(vid){if(!confirm("Rollback to this version?"))return;var r=await fetch("/pro/flow-builder/rollback",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"flow_id="+currentFlowId+"&version_id="+vid});var j=await r.json();if(j.status==="rolled_back"){loadFlow(currentFlowId);toast("Rolled back")}}async function aiGenerate(){var prompt=prompt("Deskripsikan flow yang diinginkan:");if(!prompt)return;toast("AI generating...");var r=await fetch("/pro/flow-builder/ai-generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt:prompt})});var j=await r.json();if(j.id){loadFlow(j.id);toast(j.name+" generated!")}else{toast("AI failed: "+j)}}async function showMarketplace(){var r=await fetch("/pro/flow-builder/marketplace");var flows=await r.json();var h="<h2>Marketplace</h2>";flows.forEach(function(f){h+="<div class=\"flow-row\"><div><div class=\"name\">"+f.name+"</div><div class=\"meta\">"+f.trigger.type+": "+f.trigger.value+" · "+f.nodes.length+" nodes</div></div><div><button onclick=\"loadMarketFlow("+f.id+")\">Import</button><button onclick=\"reviewFlow("+f.id+")\">Review</button></div></div>"});if(!flows.length)h="<div style=\"text-align:center;padding:20px\">No public flows yet.</div>";document.getElementById("flowList").innerHTML=h;document.getElementById("modal").classList.add("show")}async function loadMarketFlow(id){await fetch("/pro/flow-builder/download",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"flow_id="+id});var r=await fetch("/pro/flow-builder/load?id="+id);var f=await r.json();f.id=0;f.name=f.name+" (Copy)";var sr=await fetch("/pro/flow-builder/save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(f)});var j=await sr.json();if(j.id){loadFlow(j.id);closeModal();toast("Imported from marketplace")}}async function reviewFlow(fid){var r=prompt("Rating 1-5:");if(!r)return;var rev=prompt("Review (optional):")||"";await fetch("/pro/flow-builder/reviews",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"flow_id="+fid+"&rating="+r+"&review="+encodeURIComponent(rev)});toast("Review submitted!")}function newFlow(){currentFlowId=null;document.getElementById('flowName').value='New Flow';nodes=[];edges=[];selectedNode=null;panX=0;panY=0;scale=1;history=[];historyIdx=-1;render();document.getElementById('propContent').innerHTML='';toast('New flow')}
+function closeModal(){document.getElementById('modal').classList.remove('show')}
+async function testFlow(){document.getElementById('testPanel').style.display='block';var log=document.getElementById('testLog');log.innerHTML='<div style="color:#8895b7;font-size:11px">Simulator ready. Ketik pesan untuk test flow.</div>';var phone=document.getElementById('testPhone')||{};if(!phone.value)log.innerHTML+='<div style="color:#F59E0B;font-size:10px;margin-top:4px">Set phone number for more accurate testing.</div>'}
+async function runTest(){var inp=document.getElementById('testInput');var msg=inp.value;if(!msg)return;var log=document.getElementById('testLog');var phone=document.getElementById('testPhone').value||'62812test';var name=document.getElementById('testName').value||'Tester';log.innerHTML+='<div style="margin:4px 0;font-size:11px"><b style="color:#4F46E5">You:</b> '+msg+'</div>';inp.value='';inp.disabled=true;
+var flow=buildFlow();
+try{
+  var r=await fetch('/pro/flow-builder/simulate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({flow:flow,phone:phone,message:msg,name:name,debug:window._debugMode||false})});
+  var j=await r.json();
+  if(j.error){log.innerHTML+='<div style="margin:4px 0;font-size:11px"><b style="color:#DC2626">Error:</b> '+j.error+'</div>'}
+  else if(j.replies&&j.replies.length){
+    j.replies.forEach(function(reply){
+      var t=reply.text||'';if(reply.media_url)t+='\n[Media: '+reply.media_url+']';
+      log.innerHTML+='<div style="margin:4px 0;font-size:11px"><b style="color:#10B981">Bot:</b> '+t+'</div>'
+    });
+    if(j.actions&&j.actions.length){log.innerHTML+='<div style="margin:4px 0;font-size:10px;color:#64748b">Actions: '+j.actions.length+' ('+j.actions.map(function(a){return a.type}).join(', ')+')</div>'}
+    if(j.variables&&Object.keys(j.variables).length){var vars=[];Object.keys(j.variables).forEach(function(k){if(!k.startsWith('__'))vars.push(k+'='+j.variables[k])});if(vars.length)log.innerHTML+='<div style="margin:4px 0;font-size:9px;color:#64748b;background:#f1f5f9;padding:4px 6px;border-radius:4px">Vars: '+vars.join(', ')+'</div>'}
+  }else{
+    log.innerHTML+='<div style="margin:4px 0;font-size:11px;color:#64748b">[flow ended with no reply]</div>'
+  }
+  if(window._debugMode&&j.trace&&j.trace.length){
+    log.innerHTML+='<div style="margin:4px 0;font-size:9px;color:#6B7280;background:#f8f9fc;padding:4px 6px;border-radius:4px">Trace: '+j.trace.map(function(t){return t.node_type+'('+t.node_id+')'}).join(' → ')+'</div>'
+  }
+}catch(e){log.innerHTML+='<div style="margin:4px 0;font-size:11px"><b style="color:#DC2626">Error:</b> '+e.message+'</div>'}
+inp.disabled=false;log.scrollTop=log.scrollHeight;
+var resp=await fetch('/pro/flow-builder/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(flow)});var jj=await resp.json();if(jj.id)currentFlowId=jj.id}
+async function showAnalytics(){var id=currentFlowId;if(!id){toast('Save flow first');return}var r=await fetch('/pro/flow-builder/analytics?id='+id);var a=await r.json();var h='<div style="padding:8px;font-size:11px"><b>Triggers:</b> '+(a.trigger_count||0)+' | <b>Completed:</b> '+(a.completion_count||0)+'</div>';if(a.node_hits){var keys=Object.keys(a.node_hits);if(keys.length){h+='<div style="padding:0 8px 8px;font-size:10px;max-height:200px;overflow-y:auto">';keys.forEach(function(k){h+='<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid #f3f4f6">'+k+' <b>'+a.node_hits[k]+'x</b></div>'});h+='</div>'}}document.getElementById('flowList').innerHTML='<h2>📊 Analytics: '+document.getElementById('flowName').value+'</h2>'+h;document.getElementById('modal').classList.add('show')}
+async function showFlowLog(){var id=currentFlowId;if(!id){toast('Save flow first');return}var r=await fetch('/pro/flow-builder/logs?flow_id='+id);var logs=await r.json();var h='<h2>📜 Flow Execution Log</h2>';if(!logs.length){h+='<div style="text-align:center;padding:20px;color:#8895b7">No executions yet.</div>'}else{h+='<div style="max-height:400px;overflow-y:auto;font-size:10px">';logs.forEach(function(l){h+='<div style="padding:6px 8px;border-bottom:1px solid #f3f4f6"><b>'+l.time+'</b> | '+l.phone+' | <span style="color:#4F46E5">'+l.trigger+'</span> | '+l.nodes+' nodes | '+l.replies+' replies | <span style="color:'+(l.status==='completed'?'#10B981':'#DC2626')+'">'+l.status+'</span></div>'});h+='</div>'}document.getElementById('flowList').innerHTML=h;document.getElementById('modal').classList.add('show')}
+async function importTemplate(id){var r=await fetch("/pro/flow-builder/templates/import",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:"id="+id});var j=await r.json();if(j.id){loadFlow(j.id);toast("Template: "+j.name)}else toast("Import failed")}function showInlineMetrics(){var svg=document.getElementById("svg");nodes.forEach(function(n){var el=svg.querySelector(`.flow-node[data-id="${n.id}"]`);if(el){var badge=el.querySelector(".metric-badge");if(!badge){badge=document.createElementNS("http://www.w3.org/2000/svg","text");badge.classList.add("metric-badge");badge.setAttribute("x",W-8);badge.setAttribute("y",H-6);badge.setAttribute("font-size","9");badge.setAttribute("fill","#4F46E5");badge.setAttribute("font-weight","700");badge.setAttribute("text-anchor","end");el.appendChild(badge)}badge.textContent=""}});if(currentFlowId)loadNodeMetrics(currentFlowId)}async function loadNodeMetrics(fid){var r=await fetch("/pro/flow-builder/analytics?id="+fid);var a=await r.json();if(a.node_hits){var svg=document.getElementById("svg");Object.keys(a.node_hits).forEach(function(nid){var el=svg.querySelector(`.flow-node[data-id="${nid}"]`);if(el){var badge=el.querySelector(".metric-badge");if(!badge){badge=document.createElementNS("http://www.w3.org/2000/svg","text");badge.classList.add("metric-badge");badge.setAttribute("x",W-8);badge.setAttribute("y",H-6);badge.setAttribute("font-size","9");badge.setAttribute("fill","#4F46E5");badge.setAttribute("font-weight","700");badge.setAttribute("text-anchor","end");el.appendChild(badge)}badge.textContent=a.node_hits[nid]+"x"}})}}function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(function(){t.style.display='none'},2000)}
+function toggleConditional(){var p=document.getElementById('condPanel');p.style.display=p.style.display==='block'?'none':'block'}
+// Load WA accounts into dropdown
+async function loadAccounts(){try{var r=await fetch('/pro/flow-builder/accounts');var accs=await r.json();var sel=document.getElementById('accountPhone');sel.innerHTML='<option value="">— Semua nomor (Global) —</option>';accs.forEach(function(a){sel.innerHTML+='<option value="'+a.phone+'">'+a.label+'</option>'});}catch(e){console.log('Accounts load failed:',e)}}loadAccounts();
+
+saveState();render();
+</script>
+<script>
+if(!currentFlowId&&!sessionStorage.getItem('demo')){
+sessionStorage.setItem('demo','1');
+nodes=[{id:'n1',type:'message',position:{x:100,y:100},data:{text:'🍽️ Selamat datang! Mau pesan apa?\n\nKetik:\n1. Makanan\n2. Minuman\n3. Snack'}},{id:'n2',type:'condition',position:{x:300,y:100},data:{variable:'{{input}}',branches:[{id:'b1',label:'Makanan',operator:'contains',value:'makan,1'},{id:'b2',label:'Minuman',operator:'contains',value:'minum,2'},{id:'b3',label:'Snack',operator:'contains',value:'snack,3'}]}},{id:'n3',type:'message',position:{x:500,y:40},data:{text:'📋 Menu Makanan:\n1. Nasi Goreng - 25k\n2. Mie Ayam - 20k\n3. Soto Ayam - 22k\n\nKetik nomor untuk pesan.'}},{id:'n4',type:'message',position:{x:500,y:130},data:{text:'🥤 Menu Minuman:\n1. Es Teh - 5k\n2. Jeruk - 7k\n3. Kopi - 10k\n\nKetik nomor untuk pesan.'}},{id:'n5',type:'message',position:{x:500,y:220},data:{text:'🍿 Menu Snack:\n1. Kentang Goreng - 15k\n2. Pisang Goreng - 12k\n3. Tahu Crispy - 10k'}}];
+edges=[{id:'e1',source:'n1',target:'n2'},{id:'e2',source:'n2',target:'n3',sourceHandle:'out-0',label:'Makanan'},{id:'e3',source:'n2',target:'n4',sourceHandle:'out-1',label:'Minuman'},{id:'e4',source:'n2',target:'n5',sourceHandle:'out-2',label:'Snack'}];
+nextId=6;document.getElementById('flowName').value='Demo: Restoran Ordering';document.getElementById('triggerType').value='keyword';document.getElementById('triggerValue').value='menu,makan,pesan,order';
+saveState();render();
+toast('Demo flow loaded — Restaurant Ordering');
+}
+</script>
+<div style="display:none;position:fixed;bottom:0;right:300px;width:400px;height:380px;background:#fff;border:1px solid #e2e8f0;border-radius:14px 14px 0 0;z-index:100;box-shadow:0 -8px 24px rgba(0,0,0,.12)" id="testPanel">
+<div style="padding:10px 16px;background:linear-gradient(135deg,#0a1628,#13203d);color:#fff;border-radius:12px 12px 0 0;display:flex;justify-content:space-between;align-items:center">
+<span style="font-weight:700;font-size:13px">Flow Simulator</span>
+<button onclick="document.getElementById('testPanel').style.display='none'" style="background:none;border:none;color:#fff;cursor:pointer;font-size:18px">&times;</button>
+</div>
+<div style="padding:8px 12px;background:#f8f9fc;border-bottom:1px solid #e2e8f0;display:flex;gap:8px">
+<input id="testPhone" placeholder="Phone (62812...)" style="width:140px;padding:6px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px" value="">
+<input id="testName" placeholder="Name" style="width:120px;padding:6px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px" value="Tester">
+<label style="font-size:11px;display:flex;align-items:center;gap:4px;white-space:nowrap;color:#475569;font-weight:500"><input type="checkbox" id="debugToggle" onchange="window._debugMode=this.checked"> Trace</label>
+</div>
+<div style="padding:12px;overflow-y:auto;height:230px;font-size:13px" id="testLog"></div>
+<div style="padding:10px;border-top:1px solid #e2e8f0;display:flex;gap:8px">
+<input id="testInput" placeholder="Ketik pesan test..." style="flex:1;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px" onkeydown="if(event.key==='Enter')runTest()">
+<button onclick="runTest()" style="padding:8px 16px;background:linear-gradient(135deg,#4F46E5,#6366F1);color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600">Send</button>
+</div>
+</div>
+<script>
+// Debugger Panel
+function toggleDebugger(){
+  var p=document.getElementById('debugPanel');
+  if(p.style.display==='block'){p.style.display='none';window._debugMode=false;document.getElementById('debugToggle').checked=false}
+  else{p.style.display='block';window._debugMode=true;document.getElementById('debugToggle').checked=true}
+}
+function setBreakpoints(){
+  if(!selectedNode){toast('Select a node first');return}
+  toast('Breakpoint set on '+selectedNode)
+}
+function clearAllBreaks(){toast('Breakpoints cleared')}
+async function loadAIKeys(){
+  try{
+    var r=await fetch('/pro/flow-builder/ai-keys');var keys=await r.json();
+    var sel=document.getElementById('aiKeyId');sel.innerHTML='<option value="0">— Default AI —</option>';
+    keys.forEach(function(k){sel.innerHTML+='<option value="'+k.id+'">'+k.provider+': '+k.model+'</option>'})
+  }catch(e){setTimeout(loadAIKeys,3000)}
+}
+loadAIKeys();
+
+// Quick Template loader with industry categories
+var allTemplates=[];
+async function loadQuickTemplates(cat){
+  if(!allTemplates.length){
+    try{
+      var r=await fetch('/pro/flow-builder/templates');allTemplates=await r.json();
+      var cats={};allTemplates.forEach(function(t){if(!cats[t.category])cats[t.category]=0;cats[t.category]++});
+      var sel=document.getElementById('quickCategory');sel.innerHTML='<option value="">— Pilih Industri ('+allTemplates.length+' template) —</option>';
+      Object.keys(cats).sort().forEach(function(c){sel.innerHTML+='<option value="'+c+'">'+c+' ('+cats[c]+')</option>'});
+      document.getElementById('quickCount').textContent=allTemplates.length+' template tersedia'
+    }catch(e){}
+  }
+  var tpl=document.getElementById('quickTemplate');tpl.innerHTML='<option value="">— Pilih Template —</option>';
+  if(cat){allTemplates.filter(function(t){return t.category===cat}).forEach(function(t){tpl.innerHTML+='<option value="'+t.id+'">'+t.icon+' '+t.name+'</option>'})}
+  else{allTemplates.forEach(function(t){tpl.innerHTML+='<option value="'+t.id+'">'+t.icon+' '+t.name+' · '+t.category+'</option>'})}
+}
+// Load templates in background
+setTimeout(function(){loadQuickTemplates('')},500);
+</script>
+<div style="display:none;position:fixed;bottom:0;left:200px;width:320px;height:200px;background:#fff;border:1px solid #e5e7eb;border-radius:12px 12px 0 0;z-index:101;box-shadow:0 -4px 12px rgba(0,0,0,.1)" id="debugPanel">
+<div style="padding:8px 14px;background:#0f1f33;color:#fff;border-radius:10px 10px 0 0;display:flex;justify-content:space-between;align-items:center">
+<span style="font-weight:700;font-size:12px">Flow Debugger</span>
+<button onclick="toggleDebugger()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:16px">&times;</button>
+</div>
+<div style="padding:10px;font-size:11px">
+  <div style="margin-bottom:8px;display:flex;gap:8px;align-items:center">
+    <span style="font-weight:600">Breakpoints:</span>
+    <button onclick="setBreakpoints()" style="padding:3px 8px;background:#4F46E5;color:#fff;border:none;border-radius:4px;font-size:10px;cursor:pointer">Set on Selected</button>
+    <button onclick="clearAllBreaks()" style="padding:3px 8px;background:#FEE2E2;color:#DC2626;border:none;border-radius:4px;font-size:10px;cursor:pointer">Clear All</button>
+  </div>
+  <div style="color:#64748b;font-size:10px">Click a node, then set breakpoint. Enable Trace for step-by-step execution log during simulation.</div>
+  <div id="breakpointList" style="margin-top:6px;font-size:10px;color:#64748b"></div>
+</div>
+</div>
+</body>
+</html>

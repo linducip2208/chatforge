@@ -3,6 +3,7 @@ package wa
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -75,6 +76,7 @@ type Engine struct {
 
 	notifyCh      chan string
 	FlowCallbacks *FlowCallbacks
+	OnMessageNotify func(phone, name, message, channel string, ownerUID int64)
 }
 
 // New opens the whatsmeow session store.
@@ -231,13 +233,17 @@ func (e *Engine) Accounts(userID int64) []AccountInfo {
 	var out []AccountInfo
 	now := time.Now()
 	for id, s := range e.sessions {
-		if s.userID != 0 && s.userID != userID {
+		if s.userID != 0 && s.userID != userID && s.status != "connected" {
 			continue
 		}
 		if s.Phone == "" && s.status != "connected" && s.createdAt.Add(5*time.Minute).Before(now) {
 			continue
 		}
-		out = append(out, AccountInfo{ID: id, Phone: s.Phone, Status: s.status})
+		phone := s.Phone
+		if phone == "" && s.status == "connected" {
+			phone = "syncing..."
+		}
+		out = append(out, AccountInfo{ID: id, Phone: phone, Status: s.status})
 	}
 	return out
 }
@@ -372,6 +378,8 @@ func (e *Engine) GetSessionUserID(id string) int64 {
 // ValidateAccountIDs checks that all account phone numbers in the comma-separated list belong to the user.
 func (e *Engine) ValidateAccountIDs(userID int64, accountIDs string) bool {
 	if userID == 0 || accountIDs == "" { return true }
+	role, _ := e.db.GetUserRole(userID)
+	if role == "admin" || role == "Admin" { return true }
 	for _, phone := range strings.Split(accountIDs, ",") {
 		phone = strings.TrimSpace(phone)
 		if phone == "" { continue }
@@ -482,6 +490,14 @@ func (e *Engine) onMessage(s *session, evt *events.Message) {
 		return
 	}
 	text := extractText(evt.Message)
+	mediaURL := extractMedia(evt.Message)
+	mediaType := ""
+	if m := evt.Message.GetImageMessage(); m != nil { mediaType = "image" }
+	if m := evt.Message.GetVideoMessage(); m != nil { mediaType = "video" }
+	if m := evt.Message.GetDocumentMessage(); m != nil { mediaType = "document" }
+	if text == "" && mediaURL != "" {
+		text = "[media:" + mediaType + ":" + mediaURL + "]"
+	}
 	if text == "" {
 		return
 	}
@@ -490,6 +506,34 @@ func (e *Engine) onMessage(s *session, evt *events.Message) {
 		senderPhone = evt.Info.SenderAlt.User
 	}
 	name := evt.Info.PushName
+
+	// Push to omnichannel SSE for real-time inbox
+	if e.OnMessageNotify != nil && !evt.Info.IsGroup {
+		e.OnMessageNotify(senderPhone, name, text, "whatsmeow", s.userID)
+	}
+
+	// Async OCR: extract text from images via AI vision
+	if mediaType == "image" && evt.Message.GetImageMessage() != nil && !evt.Info.IsGroup {
+		go func(img *waProto.ImageMessage, sess *session, sendPhone, sendName string) {
+			if img == nil || sess == nil { return }
+			imgData, err := sess.client.Download(context.Background(), img)
+			if err != nil || len(imgData) == 0 { return }
+			b64 := base64.StdEncoding.EncodeToString(imgData)
+			keys, _ := e.db.ListAiKeys(0)
+			for _, k := range keys {
+				dk, _ := secret.Decrypt(k.APIKey)
+				if dk == "" { dk = k.APIKey }
+				if dk == "" { continue }
+				ocrText, err := aiservice.ImageToText(dk, k.Provider, k.Model, k.BaseURL, b64)
+				if err != nil || ocrText == "" { continue }
+				ocrText = strings.TrimSpace(ocrText)
+				if ocrText != "" {
+					e.db.LogReceivedForWA(sess.Phone, sendPhone, sendName, "[OCR] "+ocrText, false, sendPhone, sendName, "whatsmeow")
+				}
+				return
+			}
+		}(evt.Message.GetImageMessage(), s, senderPhone, name)
+	}
 
 	if evt.Info.IsGroup {
 		groupJID := evt.Info.Chat.User
@@ -630,7 +674,7 @@ func (e *Engine) onMessage(s *session, evt *events.Message) {
 	if e.db.GetSetting("ai_all_enabled", "0") == "1" && !evt.Info.IsGroup {
 		// Fallback-only mode: skip if auto-reply already would have matched
 		if e.db.GetSetting("ai_fallback_only", "0") == "1" {
-			if e.hasKeywordMatch(text, s.Phone) {
+			if e.hasKeywordMatch(s.userID, text, s.Phone) {
 				goto skipAIAll
 			}
 		}
@@ -675,6 +719,12 @@ skipAIAll:
 				if reply.MediaURL != "" {
 					e.SendMedia(s.userID, s.Phone, senderPhone, reply.MediaType, reply.MediaURL, reply.Text)
 					e.db.LogSent(to.User, reply.Text+" [media]", "flow", "whatsmeow")
+				} else if reply.Action == "buttons" && reply.ActionData != nil {
+					e.SendButtons(s.userID, s.Phone, senderPhone, reply.Text, "", toStringSlice(reply.ActionData["buttons"]))
+					e.db.LogSent(to.User, reply.Text+" [buttons]", "flow", "whatsmeow")
+				} else if reply.Action == "poll" && reply.ActionData != nil {
+					e.sendVia(s, to, reply.Text+"\n"+strings.Join(toStringSlice(reply.ActionData["options"]), "\n"))
+					e.db.LogSent(to.User, reply.Text+" [poll]", "flow", "whatsmeow")
 				} else if reply.Text != "" {
 					e.sendVia(s, to, reply.Text)
 					e.db.LogSent(to.User, reply.Text, "flow", "whatsmeow")
@@ -698,10 +748,10 @@ skipAIAll:
 		}
 	}
 
-	// Basic auto reply — filter by account (comma-separated)
-	rule, ok := e.db.FindReplyFullForAccount(text, s.Phone)
+	// Basic auto reply — filter by account (comma-separated), isolated per user
+	rule, ok := e.db.FindReplyFullForAccount(s.userID, text, s.Phone)
 	if !ok {
-		rule, ok = e.db.FindReplyFullForAccount(text, "") // fallback: rules with no account set
+		rule, ok = e.db.FindReplyFullForAccount(s.userID, text, "") // fallback: rules with no account set
 	}
 	if ok {
 		// build knowledge context (global DB + per-rule FAQ)
@@ -824,6 +874,17 @@ func (e *Engine) Send(userID int64, phone, message string) error {
 }
 
 func (e *Engine) SendFrom(userID int64, accountPhone, phone, message string) error {
+	// Check send limit (skip for admin)
+	role, _ := e.db.GetUserRole(userID)
+	if role != "Admin" && role != "admin" {
+		limit := e.db.GetUserSendLimit(userID)
+		if limit > 0 {
+			count := e.db.CountSentByUser(userID)
+			if count >= limit {
+				return fmt.Errorf("send limit reached: %d/%d", count, limit)
+			}
+		}
+	}
 	s := e.findSession(userID, accountPhone)
 	if s == nil {
 		return fmt.Errorf("not connected")
@@ -1080,17 +1141,17 @@ func extractMedia(m *waProto.Message) string {
 
 func (e *Engine) getChatHistory(phone string, max int) []string {
 	var out []string
-	msgs, _ := e.db.ListReceivedPaginated(1, max)
+	msgs, _ := e.db.ListReceivedPaginated(0, 1, max)
 	for _, m := range msgs {
 		if m.Phone == phone { out = append(out, m.Message) }
 	}
 	return out
 }
 
-func (e *Engine) hasKeywordMatch(text, phone string) bool {
-	_, ok := e.db.FindReplyFullForAccount(text, phone)
+func (e *Engine) hasKeywordMatch(uid int64, text, phone string) bool {
+	_, ok := e.db.FindReplyFullForAccount(uid, text, phone)
 	if !ok {
-		_, ok = e.db.FindReplyFullForAccount(text, "")
+		_, ok = e.db.FindReplyFullForAccount(uid, text, "")
 	}
 	return ok
 }
@@ -1106,6 +1167,22 @@ func (e *Engine) inBusinessHours() bool {
 	end := e.db.GetSetting("biz_hours_end", "17:00")
 	current := now.Format("15:04")
 	return current >= start && current <= end
+}
+
+func (e *Engine) FetchGroupName(jid string) string {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	for _, s := range e.sessions {
+		if s.status != "connected" { continue }
+		gjid, err := waTypes.ParseJID(jid)
+		if err != nil { continue }
+		ginfo, gerr := s.client.GetGroupInfo(context.Background(), gjid)
+		if gerr != nil { continue }
+		name := ginfo.GroupName.Name
+		e.db.SaveGroupName(jid, name)
+		return name
+	}
+	return ""
 }
 
 func onlyDigits(s string) string {
@@ -1164,4 +1241,19 @@ func (e *Engine) dispatchWebhooks(event, phone, name, message, msgType string) {
 			}(h.URL)
 		}
 	}()
+}
+
+// toStringSlice converts interface{} from ActionData to []string
+func toStringSlice(v interface{}) []string {
+	if v == nil { return nil }
+	switch arr := v.(type) {
+	case []string: return arr
+	case []interface{}:
+		var out []string
+		for _, item := range arr {
+			if s, ok := item.(string); ok { out = append(out, s) }
+		}
+		return out
+	}
+	return nil
 }
