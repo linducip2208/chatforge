@@ -3126,6 +3126,11 @@ func handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 func handleOmniInbox(w http.ResponseWriter, r *http.Request) {
 	accept := r.Header.Get("Accept")
 	if strings.Contains(accept, "text/html") {
+		if html := getOmniInboxHTML(); html != "" {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			fmt.Fprint(w, html)
+			return
+		}
 		render(w, r, "omni_inbox")
 		return
 	}
