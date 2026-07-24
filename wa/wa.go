@@ -76,7 +76,7 @@ type Engine struct {
 
 	notifyCh      chan string
 	FlowCallbacks *FlowCallbacks
-	OnMessageNotify func(phone, name, message, channel string, ownerUID int64)
+	OnMessageNotify func(phone, name, message, channel string, ownerUID int64, mediaType, mediaURL string)
 }
 
 // New opens the whatsmeow session store.
@@ -509,7 +509,9 @@ func (e *Engine) onMessage(s *session, evt *events.Message) {
 
 	// Push to omnichannel SSE for real-time inbox
 	if e.OnMessageNotify != nil && !evt.Info.IsGroup {
-		e.OnMessageNotify(senderPhone, name, text, "whatsmeow", s.userID)
+		msgText := text
+		if text == "" && mediaURL != "" { msgText = "[Media: " + mediaType + "]" }
+		e.OnMessageNotify(senderPhone, name, msgText, "whatsmeow", s.userID, mediaType, mediaURL)
 	}
 
 	// Async OCR: extract text from images via AI vision

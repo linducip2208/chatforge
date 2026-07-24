@@ -3048,6 +3048,9 @@ func handleIGWebhook(w http.ResponseWriter, r *http.Request) {
 		mc := meta.New(acc.PhoneNumberID, decryptOrPlain(acc.AccessToken), acc.VerifyToken)
 		for _, m := range msgs {
 			db.LogReceivedForWA(acc.PhoneNumberID, m.From, "", m.Text.Body, false, "", "", "instagram")
+			if PushSocialEvent != nil {
+				PushSocialEvent(m.From, "", m.Text.Body, "instagram", acc.UserID, "", "")
+			}
 			if wa.IGCallback != nil {
 				if replies, matched := wa.IGCallback(acc.UserID, m.From, m.Text.Body, ""); matched {
 					for _, reply := range replies {
@@ -3088,6 +3091,9 @@ func handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 	name := update.Message.Chat.FirstName
 
 	db.LogReceivedForWA("tg", chatID, name, text, false, "", "", "telegram")
+	if PushSocialEvent != nil {
+		PushSocialEvent(chatID, name, text, "telegram", 0, "", "")
+	}
 
 	// Flow builder integration
 	if wa.TGCallback != nil {
@@ -3126,11 +3132,6 @@ func handleTelegramWebhook(w http.ResponseWriter, r *http.Request) {
 func handleOmniInbox(w http.ResponseWriter, r *http.Request) {
 	accept := r.Header.Get("Accept")
 	if strings.Contains(accept, "text/html") {
-		if html := getOmniInboxHTML(); html != "" {
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			fmt.Fprint(w, html)
-			return
-		}
 		render(w, r, "omni_inbox")
 		return
 	}
@@ -3321,6 +3322,9 @@ func handleFBWebhook(w http.ResponseWriter, r *http.Request) {
 		mc := meta.New(acc.PhoneNumberID, decryptOrPlain(acc.AccessToken), acc.VerifyToken)
 		for _, m := range msgs {
 			db.LogReceivedForWA(acc.PhoneNumberID, m.From, "", m.Text.Body, false, "", "", "facebook")
+			if PushSocialEvent != nil {
+				PushSocialEvent(m.From, "", m.Text.Body, "facebook", acc.UserID, "", "")
+			}
 			if wa.FBCallback != nil {
 				if replies, matched := wa.FBCallback(acc.UserID, m.From, m.Text.Body, ""); matched {
 					for _, reply := range replies {

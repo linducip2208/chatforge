@@ -3114,6 +3114,9 @@ n.forEach(function(a){a.addEventListener('click',function(e){e.preventDefault();
 <div class="omni-tab active" data-ch="all">All</div>
 <div class="omni-tab" data-ch="wa" style="color:#25D366"><i class="la la-whatsapp"></i> WA <span class="badge" id="badgeWa">0</span></div>
 <div class="omni-tab" data-ch="meta" style="color:#075E54"><i class="la la-cloud"></i> Meta <span class="badge" id="badgeMeta">0</span></div>
+<div class="omni-tab" data-ch="ig" style="color:#E1306C"><i class="la la-instagram"></i> IG <span class="badge" id="badgeIg">0</span></div>
+<div class="omni-tab" data-ch="fb" style="color:#1877F2"><i class="la la-facebook"></i> FB <span class="badge" id="badgeFb">0</span></div>
+<div class="omni-tab" data-ch="tg" style="color:#2AABEE"><i class="la la-telegram"></i> TG <span class="badge" id="badgeTg">0</span></div>
 <div class="omni-tab" data-ch="private" style="color:#4F46E5"><i class="la la-user"></i> Private</div>
 <div class="omni-tab" data-ch="group" style="color:#10B981"><i class="la la-users"></i> Group</div>
 <div style="flex:1"></div><input id="omniSearch" placeholder="Cari..." style="width:180px;padding:4px 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:11px" oninput="omniDoSearch()">
