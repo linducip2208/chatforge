@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/hmac"
 	crand "crypto/rand"
+	"crypto/sha256"
 	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
@@ -26,6 +28,8 @@ import (
 	"chatgo/store"
 	"chatgo/wa"
 	"chatgo/telegram"
+	"chatgo/xcom"
+	"chatgo/shopee"
 
 	qrcode "github.com/skip2/go-qrcode"
 )
@@ -401,6 +405,8 @@ func main() {
 		mux.HandleFunc("/admin/instagram", authMiddleware(requireAdmin(handleIGInbox)))
 		mux.HandleFunc("/telegram-webhook", handleTelegramWebhook)
 		mux.HandleFunc("/fb-webhook", handleFBWebhook)
+		mux.HandleFunc("/x-webhook", handleXWebhook)
+		mux.HandleFunc("/shopee-webhook", handleShopeeWebhook)
 	}
 	mux.HandleFunc("/agency", authMiddleware(requireAdmin(handleAgency)))
 	mux.HandleFunc("/ai-settings", authMiddleware(handleAISettings))
@@ -3425,4 +3431,45 @@ func autoBackupLoop() {
 			}
 		}
 	}
+}
+// --- X/Twitter Webhook ---
+func handleXWebhook(w http.ResponseWriter, r *http.Request) {
+	if !isProBuild() { http.Error(w, "Pro feature", 402); return }
+	keys, _ := db.ListChannelKeys(0, "x")
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method == "GET" {
+		crcToken := r.URL.Query().Get("crc_token")
+		if crcToken != "" && len(keys) > 0 {
+			h := hmac.New(sha256.New, []byte(keys[0].TokenSecret)); h.Write([]byte(crcToken))
+			io.WriteString(w, `{"response_token":"`+hex.EncodeToString(h.Sum(nil))+`"}`)
+			return
+		}
+		io.WriteString(w, `{"status":"ok"}`)
+		return
+	}
+	for _, k := range keys {
+		events, _ := xcom.ParseWebhook(r, k.TokenSecret)
+		for _, evt := range events {
+			db.LogReceivedForWA("x", evt.SenderID, "", evt.Text, false, "", "", "x")
+			if PushSocialEvent != nil { PushSocialEvent(evt.SenderID, "", evt.Text, "x", k.UserID, "", "") }
+		}
+		break
+	}
+	json.NewEncoder(w).Encode(map[string]string{"status":"ok"})
+}
+
+func handleShopeeWebhook(w http.ResponseWriter, r *http.Request) {
+	if !isProBuild() { http.Error(w, "Pro feature", 402); return }
+	keys, _ := db.ListChannelKeys(0, "shopee")
+	for _, k := range keys {
+		events, _ := shopee.HandleWebhook(k.TokenSecret, r)
+		for _, evt := range events {
+			fromID := fmt.Sprintf("%d", evt.FromShopID)
+			db.LogReceivedForWA("shopee", fromID, "", evt.Content.Text, false, "", "", "shopee")
+			if PushSocialEvent != nil { PushSocialEvent(fromID, "", evt.Content.Text, "shopee", k.UserID, "", "") }
+		}
+		break
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status":"ok"})
 }

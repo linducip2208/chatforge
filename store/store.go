@@ -204,6 +204,7 @@ func (d *DB) migrate() error {
 	d.migrateFlowStats()
 	d.migrateFlowVersions()
 	d.migrateFlowMarket()
+	d.migrateChannelKeys()
 	return nil
 }
 
