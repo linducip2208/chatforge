@@ -829,6 +829,8 @@ func render(w http.ResponseWriter, r *http.Request, page string) {
 		d.AiPlugins, _ = db.ListAiPlugins()
 	case "webhooks":
 		d.Webhooks, _ = db.ListWebhooks()
+	case "channel_settings":
+		d.ChannelKeys, _ = db.ListChannelKeys(uid, "")
 	case "broadcast":
 		d.Campaigns, _ = db.ListCampaigns(uid)
 		d.Groups, _ = db.ListGroups(uid)
@@ -3483,18 +3485,6 @@ func handleShopeeWebhook(w http.ResponseWriter, r *http.Request) {
 
 // --- Channel Settings (BYOK - Bring Your Own Keys) ---
 func handleChannelSettings(w http.ResponseWriter, r *http.Request) {
-	uid := getUserID(r)
-	keys, _ := db.ListChannelKeys(uid, "")
-	d := pageData{Page:"channel_settings", Active:"channel_settings"}
-	d.Title,d.Pretitle,d.Heading,d.Icon = "Channel Settings","Integrations","Channel API Keys","la-key"
-	d.ChannelKeys = keys
-	if sub, err := db.GetActiveSubscription(uid); err == nil {
-		pkgID, _ := strconv.ParseInt(sub.Pkg, 10, 64)
-		if pkg, _ := db.GetPackage(pkgID); pkg != nil {
-			d.UserPackage = pkg.Name; d.UserPackageServices = pkg.Services
-		}
-		d.UserPackageExpire = sub.Expire
-	} else { d.UserPackage = "Free" }
 	render(w, r, "channel_settings")
 }
 

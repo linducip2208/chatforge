@@ -3154,17 +3154,19 @@ var omniEvt=new EventSource('/pro/omni/events');omniEvt.onmessage=function(e){tr
 </script>
 {{end}}{{end}}
 {{if eq .Page "channel_settings"}}
-<div class="container-fluid"><div class="row"><div class="col-12"><div class="card"><div class="card-header d-flex justify-content-between"><h4 class="card-header-title">Channel API Keys</h4><button class="btn btn-primary btn-sm" onclick="document.getElementById('addForm').style.display='block'">+ Add Key</button></div><div class="card-body">
+<div class="container-fluid"><div class="row"><div class="col-12">
+<div class="alert alert-info mb-3"><strong>Channel Configuration:</strong> WhatsApp → <a href="/wa">Account & QR</a> | Instagram/Facebook → <a href="/admin/meta">Meta Accounts</a> | Telegram → <a href="/settings">Settings</a> | X/Shopee/Discord/Line/Slack → add API keys below (BYOK).</div>
+<div class="card"><div class="card-header d-flex justify-content-between"><h4 class="card-header-title">Custom API Keys</h4><button class="btn btn-primary btn-sm" onclick="document.getElementById('addForm').style.display='block'">+ Add Key</button></div><div class="card-body">
 <div id="addForm" style="display:none;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-bottom:16px;background:#f9fafb">
 <form method="post" action="/channel-settings/add">
-<div class="form-group"><label>Platform</label><select name="platform" class="form-control" required><option value="">-- Pilih --</option><option value="x">X / Twitter</option><option value="shopee">Shopee</option><option value="discord">Discord</option><option value="line">Line</option><option value="slack">Slack</option></select></div>
+<div class="form-group"><label>Platform</label><select name="platform" class="form-control" required><option value="">-- Select Platform --</option><option value="x">X / Twitter</option><option value="shopee">Shopee</option><option value="discord">Discord</option><option value="line">Line</option><option value="slack">Slack</option></select></div>
 <div class="form-group"><label>Name (Label)</label><input name="name" class="form-control" placeholder="My X Account" required></div>
-<div class="row"><div class="col-6"><div class="form-group"><label>API Key</label><input name="api_key" class="form-control" placeholder="Consumer Key / Partner ID"></div></div><div class="col-6"><div class="form-group"><label>API Secret</label><input name="api_secret" class="form-control" placeholder="Consumer Secret / Partner Key"></div></div></div>
-<div class="row"><div class="col-6"><div class="form-group"><label>Access Token</label><input name="token" class="form-control" placeholder="OAuth Token / Access Token"></div></div><div class="col-6"><div class="form-group"><label>Token Secret</label><input name="token_secret" class="form-control" placeholder="OAuth Secret / Shop ID"></div></div></div>
+<div class="row"><div class="col-6"><div class="form-group"><label>API Key / Consumer Key</label><input name="api_key" class="form-control"></div></div><div class="col-6"><div class="form-group"><label>API Secret / Consumer Secret</label><input name="api_secret" class="form-control"></div></div></div>
+<div class="row"><div class="col-6"><div class="form-group"><label>Access Token</label><input name="token" class="form-control"></div></div><div class="col-6"><div class="form-group"><label>Token Secret / Shop ID</label><input name="token_secret" class="form-control"></div></div></div>
 <button class="btn btn-primary">Save</button> <button type="button" class="btn btn-secondary" onclick="document.getElementById('addForm').style.display='none'">Cancel</button>
 </form></div>
-<table class="table table-sm"><thead><tr><th>Platform</th><th>Name</th><th>Webhook URL</th><th>Actions</th></tr></thead>
-<tbody>{{range .ChannelKeys}}<tr><td><span class="badge badge-soft-primary">{{.Platform}}</span></td><td>{{.Name}}</td><td><code>{{.WebhookURL}}</code></td><td><form method="post" action="/channel-settings/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm text-danger">Delete</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center py-3">No API keys configured yet. Add your first key to enable channels.</td></tr>{{end}}</tbody></table>
+<table class="table table-sm"><thead><tr><th>Platform</th><th>Name</th><th>Keys</th><th>Actions</th></tr></thead>
+<tbody>{{range .ChannelKeys}}<tr><td><span class="badge badge-soft-primary">{{.Platform}}</span></td><td>{{.Name}}</td><td><small>API: {{.APIKey|printf "%.12s"}}... | Token: {{.Token|printf "%.12s"}}...</small></td><td><form method="post" action="/channel-settings/delete" style="display:inline"><input type="hidden" name="id" value="{{.ID}}"><button class="btn btn-sm text-danger">Delete</button></form></td></tr>{{else}}<tr><td colspan="4" class="text-muted text-center py-3">No custom API keys yet. Click + Add Key to connect X, Shopee, Discord, Line, or Slack.</td></tr>{{end}}</tbody></table>
 </div></div></div></div></div>
 {{end}}`
 
