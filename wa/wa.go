@@ -331,6 +331,41 @@ func (e *Engine) Notify(phone string) {
 	case e.notifyCh <- phone:
 	default:
 	}
+	// Also broadcast to per-user SSE subscribers
+	sseSubsMu.Lock()
+	defer sseSubsMu.Unlock()
+	for _, s := range sseSubs {
+		select {
+		case s.ch <- phone:
+		default:
+		}
+	}
+}
+
+// Per-user SSE subscribers for inbox real-time updates
+type sseSubscriber struct {
+	uid int64
+	ch  chan string
+}
+
+var sseSubs []sseSubscriber
+var sseSubsMu sync.Mutex
+
+func (e *Engine) AddSSESubscriber(uid int64, ch chan string) {
+	sseSubsMu.Lock()
+	defer sseSubsMu.Unlock()
+	sseSubs = append(sseSubs, sseSubscriber{uid: uid, ch: ch})
+}
+
+func (e *Engine) RemoveSSESubscriber(uid int64, ch chan string) {
+	sseSubsMu.Lock()
+	defer sseSubsMu.Unlock()
+	for i, s := range sseSubs {
+		if s.ch == ch {
+			sseSubs = append(sseSubs[:i], sseSubs[i+1:]...)
+			break
+		}
+	}
 }
 
 // LogoutAccount logs out & removes a single account.
