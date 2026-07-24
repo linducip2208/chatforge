@@ -3204,17 +3204,39 @@ func handleOmniInbox(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Instagram conversations (from Meta accounts)
+	// Instagram conversations
 	if channel == "" || channel == "ig" {
 		accounts, _ := db.ListMetaAccounts()
 		for _, acc := range accounts {
 			mc := meta.New(acc.PhoneNumberID, decryptOrPlain(acc.AccessToken), acc.VerifyToken)
 			convs, _ := mc.GetIGConversations()
 			for _, c := range convs {
+				name := ""; msg := ""; phone := ""
+				if m, ok := c["participant"].(string); ok { phone = m; name = m }
+				if m, ok := c["message"].(string); ok { msg = m }
+				if m, ok := c["name"].(string); ok && m != "" { name = m }
 				conversations = append(conversations, map[string]interface{}{
-					"channel": "ig", "data": c,
+					"phone": phone, "name": name, "message": msg,
+					"channel": "ig", "time": "", "is_group": false,
 				})
 			}
+		}
+	}
+
+	// Facebook conversations — already in received table as channel="facebook"
+	if channel == "" || channel == "fb" {
+		recv2, _ := db.ListReceivedPaginated(uid, 1, 100)
+		seen2 := map[string]bool{}
+		for _, msg := range recv2 {
+			if msg.Channel != "facebook" { continue }
+			p := cleanPhone(msg.Phone)
+			if p == "" || seen2[p] { continue }
+			seen2[p] = true
+			name := msg.Name; if name == "" { name = p }
+			conversations = append(conversations, map[string]interface{}{
+				"phone": p, "name": name, "message": msg.Message,
+				"channel": "fb", "time": msg.Created, "is_group": false,
+			})
 		}
 	}
 
