@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/hmac"
 	crand "crypto/rand"
 	"crypto/sha256"
@@ -30,6 +31,7 @@ import (
 	"chatgo/telegram"
 	"chatgo/xcom"
 	"chatgo/shopee"
+	"chatgo/discord"
 
 	qrcode "github.com/skip2/go-qrcode"
 )
@@ -410,6 +412,7 @@ func main() {
 		mux.HandleFunc("/fb-webhook", handleFBWebhook)
 		mux.HandleFunc("/x-webhook", handleXWebhook)
 		mux.HandleFunc("/shopee-webhook", handleShopeeWebhook)
+		mux.HandleFunc("/discord-webhook", handleDiscordWebhook)
 	}
 	mux.HandleFunc("/agency", authMiddleware(requireAdmin(handleAgency)))
 	mux.HandleFunc("/ai-settings", authMiddleware(handleAISettings))
@@ -3510,4 +3513,29 @@ func handleChannelSettingsDelete(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
 	if id > 0 { db.DeleteChannelKey(id, getUserID(r)) }
 	http.Redirect(w, r, "/channel-settings", http.StatusSeeOther)
+}
+
+func handleDiscordWebhook(w http.ResponseWriter, r *http.Request) {
+	if !isProBuild() { http.Error(w, "Pro feature", 402); return }
+	keys, _ := db.ListChannelKeys(0, "discord")
+	for _, k := range keys {
+		if r.Method == http.MethodPost {
+			body, _ := io.ReadAll(r.Body)
+			r.Body = io.NopCloser(bytes.NewReader(body))
+			uid, name, _, text, msgType, err := discord.ParseWebhook(r, k.APISecret)
+			if err != nil { continue }
+			if msgType == "PING" {
+				discord.RespondPing(w, k.APISecret)
+				return
+			}
+			if uid != "" {
+				db.LogReceivedForWA("discord", uid, name, text, false, "", "", "discord")
+				if PushSocialEvent != nil { PushSocialEvent(uid, name, text, "discord", k.UserID, "", "") }
+			}
+			discord.SendInteractionResponse(w, "Message received!")
+			return
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status":"no_keys"})
 }
