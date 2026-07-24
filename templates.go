@@ -501,9 +501,12 @@ if(a){var t=a.offsetTop-s.offsetHeight/2;if(t>0)s.scrollTop=t}
   <li class="nav-item"><a class="nav-link {{if eq .Active "customers"}}active{{end}}" href="/customers"><i class="la la-users la-lg"></i> {{T "nav_customers"}}</a></li>
   <li class="nav-item"><a class="nav-link {{if eq .Active "apikeys"}}active{{end}}" href="/apikeys"><i class="la la-key la-lg"></i> {{T "nav_apikeys"}}</a></li>
   <li class="nav-item"><a class="nav-link {{if eq .Active "webhooks"}}active{{end}}" href="/webhooks"><i class="la la-code-branch la-lg"></i> {{T "nav_webhooks"}}</a></li>
-  <li class="nav-item"><a class="nav-link {{if eq .Active "channel_settings"}}active{{end}}" href="/channel-settings"><i class="la la-key la-lg"></i> Channel Keys</a></li>
 {{template "egroup"}}
 {{end}}
+
+{{template "sgroup" dict "id" "integrations" "icon" "la-plug" "label" "Integrations"}}
+  <li class="nav-item"><a class="nav-link {{if eq .Active "channel_settings"}}active{{end}}" href="/channel-settings"><i class="la la-key la-lg"></i> Channel Keys</a></li>
+{{template "egroup"}}
 
 <ul class="navbar-nav mt-2">
   {{if .UserPackage}}
