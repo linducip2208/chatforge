@@ -147,6 +147,9 @@ func main() {
 	mux.HandleFunc("/inbox/search", authMiddleware(handleInboxSearch))
 	mux.HandleFunc("/autoreply", p("autoreply"))
 	mux.HandleFunc("/settings", authMiddleware(requireAdmin(handleSettings)))
+	mux.HandleFunc("/channel-settings", authMiddleware(handleChannelSettings))
+	mux.HandleFunc("/channel-settings/add", authMiddleware(handleChannelSettingsAdd))
+	mux.HandleFunc("/channel-settings/delete", authMiddleware(handleChannelSettingsDelete))
 	mux.HandleFunc("/admin/users/impersonate", authMiddleware(handleImpersonate))
 	mux.HandleFunc("/exit-impersonation", handleExitImpersonation)
 	mux.HandleFunc("/contacts", p("contacts"))
@@ -621,6 +624,7 @@ type pageData struct {
 	LogTotal       int
 	LogPages       []int
 	IsPro          bool
+	ChannelKeys    []store.ChannelKey
 }
 
 type DocsStep struct {
@@ -3472,4 +3476,38 @@ func handleShopeeWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status":"ok"})
+}
+
+// --- Channel Settings (BYOK - Bring Your Own Keys) ---
+func handleChannelSettings(w http.ResponseWriter, r *http.Request) {
+	uid := getUserID(r)
+	keys, _ := db.ListChannelKeys(uid, "")
+	d := pageData{Page:"channel_settings", Active:"channel_settings"}
+	d.Title,d.Pretitle,d.Heading,d.Icon = "Channel Settings","Integrations","Channel API Keys","la-key"
+	d.ChannelKeys = keys
+	if sub, err := db.GetActiveSubscription(uid); err == nil {
+		pkgID, _ := strconv.ParseInt(sub.Pkg, 10, 64)
+		if pkg, _ := db.GetPackage(pkgID); pkg != nil {
+			d.UserPackage = pkg.Name; d.UserPackageServices = pkg.Services
+		}
+		d.UserPackageExpire = sub.Expire
+	} else { d.UserPackage = "Free" }
+	render(w, r, "channel_settings")
+}
+
+func handleChannelSettingsAdd(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost { http.Error(w, "POST only",405); return }
+	uid := getUserID(r)
+	db.AddChannelKey(uid, r.FormValue("platform"), r.FormValue("name"),
+		r.FormValue("api_key"), r.FormValue("api_secret"),
+		r.FormValue("token"), r.FormValue("token_secret"))
+	http.Redirect(w, r, "/channel-settings", http.StatusSeeOther)
+}
+
+
+func handleChannelSettingsDelete(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost { http.Error(w, "POST only",405); return }
+	id, _ := strconv.ParseInt(r.FormValue("id"), 10, 64)
+	if id > 0 { db.DeleteChannelKey(id, getUserID(r)) }
+	http.Redirect(w, r, "/channel-settings", http.StatusSeeOther)
 }
